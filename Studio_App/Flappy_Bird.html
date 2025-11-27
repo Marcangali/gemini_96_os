@@ -220,6 +220,7 @@ WINDOW_HEIGHT: 600
                     <button class="button" onclick="selectDifficulty('easy')">Easy</button>
                     <button class="button" onclick="selectDifficulty('medium')">Medium</button>
                     <button class="button" onclick="selectDifficulty('hard')">Hard</button>
+                    <button class="button" onclick="selectDifficulty('impossible')">Impossible</button>
                 </div>
             </div>
 
@@ -273,6 +274,14 @@ WINDOW_HEIGHT: 600
                 pipeGapHeight: 120, // Narrower gap
                 pipeSpawnInterval: 1200, // Pipes appear more frequently
                 name: 'Hard'
+            },
+            impossible: {
+                gravity: 1.0, // Even higher gravity
+                jumpStrength: -10, // Even lower jump strength
+                pipeSpeed: 4, // Even faster pipes
+                pipeGapHeight: 100, // Even narrower gap
+                pipeSpawnInterval: 1000, // Pipes appear even more frequently
+                name: 'Impossible'
             }
         };
 
