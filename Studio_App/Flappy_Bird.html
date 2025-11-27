@@ -35,7 +35,6 @@ WINDOW_HEIGHT: 600
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Removed min-height: 100vh; as html, body height: 100% handles this */
             background-color: var(--background-color);
             color: var(--text-color);
             overflow: hidden; /* Prevent body scroll */
@@ -44,24 +43,23 @@ WINDOW_HEIGHT: 600
 
         .app-container {
             width: 100%;
-            height: 100%; /* This is relative to body's height (which is now 100%) */
-            max-width: 400px; /* Constrain game width */
-            max-height: 600px; /* Constrain game height */
+            height: 100%;
+            max-width: 400px;
+            max-height: 600px;
             background-color: var(--background-color);
             border-radius: 8px;
             box-shadow: 0 2px 8px var(--shadow-color);
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Keep game elements within bounds */
+            overflow: hidden;
         }
 
         .game-area {
             position: relative;
             width: 100%;
-            /* Removed height: 100%; as flex-grow: 1 correctly handles height within a flex column */
             background-color: #70c5ce; /* Sky blue */
             overflow: hidden;
-            flex-grow: 1; /* This makes it take up all available vertical space in the flex column */
+            flex-grow: 1;
         }
 
         .bird {
@@ -224,16 +222,18 @@ WINDOW_HEIGHT: 600
         const finalScoreSpan = document.getElementById('finalScore');
         const ground = document.getElementById('ground');
 
-        let birdY = 0; // Will be initialized by updateDimensions/resetGame
+        let birdY = 0;
         let birdVelocity = 0;
-        const gravity = 0.5;
-        const jumpStrength = -8; // Negative for upward movement
+        // Physics adjustments for a snappier feel
+        const gravity = 0.8; // Increased gravity for faster fall
+        const jumpStrength = -12; // Increased jump strength for more powerful flap
 
         let pipes = [];
         const pipeWidth = 50;
-        const pipeGapHeight = 150; // Gap for the bird to fly through
-        const pipeSpeed = 2;
-        const pipeSpawnInterval = 1800; // ms between pipe spawns
+        const pipeGapHeight = 150;
+        // Game pace adjustments for quicker reaction time requirement
+        const pipeSpeed = 3; // Increased pipe speed
+        const pipeSpawnInterval = 1500; // Decreased interval for more frequent pipes
         let pipeTimer;
 
         let score = 0;
@@ -241,10 +241,9 @@ WINDOW_HEIGHT: 600
         let isGameOver = false;
         let animationFrameId;
 
-        // Dynamic dimensions - will be updated during game lifecycle
         let gameAreaWidth;
         let gameAreaHeight;
-        let playableHeight; // Height above the ground for bird/pipes
+        let playableHeight;
         let birdWidth;
         let birdHeight;
         let groundHeight;
@@ -264,79 +263,62 @@ WINDOW_HEIGHT: 600
             birdVelocity += gravity;
             birdY += birdVelocity;
 
-            // Keep bird within top bounds
             if (birdY < 0) {
                 birdY = 0;
                 birdVelocity = 0;
             }
 
-            // Collision with ground (using playableHeight)
             if (birdY + birdHeight >= playableHeight) {
-                birdY = playableHeight - birdHeight; // Set bird on ground
+                birdY = playableHeight - birdHeight;
                 birdVelocity = 0;
                 endGame();
-                return; // Stop further updates if game ended
+                return;
             }
 
             bird.style.top = `${birdY}px`;
         }
 
         function flap() {
-            if (isGameOver) return; // Prevent flapping if game is over
+            if (isGameOver) return;
+
             if (!gameStarted) {
-                startGame(); // Start game on first flap/click if not started
-                return;
+                // If game hasn't started, the first flap should start the game AND apply the jump
+                startGame();
             }
+            // Apply the jump strength
             birdVelocity = jumpStrength;
         }
 
         function createPipe() {
             if (!gameStarted || isGameOver) return;
 
-            // Min and max heights for the *top* pipe
             const minPipeHeight = 50;
-            // The max height for the top pipe ensures there's always space for the gap and min bottom pipe
             const maxTopPipeHeight = playableHeight - pipeGapHeight - minPipeHeight;
 
-            // Ensure maxTopPipeHeight is not less than minPipeHeight to avoid negative or zero range
-            if (maxTopPipeHeight < minPipeHeight) {
-                // This means the playable area is too small for a pipe and gap.
-                // For now, if it's too small, just don't create pipes or make them minimum size.
-                // A better fix might be to adjust gameAreaHeight or scale game.
-                console.warn("Playable area too small for proper pipes, adjusting maxTopPipeHeight.");
-                maxTopPipeHeight = minPipeHeight; // Ensure a valid range, or clamp
-                if (playableHeight - pipeGapHeight < minPipeHeight) { // If not even minPipeHeight + gap + minPipeHeight fits
-                    return; // Cannot create pipe
+            // Ensure maxTopPipeHeight is not less than minPipeHeight to avoid invalid range
+            let actualMaxTopPipeHeight = Math.max(minPipeHeight, maxTopPipeHeight);
+            if (playableHeight - pipeGapHeight < 2 * minPipeHeight) {
+                // If the total playable height minus gap is too small for two min pipes,
+                // we might have issues. This game might not look good in very small windows.
+                // For now, clamp to avoid negative range or ensure min height.
+                if (playableHeight < pipeGapHeight + 2 * minPipeHeight) { // Cannot create valid pipes
+                    console.warn("Playable area too small for proper pipes.");
+                    return;
                 }
+                actualMaxTopPipeHeight = playableHeight - pipeGapHeight - minPipeHeight;
             }
             
-            // Handle case where maxTopPipeHeight might still be less than minPipeHeight if playableHeight is very small
-            let topPipeHeight;
-            if (maxTopPipeHeight <= minPipeHeight) {
-                topPipeHeight = minPipeHeight;
-            } else {
-                topPipeHeight = Math.floor(Math.random() * (maxTopPipeHeight - minPipeHeight + 1)) + minPipeHeight;
-            }
-
-            const bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
-            if (bottomPipeHeight < minPipeHeight) { // Ensure bottom pipe is also minimum height
+            let topPipeHeight = Math.floor(Math.random() * (actualMaxTopPipeHeight - minPipeHeight + 1)) + minPipeHeight;
+            // Ensure bottom pipe is also minimum height
+            let bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
+            if (bottomPipeHeight < minPipeHeight) {
                 // This scenario means topPipeHeight was too large, or playableHeight is too small
                 // Recalculate based on a guaranteed minimum for both and the gap
-                const remainingHeight = playableHeight - pipeGapGapHeight;
-                topPipeHeight = Math.floor(Math.random() * (remainingHeight - 2 * minPipeHeight + 1)) + minPipeHeight;
-                if (topPipeHeight < minPipeHeight) topPipeHeight = minPipeHeight;
-                if (topPipeHeight > remainingHeight - minPipeHeight) topPipeHeight = remainingHeight - minPipeHeight;
-                // Re-derive bottom height based on the adjusted top height
-                bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
+                topPipeHeight = playableHeight - pipeGapHeight - minPipeHeight; // Max possible top pipe
+                if (topPipeHeight < minPipeHeight) topPipeHeight = minPipeHeight; // Ensure min
+                bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight; // Recalculate bottom
             }
             
-            // Final check to ensure pipes don't overlap or go into ground
-            if (topPipeHeight < 0 || bottomPipeHeight < 0 || topPipeHeight + bottomPipeHeight + pipeGapHeight > playableHeight) {
-                console.error("Pipe calculation error, preventing pipe creation.");
-                return;
-            }
-
-
             const pipeX = gameAreaWidth;
 
             const pipeTop = document.createElement('div');
@@ -361,7 +343,7 @@ WINDOW_HEIGHT: 600
                 bottomHeight: bottomPipeHeight,
                 pipeTopElement: pipeTop,
                 pipeBottomElement: pipeBottom,
-                passed: false // To track if bird has passed this pipe for scoring
+                passed: false
             });
         }
 
@@ -373,19 +355,13 @@ WINDOW_HEIGHT: 600
                 pipe.pipeTopElement.style.left = `${pipe.x}px`;
                 pipe.pipeBottomElement.style.left = `${pipe.x}px`;
 
-                // Scoring: Check if bird has passed the pipe's horizontal center
-                // The bird's X position is fixed (bird.offsetLeft). The pipe moves.
-                // When the pipe's right edge (pipe.x + pipeWidth) moves past bird's left edge,
-                // and the bird's left edge is past pipe's right edge for scoring.
-                // A common scoring point is when the pipe passes the bird's fixed X position.
                 if (pipe.x + pipeWidth < bird.offsetLeft && !pipe.passed) {
                     score++;
                     scoreDisplay.textContent = score;
-                    pipe.passed = true; // Mark as passed
+                    pipe.passed = true;
                 }
             });
 
-            // Remove off-screen pipes
             if (pipes.length > 0 && pipes[0].x + pipeWidth < 0) {
                 gameArea.removeChild(pipes[0].pipeTopElement);
                 gameArea.removeChild(pipes[0].pipeBottomElement);
@@ -394,9 +370,6 @@ WINDOW_HEIGHT: 600
         }
 
         function checkCollisions() {
-            // Collision with ground is handled in updateBirdPosition()
-            
-            // Collision with pipes
             for (let i = 0; i < pipes.length; i++) {
                 const p = pipes[i];
 
@@ -407,15 +380,13 @@ WINDOW_HEIGHT: 600
 
                 const pipeRight = p.x + pipeWidth;
                 const pipeLeft = p.x;
-                const pipeTopBottom = p.topHeight; // Bottom edge of top pipe
-                const pipeBottomTop = p.topHeight + pipeGapHeight; // Top edge of bottom pipe
+                const pipeTopBottom = p.topHeight;
+                const pipeBottomTop = p.topHeight + pipeGapHeight;
 
-                // Check for horizontal overlap
                 if (birdRight > pipeLeft && birdLeft < pipeRight) {
-                    // Check for vertical collision with top pipe OR bottom pipe
                     if (birdTop < pipeTopBottom || birdBottom > pipeBottomTop) {
                         endGame();
-                        return; // Exit on first collision
+                        return;
                     }
                 }
             }
@@ -435,10 +406,10 @@ WINDOW_HEIGHT: 600
         }
 
         function startGame() {
-            if (gameStarted) return; // Prevent multiple starts
+            if (gameStarted) return;
             
-            updateDimensions(); // Ensure dimensions are fresh at start
-            resetGame(false); // Reset state without showing game over overlay
+            updateDimensions();
+            resetGame(false);
             
             startOverlay.classList.remove('active');
             gameOverOverlay.classList.remove('active');
@@ -448,12 +419,10 @@ WINDOW_HEIGHT: 600
             score = 0;
             scoreDisplay.textContent = score;
             
-            // Re-initialize bird position in the middle of the playable area
             birdY = playableHeight / 2 - birdHeight / 2;
             birdVelocity = 0;
             bird.style.top = `${birdY}px`;
 
-            // Clear any existing pipes from previous game
             pipes.forEach(p => {
                 if (p.pipeTopElement.parentNode === gameArea) {
                     gameArea.removeChild(p.pipeTopElement);
@@ -471,26 +440,25 @@ WINDOW_HEIGHT: 600
         function endGame() {
             isGameOver = true;
             gameStarted = false;
-            clearInterval(pipeTimer); // Stop pipe generation
-            cancelAnimationFrame(animationFrameId); // Stop animation loop
+            clearInterval(pipeTimer);
+            cancelAnimationFrame(animationFrameId);
 
             finalScoreSpan.textContent = score;
             gameOverOverlay.classList.add('active');
         }
 
         function resetGame(showStartScreen = true) {
-            isGameOver = true; // Ensure game is marked over to stop any running loop
+            isGameOver = true;
             gameStarted = false;
             clearInterval(pipeTimer);
             cancelAnimationFrame(animationFrameId);
 
-            updateDimensions(); // Update dimensions during reset
+            updateDimensions();
 
-            // Ensure playableHeight is not zero before calculating bird position
             if (playableHeight > 0) {
-                 birdY = playableHeight / 2 - birdHeight / 2; // Center bird vertically
+                 birdY = playableHeight / 2 - birdHeight / 2;
             } else {
-                 birdY = gameAreaHeight / 2 - birdHeight / 2; // Fallback to full game area height
+                 birdY = gameAreaHeight / 2 - birdHeight / 2;
             }
             birdVelocity = 0;
             bird.style.top = `${birdY}px`;
@@ -498,7 +466,6 @@ WINDOW_HEIGHT: 600
             score = 0;
             scoreDisplay.textContent = score;
 
-            // Remove all pipes from the DOM
             pipes.forEach(p => {
                 if (p.pipeTopElement.parentNode === gameArea) {
                     gameArea.removeChild(p.pipeTopElement);
@@ -507,7 +474,7 @@ WINDOW_HEIGHT: 600
                     gameArea.removeChild(p.pipeBottomElement);
                 }
             });
-            pipes = []; // Clear the pipes array
+            pipes = [];
 
             gameOverOverlay.classList.remove('active');
             if (showStartScreen) {
@@ -517,30 +484,24 @@ WINDOW_HEIGHT: 600
             }
         }
 
-        // Event Listeners
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
-                e.preventDefault(); // Prevent page scroll
+                e.preventDefault();
                 flap();
             }
         });
 
-        // Click anywhere in the game area to flap
         gameArea.addEventListener('click', (e) => {
-            // Only flap if the click is not on an overlay button
             if (!e.target.closest('.game-overlay.active button')) {
                 flap();
             }
         });
         
-        // Initialize game on load, showing start screen
         document.addEventListener('DOMContentLoaded', () => {
-            updateDimensions(); // Get initial dimensions
-            resetGame(true); // Show start screen
+            updateDimensions();
+            resetGame(true);
         });
 
-        // Add a resize listener to keep dimensions up-to-date, though it's less critical
-        // if app-container has fixed max-width/height in the OS iframe environment.
         window.addEventListener('resize', updateDimensions);
 
     </script>
