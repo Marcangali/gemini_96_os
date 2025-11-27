@@ -1,0 +1,871 @@
+<!--
+APP_NAME: Tetra3D
+APP_ICON: https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/Tetra3D_1764276054806/icon.png?t=1764276278902
+WINDOW_WIDTH: 420
+WINDOW_HEIGHT: 640
+STORE_ID: tetra3d-game
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetra3D: BlockOut</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --window-bg: #ffffff;
+            --accent: #0078d4;
+            --accent-hover: #106ebe;
+            --text-main: #202020;
+            --text-sub: #606060;
+            --well-bg: #000000;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        #app-root {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: var(--window-bg);
+            position: relative;
+        }
+
+        /* Header */
+        header {
+            height: 40px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .app-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .controls-top {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: var(--text-sub);
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        .icon-btn:hover { background: rgba(0,0,0,0.05); color: var(--text-main); }
+        .icon-btn:active { transform: scale(0.95); }
+
+        /* Main Layout */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: #202020; /* Dark surround for game */
+            overflow: hidden;
+        }
+
+        /* Canvas Area */
+        #game-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        canvas {
+            background: var(--well-bg);
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+
+        /* Sidebar / HUD */
+        #hud-bar {
+            height: 60px;
+            background: #2b2b2b;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            border-top: 1px solid #3d3d3d;
+            color: #fff;
+            padding: 0 10px;
+        }
+
+        .hud-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hud-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #aaa;
+            margin-bottom: 2px;
+        }
+
+        .hud-value {
+            font-size: 18px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+        }
+
+        /* Overlays */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            color: white;
+            text-align: center;
+        }
+        
+        .overlay.active { opacity: 1; pointer-events: all; }
+
+        h1 {
+            font-size: 36px;
+            margin: 0 0 8px 0;
+            background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .subtitle { color: #aaa; font-size: 14px; margin-bottom: 32px; }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 32px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 120, 212, 0.4);
+            transition: transform 0.1s, background 0.2s;
+        }
+        .btn-primary:hover { background: var(--accent-hover); transform: scale(1.05); }
+        .btn-primary:active { transform: scale(0.95); }
+
+        .key-legend {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 12px 24px;
+            text-align: left;
+            font-size: 12px;
+            color: #ccc;
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .k-row { display: flex; align-items: center; justify-content: space-between; width: 140px; }
+        .kbd {
+            font-family: 'Consolas', monospace;
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.2);
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        /* Mobile Controls */
+        #mobile-controls {
+            display: none; /* Only show if touch logic added, keeping clean for now */
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="app-root">
+    <header>
+        <div class="app-title">
+            <span>Tetra3D</span>
+        </div>
+        <div class="controls-top">
+            <button id="btn-pause" class="icon-btn" title="Pause">II</button>
+            <button id="btn-reset" class="icon-btn" title="Reset">↻</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="game-container">
+            <canvas id="game-canvas"></canvas>
+        </div>
+
+        <div id="hud-bar">
+            <div class="hud-item">
+                <span class="hud-label">Score</span>
+                <span class="hud-value" id="score-val">0</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">Level</span>
+                <span class="hud-value" id="level-val">1</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">Depth</span>
+                <span class="hud-value" id="depth-val">0</span>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="overlay active">
+            <h1>Tetra3D</h1>
+            <div class="subtitle">Perspective Block Puzzle</div>
+            <button id="btn-start" class="btn-primary">Start Game</button>
+            
+            <div class="key-legend">
+                <div class="k-row"><span class="kbd">Arrows</span> Move X/Y</div>
+                <div class="k-row"><span class="kbd">Z</span> <span class="kbd">X</span> Spin</div>
+                <div class="k-row"><span class="kbd">A</span> <span class="kbd">S</span> Flip / Roll</div>
+                <div class="k-row"><span class="kbd">Space</span> Drop</div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="overlay">
+            <h1 style="-webkit-text-fill-color: #ff4d4d;">Game Over</h1>
+            <div class="subtitle">You filled the well!</div>
+            <div style="margin-bottom: 20px; font-size: 24px; font-weight: bold;" id="final-score">0</div>
+            <button id="btn-restart" class="btn-primary">Try Again</button>
+        </div>
+        
+        <!-- Pause Screen -->
+         <div id="pause-screen" class="overlay">
+            <h1>Paused</h1>
+            <button id="btn-resume" class="btn-primary" style="margin-top:20px;">Resume</button>
+        </div>
+    </main>
+</div>
+
+<script>
+/**
+ * Tetra3D: BlockOut Implementation
+ * 
+ * Coordinate System:
+ * X: Horizontal (-2 to 2)
+ * Y: Vertical (-2 to 2) 
+ * Z: Depth (0 to BOARD_DEPTH)
+ * 
+ * Z=0 is closest to camera (Top).
+ * Z=BOARD_DEPTH is furthest (Bottom).
+ * Pieces spawn at Z=0 and fall towards Z=BOARD_DEPTH.
+ */
+
+// --- Constants ---
+const BOARD_W = 5;
+const BOARD_H = 5;
+const BOARD_D = 12; // Depth of the well
+
+const CANVAS_SIZE = 360; // Internal resolution
+const FOCAL_LENGTH = 300;
+const TILE_SIZE = 40; // Base size at Z=0
+
+// Colors for pieces (Standard PolyCube Colors)
+const COLORS = [
+    '#333333', // Empty
+    '#FF0D72', // T - Magenta
+    '#0DC2FF', // I - Cyan
+    '#0DFF72', // S - Green
+    '#F538FF', // Z - Purple (Custom)
+    '#FF8E0D', // L - Orange
+    '#FFE138', // O - Yellow
+    '#3877FF', // J - Blue
+    '#E62E2E'  // Tripod/Corner - Red
+];
+
+// 3D Shapes (Offsets from center [x,y,z])
+// Simplified set for playability
+const SHAPES = [
+    // 1. Single Block (Dot) - Rare but useful
+    [{x:0,y:0,z:0}], 
+    
+    // 2. Line (3)
+    [{x:0,y:0,z:0}, {x:-1,y:0,z:0}, {x:1,y:0,z:0}], 
+    
+    // 3. L Shape (Flat)
+    [{x:0,y:0,z:0}, {x:-1,y:0,z:0}, {x:1,y:0,z:0}, {x:1,y:1,z:0}], 
+    
+    // 4. Square (2x2)
+    [{x:0,y:0,z:0}, {x:1,y:0,z:0}, {x:0,y:1,z:0}, {x:1,y:1,z:0}], 
+    
+    // 5. Tripod (Corner 3D)
+    [{x:0,y:0,z:0}, {x:1,y:0,z:0}, {x:0,y:1,z:0}, {x:0,y:0,z:1}], 
+    
+    // 6. S Shape (3D twisted)
+    [{x:0,y:0,z:0}, {x:1,y:0,z:0}, {x:0,y:1,z:0}, {x:-1,y:1,z:0}],
+    
+    // 7. T Shape
+    [{x:0,y:0,z:0}, {x:-1,y:0,z:0}, {x:1,y:0,z:0}, {x:0,y:1,z:0}]
+];
+
+// --- Global State ---
+let canvas, ctx;
+let board = []; // 3D Array: board[z][y][x]
+let activePiece = null;
+let score = 0;
+let level = 1;
+let lastTime = 0;
+let dropCounter = 0;
+let dropInterval = 1000;
+let isPaused = false;
+let isGameOver = false;
+let animationFrameId;
+
+// --- Initialization ---
+window.onload = () => {
+    canvas = document.getElementById('game-canvas');
+    ctx = canvas.getContext('2d', { alpha: false });
+    
+    // Set HighDPI
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = CANVAS_SIZE * dpr;
+    canvas.height = CANVAS_SIZE * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%'; // Max height constrained by container
+    canvas.style.maxWidth = '400px';
+    canvas.style.maxHeight = '400px';
+    ctx.scale(dpr, dpr);
+
+    // Initial Screen
+    draw(); 
+    
+    // Listeners
+    document.addEventListener('keydown', handleInput);
+    document.getElementById('btn-start').addEventListener('click', startGame);
+    document.getElementById('btn-restart').addEventListener('click', startGame);
+    document.getElementById('btn-reset').addEventListener('click', () => { if(confirm("Restart?")) startGame(); });
+    document.getElementById('btn-pause').addEventListener('click', togglePause);
+    document.getElementById('btn-resume').addEventListener('click', togglePause);
+};
+
+// --- Core Logic ---
+
+function initBoard() {
+    board = [];
+    for(let z=0; z<BOARD_D; z++) {
+        let layer = [];
+        for(let y=0; y<BOARD_H; y++) {
+            let row = new Array(BOARD_W).fill(0);
+            layer.push(row);
+        }
+        board.push(layer);
+    }
+}
+
+function spawnPiece() {
+    const typeIdx = Math.floor(Math.random() * SHAPES.length);
+    const shape = JSON.parse(JSON.stringify(SHAPES[typeIdx])); // Deep copy
+    
+    activePiece = {
+        blocks: shape,
+        x: Math.floor(BOARD_W / 2),
+        y: Math.floor(BOARD_H / 2),
+        z: 0, // Top
+        color: typeIdx + 1
+    };
+
+    // Check immediate collision (Game Over)
+    if (checkCollision(activePiece.x, activePiece.y, activePiece.z, activePiece.blocks)) {
+        gameOver();
+    }
+}
+
+function startGame() {
+    initBoard();
+    score = 0;
+    level = 1;
+    dropInterval = 1000;
+    isGameOver = false;
+    isPaused = false;
+    activePiece = null;
+    
+    updateHUD();
+    spawnPiece();
+    
+    document.getElementById('start-screen').classList.remove('active');
+    document.getElementById('game-over-screen').classList.remove('active');
+    document.getElementById('pause-screen').classList.remove('active');
+
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    lastTime = performance.now();
+    gameLoop(lastTime);
+}
+
+function gameOver() {
+    isGameOver = true;
+    document.getElementById('final-score').innerText = score;
+    document.getElementById('game-over-screen').classList.add('active');
+}
+
+function togglePause() {
+    if (isGameOver) return;
+    isPaused = !isPaused;
+    const pScreen = document.getElementById('pause-screen');
+    const btn = document.getElementById('btn-pause');
+    
+    if (isPaused) {
+        pScreen.classList.add('active');
+        btn.textContent = "▶";
+    } else {
+        pScreen.classList.remove('active');
+        btn.textContent = "II";
+        lastTime = performance.now();
+        gameLoop(lastTime);
+    }
+}
+
+// --- Game Loop ---
+
+function gameLoop(time) {
+    if (isPaused || isGameOver) return;
+    
+    const dt = time - lastTime;
+    lastTime = time;
+    
+    dropCounter += dt;
+    if (dropCounter > dropInterval) {
+        dropPiece();
+        dropCounter = 0;
+    }
+    
+    draw();
+    animationFrameId = requestAnimationFrame(gameLoop);
+}
+
+// --- Movement & Physics ---
+
+function checkCollision(ox, oy, oz, blocks) {
+    for (let b of blocks) {
+        const x = ox + b.x;
+        const y = oy + b.y;
+        const z = oz + b.z;
+        
+        // Bounds
+        if (x < 0 || x >= BOARD_W) return true;
+        if (y < 0 || y >= BOARD_H) return true;
+        if (z >= BOARD_D) return true; 
+        
+        // Board occupancy
+        // Only check if z >= 0. Blocks can temporarily exist above z=0 during rotation, 
+        // but typically we clamp or allow. For simplicity, check bounds 0.
+        if (z >= 0 && board[z][y][x] !== 0) return true;
+    }
+    return false;
+}
+
+function movePiece(dx, dy) {
+    if (!activePiece) return;
+    if (!checkCollision(activePiece.x + dx, activePiece.y + dy, activePiece.z, activePiece.blocks)) {
+        activePiece.x += dx;
+        activePiece.y += dy;
+    }
+}
+
+function dropPiece() {
+    if (!activePiece) return;
+    
+    if (!checkCollision(activePiece.x, activePiece.y, activePiece.z + 1, activePiece.blocks)) {
+        activePiece.z++;
+        updateHUD(); // Depth update
+    } else {
+        lockPiece();
+    }
+}
+
+function hardDrop() {
+    if (!activePiece) return;
+    while (!checkCollision(activePiece.x, activePiece.y, activePiece.z + 1, activePiece.blocks)) {
+        activePiece.z++;
+        score += 2; // Bonus for hard drop
+    }
+    lockPiece();
+    updateHUD();
+}
+
+function lockPiece() {
+    // Add to board
+    for (let b of activePiece.blocks) {
+        const x = activePiece.x + b.x;
+        const y = activePiece.y + b.y;
+        const z = activePiece.z + b.z;
+        
+        if (z >= 0 && z < BOARD_D && x >= 0 && x < BOARD_W && y >= 0 && y < BOARD_H) {
+            board[z][y][x] = activePiece.color;
+        }
+    }
+    
+    checkLines();
+    spawnPiece();
+}
+
+function checkLines() {
+    // In BlockOut, usually a full layer (plane) clears.
+    let linesCleared = 0;
+    
+    // Scan from bottom up
+    for (let z = 0; z < BOARD_D; z++) {
+        let full = true;
+        for (let y = 0; y < BOARD_H; y++) {
+            for (let x = 0; x < BOARD_W; x++) {
+                if (board[z][y][x] === 0) {
+                    full = false;
+                    break;
+                }
+            }
+            if (!full) break;
+        }
+        
+        if (full) {
+            // Remove layer z
+            // To simulate gravity in the well, layers ABOVE (z < current) drop down?
+            // Actually in BlockOut, usually layers Z < cleared move towards Z_max.
+            // Wait, gravity is Z+ direction.
+            // So if Z=10 clears, Z=0..9 move to Z=1..10.
+            
+            for (let k = z; k > 0; k--) {
+                // Copy k-1 to k
+                for (let y = 0; y < BOARD_H; y++) {
+                    for (let x = 0; x < BOARD_W; x++) {
+                        board[k][y][x] = board[k-1][y][x];
+                    }
+                }
+            }
+            // Clear Z=0
+            for (let y = 0; y < BOARD_H; y++) {
+                for (let x = 0; x < BOARD_W; x++) board[0][y][x] = 0;
+            }
+            
+            linesCleared++;
+            // Re-check same index z because new layer shifted in
+            // Actually standard loop z++ handles it if we assume simple slide
+        }
+    }
+    
+    if (linesCleared > 0) {
+        const scores = [0, 100, 300, 500, 800]; // 1, 2, 3, 4 layers
+        score += (scores[linesCleared] || 1000) * level;
+        level = Math.floor(score / 2000) + 1;
+        dropInterval = Math.max(150, 1000 - (level * 80));
+        updateHUD();
+    }
+}
+
+// Rotation
+// Axis: 'x', 'y', 'z'
+// Dir: 1 or -1
+function rotatePiece(axis, dir) {
+    if (!activePiece) return;
+    
+    const newBlocks = activePiece.blocks.map(b => {
+        let x = b.x, y = b.y, z = b.z;
+        let nx, ny, nz;
+        
+        // 90 degree rotations
+        if (axis === 'z') {
+            // Screen plane rotation
+            nx = -y * dir;
+            ny = x * dir;
+            nz = z;
+        } else if (axis === 'y') {
+            // Around Vertical axis
+            nx = z * dir;
+            ny = y;
+            nz = -x * dir;
+        } else if (axis === 'x') {
+            // Around Horizontal axis
+            nx = x;
+            ny = -z * dir;
+            nz = y * dir;
+        }
+        return {x: Math.round(nx), y: Math.round(ny), z: Math.round(nz)};
+    });
+    
+    // Wall kicks logic (simple)
+    // Try original pos, then try shifting x/y/z
+    const kicks = [
+        {x:0, y:0}, {x:1, y:0}, {x:-1, y:0}, {x:0, y:1}, {x:0, y:-1}
+    ];
+    
+    for (let k of kicks) {
+        if (!checkCollision(activePiece.x + k.x, activePiece.y + k.y, activePiece.z, newBlocks)) {
+            activePiece.blocks = newBlocks;
+            activePiece.x += k.x;
+            activePiece.y += k.y;
+            return;
+        }
+    }
+}
+
+function updateHUD() {
+    document.getElementById('score-val').innerText = score;
+    document.getElementById('level-val').innerText = level;
+    document.getElementById('depth-val').innerText = activePiece ? activePiece.z : 0;
+}
+
+function handleInput(e) {
+    if (isPaused || isGameOver) return;
+    
+    switch(e.code) {
+        case 'ArrowLeft': movePiece(-1, 0); break;
+        case 'ArrowRight': movePiece(1, 0); break;
+        case 'ArrowUp': movePiece(0, -1); break;
+        case 'ArrowDown': movePiece(0, 1); break;
+        case 'Space': hardDrop(); break;
+        case 'KeyZ': rotatePiece('z', -1); break; // CCW
+        case 'KeyX': rotatePiece('z', 1); break;  // CW
+        case 'KeyA': rotatePiece('y', -1); break;
+        case 'KeyD': rotatePiece('y', 1); break;
+        case 'KeyW': rotatePiece('x', 1); break;
+        case 'KeyS': rotatePiece('x', -1); break;
+    }
+}
+
+// --- 3D Projection & Rendering ---
+
+// Project 3D coordinate (board space) to 2D canvas
+function project(x, y, z) {
+    // Center logic: The well is from -W/2 to W/2
+    const centerOffset = CANVAS_SIZE / 2;
+    
+    // Scale board coordinates to World Space
+    // Center the board at 0,0
+    const wx = (x - BOARD_W/2) * TILE_SIZE;
+    const wy = (y - BOARD_H/2) * TILE_SIZE;
+    // Z increases away from camera.
+    // Base depth offset to ensure nothing is behind camera
+    const wz = (z * TILE_SIZE) + 20; 
+    
+    // Perspective math
+    // scale = f / (f + z)
+    // We add an offset to z to keep it in front of lens
+    const scale = FOCAL_LENGTH / (FOCAL_LENGTH + wz);
+    
+    return {
+        x: centerOffset + (wx * scale) + (TILE_SIZE/2 * scale), 
+        y: centerOffset + (wy * scale) + (TILE_SIZE/2 * scale),
+        s: scale * TILE_SIZE
+    };
+}
+
+function drawFace(ctx, pts, color) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.3)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Highlight edges
+    ctx.strokeStyle = "rgba(255,255,255,0.2)";
+    ctx.stroke();
+}
+
+function getBlockColor(idx) {
+    return COLORS[idx] || '#fff';
+}
+
+function drawBlock(x, y, z, cIdx, opacity = 1.0) {
+    const baseColor = getBlockColor(cIdx);
+    
+    // Calculate 8 corners
+    // Front face (z), Back face (z+1)
+    const p0 = project(x, y, z);          // Top-Left Front
+    const p1 = project(x+1, y, z);        // Top-Right Front
+    const p2 = project(x+1, y+1, z);      // Btm-Right Front
+    const p3 = project(x, y+1, z);        // Btm-Left Front
+    
+    const p4 = project(x, y, z+1);        // TL Back
+    const p5 = project(x+1, y, z+1);      // TR Back
+    const p6 = project(x+1, y+1, z+1);    // BR Back
+    const p7 = project(x, y+1, z+1);      // BL Back
+    
+    // Back Face
+    drawFace(ctx, [p4, p5, p6, p7], baseColor);
+    
+    // Sides - We only need to draw visible sides based on position relative to center
+    // However, painter's algo + simple solid drawing is enough for this aesthetic
+    // if we draw carefully.
+    
+    // Simple approach: Draw all connecting sides then front
+    // Darken side colors
+    const sideColor = adjustColor(baseColor, -40);
+    
+    // Top/Bottom/Left/Right connections
+    drawFace(ctx, [p0, p1, p5, p4], sideColor); // Top
+    drawFace(ctx, [p3, p2, p6, p7], sideColor); // Bottom
+    drawFace(ctx, [p0, p3, p7, p4], sideColor); // Left
+    drawFace(ctx, [p1, p2, p6, p5], sideColor); // Right
+    
+    // Front Face (Brightest)
+    drawFace(ctx, [p0, p1, p2, p3], baseColor);
+}
+
+// Hex color dimmer
+function adjustColor(col, amt) {
+    let usePound = false;
+    if (col[0] == "#") {
+        col = col.slice(1);
+        usePound = true;
+    }
+    let num = parseInt(col,16);
+    let r = (num >> 16) + amt;
+    if (r > 255) r = 255; else if  (r < 0) r = 0;
+    let b = ((num >> 8) & 0x00FF) + amt;
+    if (b > 255) b = 255; else if  (b < 0) b = 0;
+    let g = (num & 0x0000FF) + amt;
+    if (g > 255) g = 255; else if  (g < 0) g = 0;
+    return (usePound?"#":"") + (g | (b << 8) | (r << 16)).toString(16);
+}
+
+function drawGrid() {
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+    
+    // Draw depth lines (corners)
+    const corners = [
+        {x:0, y:0}, {x:BOARD_W, y:0}, 
+        {x:BOARD_W, y:BOARD_H}, {x:0, y:BOARD_H}
+    ];
+    
+    for(let c of corners) {
+        const start = project(c.x, c.y, 0);
+        const end = project(c.x, c.y, BOARD_D);
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+    }
+    
+    // Draw rectangular sections down the well
+    for(let z=0; z<=BOARD_D; z++) {
+        ctx.strokeStyle = z === BOARD_D ? "#666" : "#222"; // Floor is lighter
+        ctx.beginPath();
+        const p0 = project(0, 0, z);
+        const p1 = project(BOARD_W, 0, z);
+        const p2 = project(BOARD_W, BOARD_H, z);
+        const p3 = project(0, BOARD_H, z);
+        
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.closePath();
+        ctx.stroke();
+    }
+}
+
+function draw() {
+    // Clear
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    
+    // Draw Well Walls
+    drawGrid();
+    
+    // Render Strategy: Painter's Algorithm
+    // Draw from Z = BOARD_D (Furthest) to Z = 0 (Closest)
+    
+    for (let z = BOARD_D - 1; z >= 0; z--) {
+        // 1. Draw Board Blocks at this layer
+        for (let y = 0; y < BOARD_H; y++) {
+            for (let x = 0; x < BOARD_W; x++) {
+                const val = board[z][y][x];
+                if (val !== 0) {
+                    drawBlock(x, y, z, val);
+                }
+            }
+        }
+        
+        // 2. Draw Active Piece blocks if they are at this layer
+        if (activePiece) {
+            for (let b of activePiece.blocks) {
+                if (activePiece.z + b.z === z) {
+                    drawBlock(activePiece.x + b.x, activePiece.y + b.y, activePiece.z + b.z, activePiece.color);
+                }
+            }
+        }
+    }
+    
+    // Helper: Draw highlight around active piece's column on the floor (Shadow)
+    if (activePiece) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 2;
+        // Determine shadow Z (where it would land)
+        let shadowZ = activePiece.z;
+        while (!checkCollision(activePiece.x, activePiece.y, shadowZ + 1, activePiece.blocks)) {
+            shadowZ++;
+        }
+        
+        for (let b of activePiece.blocks) {
+             const p0 = project(activePiece.x + b.x, activePiece.y + b.y, shadowZ + b.z + 1); // Floor of block
+             const p1 = project(activePiece.x + b.x + 1, activePiece.y + b.y + 1, shadowZ + b.z + 1);
+             // Approximate shadow rect
+             // Correct logic is projecting the quad. 
+             const sTL = project(activePiece.x + b.x, activePiece.y + b.y, shadowZ + b.z + 1);
+             const sBR = project(activePiece.x + b.x + 1, activePiece.y + b.y + 1, shadowZ + b.z + 1);
+             const w = sBR.x - sTL.x;
+             
+             ctx.strokeRect(sTL.x, sTL.y, w, w);
+        }
+        ctx.restore();
+    }
+}
+
+</script>
+</body>
+</html>
