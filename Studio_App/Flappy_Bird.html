@@ -137,11 +137,24 @@ WINDOW_HEIGHT: 600
             color: var(--primary-color);
             text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
+        .game-overlay h3 {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
 
         .game-overlay p {
             font-size: 1.1em;
             margin-bottom: 25px;
             color: var(--text-color);
+        }
+
+        .difficulty-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
         }
 
         .score-display {
@@ -168,6 +181,7 @@ WINDOW_HEIGHT: 600
             transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
             box-shadow: 0 1px 3px var(--shadow-color);
             outline: none;
+            min-width: 120px; /* Ensure buttons have consistent width */
         }
 
         .button:hover {
@@ -199,9 +213,19 @@ WINDOW_HEIGHT: 600
             <div class="score-display" id="scoreDisplay">0</div>
             <div class="ground" id="ground"></div>
 
+            <div class="game-overlay" id="difficultyOverlay">
+                <h2>Flappy Bird</h2>
+                <h3>Choose Difficulty</h3>
+                <div class="difficulty-buttons">
+                    <button class="button" onclick="selectDifficulty('easy')">Easy</button>
+                    <button class="button" onclick="selectDifficulty('medium')">Medium</button>
+                    <button class="button" onclick="selectDifficulty('hard')">Hard</button>
+                </div>
+            </div>
+
             <div class="game-overlay" id="startOverlay">
                 <h2>Flappy Bird</h2>
-                <p>Press space or click to flap!</p>
+                <p id="startMessage">Press space or click to flap!</p>
                 <button class="button" onclick="startGame()">Start Game</button>
             </div>
 
@@ -217,23 +241,55 @@ WINDOW_HEIGHT: 600
         const gameArea = document.getElementById('gameArea');
         const bird = document.getElementById('bird');
         const scoreDisplay = document.getElementById('scoreDisplay');
+        const difficultyOverlay = document.getElementById('difficultyOverlay');
         const startOverlay = document.getElementById('startOverlay');
+        const startMessage = document.getElementById('startMessage');
         const gameOverOverlay = document.getElementById('gameOverOverlay');
         const finalScoreSpan = document.getElementById('finalScore');
         const ground = document.getElementById('ground');
 
+        // Difficulty Settings
+        const difficulties = {
+            easy: {
+                gravity: 0.7, // Lower gravity for slower fall
+                jumpStrength: -13, // Higher jump for more control
+                pipeSpeed: 2.5, // Slower pipes
+                pipeGapHeight: 180, // Wider gap
+                pipeSpawnInterval: 1800, // Pipes appear less frequently
+                name: 'Easy'
+            },
+            medium: {
+                gravity: 0.8,
+                jumpStrength: -12,
+                pipeSpeed: 3,
+                pipeGapHeight: 150,
+                pipeSpawnInterval: 1500,
+                name: 'Medium'
+            },
+            hard: {
+                gravity: 0.9, // Higher gravity for faster fall
+                jumpStrength: -11, // Lower jump for less control
+                pipeSpeed: 3.5, // Faster pipes
+                pipeGapHeight: 120, // Narrower gap
+                pipeSpawnInterval: 1200, // Pipes appear more frequently
+                name: 'Hard'
+            }
+        };
+
+        let currentDifficulty = null; // Will store the selected difficulty object
+
         let birdY = 0;
         let birdVelocity = 0;
-        // Physics adjustments for a snappier feel
-        const gravity = 0.8; // Increased gravity for faster fall
-        const jumpStrength = -12; // Increased jump strength for more powerful flap
+        
+        // These will be set based on difficulty
+        let gravity;
+        let jumpStrength;
+        let pipeSpeed;
+        let pipeGapHeight;
+        let pipeSpawnInterval;
 
         let pipes = [];
         const pipeWidth = 50;
-        const pipeGapHeight = 150;
-        // Game pace adjustments for quicker reaction time requirement
-        const pipeSpeed = 3; // Increased pipe speed
-        const pipeSpawnInterval = 1500; // Decreased interval for more frequent pipes
         let pipeTimer;
 
         let score = 0;
@@ -281,8 +337,8 @@ WINDOW_HEIGHT: 600
         function flap() {
             if (isGameOver) return;
 
-            if (!gameStarted) {
-                // If game hasn't started, the first flap should start the game AND apply the jump
+            if (!gameStarted && startOverlay.classList.contains('active')) {
+                // If game hasn't started, and start overlay is active, first flap starts the game AND applies the jump
                 startGame();
             }
             // Apply the jump strength
@@ -295,28 +351,23 @@ WINDOW_HEIGHT: 600
             const minPipeHeight = 50;
             const maxTopPipeHeight = playableHeight - pipeGapHeight - minPipeHeight;
 
-            // Ensure maxTopPipeHeight is not less than minPipeHeight to avoid invalid range
             let actualMaxTopPipeHeight = Math.max(minPipeHeight, maxTopPipeHeight);
             if (playableHeight - pipeGapHeight < 2 * minPipeHeight) {
-                // If the total playable height minus gap is too small for two min pipes,
-                // we might have issues. This game might not look good in very small windows.
-                // For now, clamp to avoid negative range or ensure min height.
-                if (playableHeight < pipeGapHeight + 2 * minPipeHeight) { // Cannot create valid pipes
-                    console.warn("Playable area too small for proper pipes.");
-                    return;
+                if (playableHeight < pipeGapHeight + 2 * minPipeHeight) {
+                    // console.warn("Playable area too small for proper pipes.");
+                    return; // Cannot create valid pipes, stop
                 }
                 actualMaxTopPipeHeight = playableHeight - pipeGapHeight - minPipeHeight;
             }
             
             let topPipeHeight = Math.floor(Math.random() * (actualMaxTopPipeHeight - minPipeHeight + 1)) + minPipeHeight;
-            // Ensure bottom pipe is also minimum height
             let bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
+            
             if (bottomPipeHeight < minPipeHeight) {
-                // This scenario means topPipeHeight was too large, or playableHeight is too small
-                // Recalculate based on a guaranteed minimum for both and the gap
-                topPipeHeight = playableHeight - pipeGapHeight - minPipeHeight; // Max possible top pipe
-                if (topPipeHeight < minPipeHeight) topPipeHeight = minPipeHeight; // Ensure min
-                bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight; // Recalculate bottom
+                // Adjust if bottom pipe is too small due to very large top pipe
+                topPipeHeight = playableHeight - pipeGapHeight - minPipeHeight;
+                if (topPipeHeight < minPipeHeight) topPipeHeight = minPipeHeight;
+                bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
             }
             
             const pipeX = gameAreaWidth;
@@ -380,8 +431,8 @@ WINDOW_HEIGHT: 600
 
                 const pipeRight = p.x + pipeWidth;
                 const pipeLeft = p.x;
-                const pipeTopBottom = p.topHeight;
-                const pipeBottomTop = p.topHeight + pipeGapHeight;
+                const pipeTopBottom = p.topHeight; // Y coordinate of bottom of top pipe
+                const pipeBottomTop = p.topHeight + pipeGapHeight; // Y coordinate of top of bottom pipe
 
                 if (birdRight > pipeLeft && birdLeft < pipeRight) {
                     if (birdTop < pipeTopBottom || birdBottom > pipeBottomTop) {
@@ -402,10 +453,7 @@ WINDOW_HEIGHT: 600
             updatePipes();
             checkCollisions();
             
-            // Fix for physics interference: If a collision occurred and endGame was called,
-            // immediately halt the current frame's execution to prevent further visual updates
-            // of the bird or pipes after the game is technically over.
-            if (isGameOver) {
+            if (isGameOver) { // Check again in case collision in this frame ended game
                 cancelAnimationFrame(animationFrameId);
                 return;
             }
@@ -413,11 +461,37 @@ WINDOW_HEIGHT: 600
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
+        function applyDifficultySettings() {
+            if (!currentDifficulty) {
+                console.error("No difficulty selected!");
+                return;
+            }
+            gravity = currentDifficulty.gravity;
+            jumpStrength = currentDifficulty.jumpStrength;
+            pipeSpeed = currentDifficulty.pipeSpeed;
+            pipeGapHeight = currentDifficulty.pipeGapHeight;
+            pipeSpawnInterval = currentDifficulty.pipeSpawnInterval;
+            startMessage.textContent = `Difficulty: ${currentDifficulty.name}. Press space or click to flap!`;
+        }
+
+        function showDifficultyScreen() {
+            difficultyOverlay.classList.add('active');
+            startOverlay.classList.remove('active');
+            gameOverOverlay.classList.remove('active');
+            currentDifficulty = null; // Clear selected difficulty
+        }
+
+        function selectDifficulty(mode) {
+            currentDifficulty = difficulties[mode];
+            applyDifficultySettings();
+            difficultyOverlay.classList.remove('active');
+            startOverlay.classList.add('active'); // Show start game overlay after selection
+        }
+
         function startGame() {
-            if (gameStarted) return;
-            
+            if (gameStarted || !currentDifficulty) return; // Only start if difficulty selected and not already started
+
             updateDimensions();
-            resetGame(false);
             
             startOverlay.classList.remove('active');
             gameOverOverlay.classList.remove('active');
@@ -431,6 +505,7 @@ WINDOW_HEIGHT: 600
             birdVelocity = 0;
             bird.style.top = `${birdY}px`;
 
+            // Clear existing pipes
             pipes.forEach(p => {
                 if (p.pipeTopElement.parentNode === gameArea) {
                     gameArea.removeChild(p.pipeTopElement);
@@ -449,13 +524,13 @@ WINDOW_HEIGHT: 600
             isGameOver = true;
             gameStarted = false;
             clearInterval(pipeTimer);
-            cancelAnimationFrame(animationFrameId); // This cancels the *next* scheduled frame.
+            cancelAnimationFrame(animationFrameId);
 
             finalScoreSpan.textContent = score;
             gameOverOverlay.classList.add('active');
         }
 
-        function resetGame(showStartScreen = true) {
+        function resetGame() {
             isGameOver = true;
             gameStarted = false;
             clearInterval(pipeTimer);
@@ -474,6 +549,7 @@ WINDOW_HEIGHT: 600
             score = 0;
             scoreDisplay.textContent = score;
 
+            // Clear pipes from screen
             pipes.forEach(p => {
                 if (p.pipeTopElement.parentNode === gameArea) {
                     gameArea.removeChild(p.pipeTopElement);
@@ -484,30 +560,33 @@ WINDOW_HEIGHT: 600
             });
             pipes = [];
 
-            gameOverOverlay.classList.remove('active');
-            if (showStartScreen) {
-                startOverlay.classList.add('active');
-            } else {
-                startOverlay.classList.remove('active');
-            }
+            // After game over, always show the difficulty selection screen
+            showDifficultyScreen();
         }
 
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
-                flap();
+                // Only allow flap if start overlay is active OR game is running
+                if (startOverlay.classList.contains('active') || gameStarted) {
+                    flap();
+                }
             }
         });
 
         gameArea.addEventListener('click', (e) => {
-            if (!e.target.closest('.game-overlay.active button')) {
+            // If a button was clicked, let its onclick handle it.
+            if (e.target.closest('.button')) return;
+
+            // Only allow flap if start overlay is active OR game is running
+            if (startOverlay.classList.contains('active') || gameStarted) {
                 flap();
             }
         });
         
         document.addEventListener('DOMContentLoaded', () => {
             updateDimensions();
-            resetGame(true);
+            showDifficultyScreen(); // Start by showing difficulty selection
         });
 
         window.addEventListener('resize', updateDimensions);
