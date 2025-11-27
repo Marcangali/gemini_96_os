@@ -361,18 +361,30 @@ STORE_ID: duck-maze-hun
                 const ghostColors = ['#FF0000', '#FFB8FF', '#00FFFF', '#FFB852'];
                 this.ghosts = [];
                 
-                // Release times: Ghost 0 immediately, others delayed
-                const delays = [0, 4000, 8000, 12000]; 
+                // Delays for subsequent ghosts (indices 1, 2, 3) after the first one is out
+                const delayedGhostReleaseTimes = [4000, 8000, 12000]; 
 
-                for(let i=0; i<4; i++) {
+                // First ghost (index 0) starts active and exits immediately
+                this.ghosts.push({
+                    x: 10 * TILE_SIZE, // Start at the door's horizontal center
+                    y: 9 * TILE_SIZE,  // Start at the door tile (map[9][10])
+                    color: ghostColors[0],
+                    dir: {x:0, y:-1}, // Immediately try to move up and out
+                    speed: GHOST_SPEED,
+                    releaseTime: Date.now() - 1000, // Set release time in the past
+                    active: true // This ghost is active from the start
+                });
+
+                // Remaining ghosts (indices 1, 2, 3) start inactive inside the ghost house
+                for(let i=1; i<4; i++) {
                     this.ghosts.push({
-                        x: (9 + i%3) * TILE_SIZE,
+                        x: (9 + (i%3)) * TILE_SIZE, // Original spawn positions for ghosts inside the house
                         y: 10 * TILE_SIZE,
                         color: ghostColors[i],
-                        dir: {x:0, y:-1},
+                        dir: {x:0, y:-1}, // Initial direction, will be used when activated
                         speed: GHOST_SPEED,
-                        releaseTime: Date.now() + delays[i],
-                        active: false
+                        releaseTime: Date.now() + delayedGhostReleaseTimes[i-1], // Apply respective delays
+                        active: false // These ghosts start inactive
                     });
                 }
             }
@@ -505,9 +517,9 @@ STORE_ID: duck-maze-hun
                             // We need to allow ghosts to pass door (9) ONLY if they are inside
                             let isW = this.isWall(cx + d.x, cy + d.y);
                             
-                            // Special case: Ghost inside house can move up through door
+                            // Special case: Ghost can move up through door (tile type 9) if active
                             const tileType = this.map[cy+d.y] ? this.map[cy+d.y][cx+d.x] : 1;
-                            if (tileType === 9 && entity.active) isW = false; 
+                            if (tileType === 9 && entity.active && d.y === -1) isW = false; 
 
                             if (!isW) possibleDirs.push(d);
                         }
@@ -622,6 +634,13 @@ STORE_ID: duck-maze-hun
                         g.active = false;
                         g.releaseTime = Date.now() + delays[i];
                     });
+                    // Re-activate first ghost immediately after death
+                    if (this.ghosts.length > 0) {
+                        this.ghosts[0].x = 10 * TILE_SIZE;
+                        this.ghosts[0].y = 9 * TILE_SIZE;
+                        this.ghosts[0].active = true;
+                        this.ghosts[0].releaseTime = Date.now() - 1000;
+                    }
                 }
             }
 
@@ -703,6 +722,9 @@ STORE_ID: duck-maze-hun
                 if (this.duck.dir.y === 1) angle = Math.PI/2;
                 if (this.duck.dir.y === -1) angle = -Math.PI/2;
 
+                // Adjust mouth animation speed if needed for duck (original code lacked mouth speed property)
+                // Defaulting to a fixed value for consistent animation
+                this.duck.mouthSpeed = this.duck.mouthSpeed || 0.05; 
                 this.duck.mouthOpen += this.duck.mouthSpeed * this.duck.mouthDir;
                 if (this.duck.mouthOpen > 0.6 || this.duck.mouthOpen < 0) this.duck.mouthDir *= -1;
                 const mouth = Math.max(0, this.duck.mouthOpen);
