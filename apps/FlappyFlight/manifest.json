@@ -1,0 +1,9 @@
+{
+  "id": "FlappyFlight",
+  "name": "Flappy Flight",
+  "description": "Created with Gemini Studio",
+  "category": "Custom",
+  "icon": "icon.png",
+  "width": 400,
+  "height": 600
+}
