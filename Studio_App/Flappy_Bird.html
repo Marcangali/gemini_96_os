@@ -23,14 +23,19 @@ WINDOW_HEIGHT: 600
             --shadow-color: rgba(0,0,0,0.05);
         }
 
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
+        /* Ensure html and body take full height of the iframe viewport */
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            /* Removed min-height: 100vh; as html, body height: 100% handles this */
             background-color: var(--background-color);
             color: var(--text-color);
             overflow: hidden; /* Prevent body scroll */
@@ -39,7 +44,7 @@ WINDOW_HEIGHT: 600
 
         .app-container {
             width: 100%;
-            height: 100%;
+            height: 100%; /* This is relative to body's height (which is now 100%) */
             max-width: 400px; /* Constrain game width */
             max-height: 600px; /* Constrain game height */
             background-color: var(--background-color);
@@ -53,10 +58,10 @@ WINDOW_HEIGHT: 600
         .game-area {
             position: relative;
             width: 100%;
-            height: 100%; /* Full height of app-container */
+            /* Removed height: 100%; as flex-grow: 1 correctly handles height within a flex column */
             background-color: #70c5ce; /* Sky blue */
             overflow: hidden;
-            flex-grow: 1;
+            flex-grow: 1; /* This makes it take up all available vertical space in the flex column */
         }
 
         .bird {
@@ -296,13 +301,41 @@ WINDOW_HEIGHT: 600
             // Ensure maxTopPipeHeight is not less than minPipeHeight to avoid negative or zero range
             if (maxTopPipeHeight < minPipeHeight) {
                 // This means the playable area is too small for a pipe and gap.
-                // Handle as an error or just return. For now, we'll try to use minPipeHeight.
-                console.warn("Playable area too small for proper pipes.");
+                // For now, if it's too small, just don't create pipes or make them minimum size.
+                // A better fix might be to adjust gameAreaHeight or scale game.
+                console.warn("Playable area too small for proper pipes, adjusting maxTopPipeHeight.");
+                maxTopPipeHeight = minPipeHeight; // Ensure a valid range, or clamp
+                if (playableHeight - pipeGapHeight < minPipeHeight) { // If not even minPipeHeight + gap + minPipeHeight fits
+                    return; // Cannot create pipe
+                }
+            }
+            
+            // Handle case where maxTopPipeHeight might still be less than minPipeHeight if playableHeight is very small
+            let topPipeHeight;
+            if (maxTopPipeHeight <= minPipeHeight) {
+                topPipeHeight = minPipeHeight;
+            } else {
+                topPipeHeight = Math.floor(Math.random() * (maxTopPipeHeight - minPipeHeight + 1)) + minPipeHeight;
+            }
+
+            const bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
+            if (bottomPipeHeight < minPipeHeight) { // Ensure bottom pipe is also minimum height
+                // This scenario means topPipeHeight was too large, or playableHeight is too small
+                // Recalculate based on a guaranteed minimum for both and the gap
+                const remainingHeight = playableHeight - pipeGapGapHeight;
+                topPipeHeight = Math.floor(Math.random() * (remainingHeight - 2 * minPipeHeight + 1)) + minPipeHeight;
+                if (topPipeHeight < minPipeHeight) topPipeHeight = minPipeHeight;
+                if (topPipeHeight > remainingHeight - minPipeHeight) topPipeHeight = remainingHeight - minPipeHeight;
+                // Re-derive bottom height based on the adjusted top height
+                bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
+            }
+            
+            // Final check to ensure pipes don't overlap or go into ground
+            if (topPipeHeight < 0 || bottomPipeHeight < 0 || topPipeHeight + bottomPipeHeight + pipeGapHeight > playableHeight) {
+                console.error("Pipe calculation error, preventing pipe creation.");
                 return;
             }
 
-            const topPipeHeight = Math.floor(Math.random() * (maxTopPipeHeight - minPipeHeight + 1)) + minPipeHeight;
-            const bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
 
             const pipeX = gameAreaWidth;
 
@@ -453,7 +486,12 @@ WINDOW_HEIGHT: 600
 
             updateDimensions(); // Update dimensions during reset
 
-            birdY = playableHeight / 2 - birdHeight / 2; // Center bird vertically
+            // Ensure playableHeight is not zero before calculating bird position
+            if (playableHeight > 0) {
+                 birdY = playableHeight / 2 - birdHeight / 2; // Center bird vertically
+            } else {
+                 birdY = gameAreaHeight / 2 - birdHeight / 2; // Fallback to full game area height
+            }
             birdVelocity = 0;
             bird.style.top = `${birdY}px`;
             
