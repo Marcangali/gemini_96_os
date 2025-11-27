@@ -1,0 +1,278 @@
+<!--
+APP_NAME: Clicker Game
+APP_ICON: https://win98icons.alexmeub.com/icons/png/cd_disk-1.png
+APP_CATEGORY: Games
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clicker Game</title>
+    <style>
+        body {
+            font-family: 'MS Sans Serif', 'Arial', sans-serif;
+            background-color: #008080; /* Teal background */
+            color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        .window {
+            background-color: #c0c0c0; /* Standard Windows 95 grey */
+            border-top: 2px solid #fff;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            box-shadow: 1px 1px #000;
+            padding: 2px;
+            width: 500px;
+            box-sizing: border-box;
+        }
+
+        .title-bar {
+            background: linear-gradient(to right, #0a246a, #a6caf0); /* Blue gradient */
+            color: #fff;
+            font-weight: bold;
+            padding: 3px 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .title-bar-text {
+            flex-grow: 1;
+        }
+
+        .title-bar-controls button {
+            background-color: #c0c0c0;
+            border: 1px solid #000;
+            width: 16px;
+            height: 14px;
+            padding: 0;
+            font-size: 8px;
+            line-height: 1;
+            box-shadow: 1px 1px #808080 inset, -1px -1px #fff inset;
+            font-family: 'Marlett', 'MS Sans Serif', sans-serif; /* For close icon */
+        }
+
+        .content {
+            padding: 10px;
+            border: 2px solid #808080; /* Inset border effect */
+            border-top-color: #c0c0c0;
+            border-left-color: #c0c0c0;
+            background-color: #fff;
+            display: flex;
+            gap: 15px;
+        }
+
+        .panel {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #808080; /* Standard inset panel */
+            border-top-color: #c0c0c0;
+            border-left-color: #c0c0c0;
+            background-color: #f0f0f0;
+        }
+
+        .panel h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        button {
+            background-color: #c0c0c0;
+            border-top: 2px solid #fff;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            box-shadow: 1px 1px #000;
+            padding: 6px 12px;
+            font-family: 'MS Sans Serif', 'Arial', sans-serif;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        button:active {
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #fff;
+            border-bottom: 2px solid #fff;
+            box-shadow: 1px 1px #000 inset;
+            padding: 7px 11px 5px 13px; /* Adjust padding for pressed look */
+        }
+
+        .status-bar {
+            background-color: #c0c0c0;
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #fff;
+            border-bottom: 2px solid #fff;
+            padding: 3px 5px;
+            margin-top: 5px;
+            font-size: 0.8em;
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-bar-field {
+            flex: 1;
+            border: 1px solid #808080;
+            border-top-color: #c0c0c0;
+            border-left-color: #c0c0c0;
+            padding: 0 3px;
+        }
+
+        .upgrade-item {
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #a0a0a0;
+        }
+        .upgrade-item:last-child {
+            border-bottom: none;
+        }
+        .upgrade-info {
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="window">
+        <div class="title-bar">
+            <div class="title-bar-text">Clicker Game</div>
+            <div class="title-bar-controls">
+                <button aria-label="Minimize" disabled>-</button>
+                <button aria-label="Maximize" disabled>&#x25A1;</button>
+                <button aria-label="Close" disabled>x</button>
+            </div>
+        </div>
+        <div class="content">
+            <div class="panel">
+                <h3>Your Clicks</h3>
+                <p style="font-size: 2em; font-weight: bold; margin: 10px 0;" id="clicksDisplay">0 Clicks</p>
+                <button id="clickButton" style="width: 100%; height: 60px; font-size: 1.5em;">Click Me!</button>
+                <p style="font-size: 0.9em;">Clicks per Click: <span id="clickPowerDisplay">1</span></p>
+            </div>
+            <div class="panel">
+                <h3>Upgrades</h3>
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>Auto Clicker</strong><br>
+                        Level: <span id="autoClickerLevelDisplay">0</span><br>
+                        Generates: <span id="autoClickRateDisplay">0</span> Clicks/sec<br>
+                        Cost: <span id="autoClickerCostDisplay">10</span> Clicks
+                    </div>
+                    <button id="buyAutoClickerButton">Buy Auto Clicker</button>
+                </div>
+
+                <div class="upgrade-item">
+                    <div class="upgrade-info">
+                        <strong>Click Power</strong><br>
+                        Level: <span id="clickMultiplierLevelDisplay">0</span><br>
+                        Increases clicks/click by 1.<br>
+                        Cost: <span id="clickMultiplierCostDisplay">20</span> Clicks
+                    </div>
+                    <button id="buyClickMultiplierButton">Buy Click Power</button>
+                </div>
+            </div>
+        </div>
+        <div class="status-bar">
+            <div class="status-bar-field">Game Ready</div>
+            <div class="status-bar-field">CPS: <span id="totalCpsDisplay">0</span></div>
+            <div class="status-bar-field"></div>
+        </div>
+    </div>
+
+    <script>
+        let clicks = 0;
+        let clickPower = 1;
+
+        let autoClickerLevel = 0;
+        let autoClickerBaseCost = 10;
+        let autoClickerCostMultiplier = 1.2;
+        let autoClickRatePerLevel = 0.1; // Clicks per second per level
+
+        let clickMultiplierLevel = 0;
+        let clickMultiplierBaseCost = 20;
+        let clickMultiplierCostMultiplier = 1.5;
+
+        const clicksDisplay = document.getElementById('clicksDisplay');
+        const clickPowerDisplay = document.getElementById('clickPowerDisplay');
+        const clickButton = document.getElementById('clickButton');
+
+        const autoClickerLevelDisplay = document.getElementById('autoClickerLevelDisplay');
+        const autoClickRateDisplay = document.getElementById('autoClickRateDisplay');
+        const autoClickerCostDisplay = document.getElementById('autoClickerCostDisplay');
+        const buyAutoClickerButton = document.getElementById('buyAutoClickerButton');
+
+        const clickMultiplierLevelDisplay = document.getElementById('clickMultiplierLevelDisplay');
+        const clickMultiplierCostDisplay = document.getElementById('clickMultiplierCostDisplay');
+        const buyClickMultiplierButton = document.getElementById('buyClickMultiplierButton');
+
+        const totalCpsDisplay = document.getElementById('totalCpsDisplay');
+
+        function updateDisplay() {
+            clicksDisplay.textContent = Math.floor(clicks).toLocaleString() + ' Clicks';
+            clickPowerDisplay.textContent = clickPower;
+
+            autoClickerLevelDisplay.textContent = autoClickerLevel;
+            autoClickRateDisplay.textContent = (autoClickerLevel * autoClickRatePerLevel).toFixed(1);
+            autoClickerCostDisplay.textContent = Math.ceil(autoClickerBaseCost * Math.pow(autoClickerCostMultiplier, autoClickerLevel)).toLocaleString();
+            buyAutoClickerButton.disabled = clicks < Math.ceil(autoClickerBaseCost * Math.pow(autoClickerCostMultiplier, autoClickerLevel));
+
+            clickMultiplierLevelDisplay.textContent = clickMultiplierLevel;
+            clickMultiplierCostDisplay.textContent = Math.ceil(clickMultiplierBaseCost * Math.pow(clickMultiplierCostMultiplier, clickMultiplierLevel)).toLocaleString();
+            buyClickMultiplierButton.disabled = clicks < Math.ceil(clickMultiplierBaseCost * Math.pow(clickMultiplierCostMultiplier, clickMultiplierLevel));
+
+            totalCpsDisplay.textContent = (autoClickerLevel * autoClickRatePerLevel).toFixed(1);
+        }
+
+        function doClick() {
+            clicks += clickPower;
+            updateDisplay();
+        }
+
+        function buyAutoClicker() {
+            let cost = Math.ceil(autoClickerBaseCost * Math.pow(autoClickerCostMultiplier, autoClickerLevel));
+            if (clicks >= cost) {
+                clicks -= cost;
+                autoClickerLevel++;
+                updateDisplay();
+            }
+        }
+
+        function buyClickMultiplier() {
+            let cost = Math.ceil(clickMultiplierBaseCost * Math.pow(clickMultiplierCostMultiplier, clickMultiplierLevel));
+            if (clicks >= cost) {
+                clicks -= cost;
+                clickMultiplierLevel++;
+                clickPower++; // Each level adds 1 to click power
+                updateDisplay();
+            }
+        }
+
+        function gameLoop() {
+            let autoClicks = autoClickerLevel * autoClickRatePerLevel;
+            clicks += autoClicks / 10; // Divide by 10 because loop runs every 100ms (10 times a second)
+            updateDisplay();
+        }
+
+        // Event Listeners
+        clickButton.addEventListener('click', doClick);
+        buyAutoClickerButton.addEventListener('click', buyAutoClicker);
+        buyClickMultiplierButton.addEventListener('click', buyClickMultiplier);
+
+        // Initial setup
+        updateDisplay();
+        setInterval(gameLoop, 100); // Run game loop every 100ms
+    </script>
+</body>
+</html>
