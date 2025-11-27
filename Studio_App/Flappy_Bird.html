@@ -402,6 +402,14 @@ WINDOW_HEIGHT: 600
             updatePipes();
             checkCollisions();
             
+            // Fix for physics interference: If a collision occurred and endGame was called,
+            // immediately halt the current frame's execution to prevent further visual updates
+            // of the bird or pipes after the game is technically over.
+            if (isGameOver) {
+                cancelAnimationFrame(animationFrameId);
+                return;
+            }
+
             animationFrameId = requestAnimationFrame(gameLoop);
         }
 
@@ -441,7 +449,7 @@ WINDOW_HEIGHT: 600
             isGameOver = true;
             gameStarted = false;
             clearInterval(pipeTimer);
-            cancelAnimationFrame(animationFrameId);
+            cancelAnimationFrame(animationFrameId); // This cancels the *next* scheduled frame.
 
             finalScoreSpan.textContent = score;
             gameOverOverlay.classList.add('active');
