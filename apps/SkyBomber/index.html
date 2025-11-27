@@ -1,0 +1,487 @@
+<!--
+APP_NAME: Sky Bomber
+APP_ICON: https://i.ibb.co/3y2znvTP/ebd4bb254b5e.png
+WINDOW_WIDTH: 390
+WINDOW_HEIGHT: 540
+STORE_ID: SkyBomber
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky Bomber</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --text-color: #333;
+            --accent-color: #0078d4;
+            --danger-color: #e81123;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            --radius: 8px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #app-container {
+            position: relative;
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 370px;
+            box-sizing: border-box;
+        }
+
+        header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .score-board {
+            font-size: 14px;
+            font-weight: 600;
+            background: #eef2f5;
+            color: #0f172a;
+            padding: 4px 12px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        canvas {
+            background-color: #0f172a; /* Night sky */
+            border-radius: 4px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            cursor: crosshair;
+            display: block;
+        }
+
+        /* Overlays */
+        .overlay {
+            position: absolute;
+            top: 50px; /* Below header roughly */
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            border-radius: 4px;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+            text-align: center;
+        }
+
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay h2 {
+            font-size: 28px;
+            margin: 0 0 8px 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .overlay p {
+            font-size: 14px;
+            color: #cbd5e1;
+            margin-bottom: 20px;
+            line-height: 1.4;
+            max-width: 80%;
+        }
+
+        button.btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            font-size: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        button.btn-primary:hover {
+            background-color: #0064b1;
+        }
+
+        button.btn-primary:active {
+            transform: scale(0.96);
+        }
+
+        .controls-hint {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #94a3b8;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <header>
+            <h1>Sky Bomber</h1>
+            <div class="score-board">Score: <span id="score-display">0</span></div>
+        </header>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="overlay">
+            <h2>Sky Bomber</h2>
+            <p>Destroy the towers before you crash into them.</p>
+            <button class="btn-primary" onclick="startGame()">Start Game</button>
+            <div class="controls-hint">SPACE to drop bomb</div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="overlay hidden">
+            <h2>Game Over</h2>
+            <p>Mission Ended.<br>Final Score: <span id="final-score">0</span></p>
+            <button class="btn-primary" onclick="startGame()">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Game Constants & Configuration
+         * Sized for ~360px width window
+         */
+        const CELL_SIZE = 6; // px
+        const GRID_COLS = 60; // 60 * 6 = 360px
+        const GRID_ROWS = 70; // 70 * 6 = 420px
+        
+        const CANVAS_WIDTH = GRID_COLS * CELL_SIZE; 
+        const CANVAS_HEIGHT = GRID_ROWS * CELL_SIZE;
+
+        const PLANE_SPEED = 2; // pixels per frame
+        const BOMB_SPEED = 3.5; // pixels per frame
+        const DROP_AMOUNT = 6; // Pixels to drop per line
+        
+        // Colors
+        const COLOR_SKY = '#0f172a';
+        const COLOR_BUILDING = '#64748b'; // Slate 500
+        const COLOR_BUILDING_ACCENT = '#475569'; // Slate 600
+        const COLOR_PLANE = '#38bdf8'; // Sky 400
+        const COLOR_BOMB = '#ef4444'; // Red 500
+        const COLOR_PARTICLE = '#fbbf24'; // Amber 400
+
+        /**
+         * DOM Elements
+         */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score-display');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreEl = document.getElementById('final-score');
+
+        // Set dimensions
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        /**
+         * Game State
+         */
+        let grid = []; // 2D array [col][row] -> 1 (block) or 0 (empty)
+        let plane = { x: 0, y: 0 };
+        let bombs = [];
+        let particles = [];
+        let score = 0;
+        let isGameRunning = false;
+        let animationFrameId;
+        let lastTime = 0;
+
+        /**
+         * Initialization
+         */
+        function initGrid() {
+            grid = new Array(GRID_COLS).fill(0).map(() => new Array(GRID_ROWS).fill(0));
+            
+            // Generate random towers
+            for (let c = 0; c < GRID_COLS; c++) {
+                // Height generation
+                let height = 0;
+                
+                // Simplex-ish noise simulation for jagged skyline
+                const noise = Math.sin(c * 0.15) * 15 + Math.random() * 20 + 5;
+                height = Math.floor(Math.max(0, Math.min(GRID_ROWS - 10, noise)));
+
+                // Occasional gaps
+                if (Math.random() < 0.05) height = 0;
+                // Occasional tall spire
+                if (Math.random() < 0.02) height += 15;
+
+                for (let r = GRID_ROWS - 1; r >= GRID_ROWS - height; r--) {
+                    if (r >= 0) grid[c][r] = 1;
+                }
+            }
+        }
+
+        function startGame() {
+            initGrid();
+            plane = { x: -10, y: 10 }; // Start slightly off screen, top left
+            bombs = [];
+            particles = [];
+            score = 0;
+            scoreEl.innerText = score;
+            
+            isGameRunning = true;
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            lastTime = performance.now();
+            loop(lastTime);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            finalScoreEl.innerText = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        /**
+         * Input Handling
+         */
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && isGameRunning) {
+                e.preventDefault(); // Prevent scrolling
+                dropBomb();
+            }
+        });
+
+        function dropBomb() {
+            // Limit bomb rate
+            if (bombs.length > 4) return;
+
+            // Spawn bomb at center of plane
+            bombs.push({
+                x: plane.x + (CELL_SIZE),
+                y: plane.y + CELL_SIZE,
+            });
+        }
+
+        /**
+         * Game Logic
+         */
+        function update(dt) {
+            // 1. Move Plane
+            plane.x += PLANE_SPEED;
+            
+            // Wrap around logic
+            if (plane.x > CANVAS_WIDTH) {
+                plane.x = -12; // Reset to start (accounting for plane width)
+                plane.y += DROP_AMOUNT; // GO DOWN 6 PIXELS
+            }
+
+            // Check Plane Collision
+            // Plane dimensions: approx 12x6 px
+            const pBox = {
+                x: plane.x + 2,
+                y: plane.y + 1,
+                w: 8,
+                h: 4
+            };
+
+            // Check corners of bounding box against grid
+            if (checkCollision(pBox.x, pBox.y) || 
+                checkCollision(pBox.x + pBox.w, pBox.y) ||
+                checkCollision(pBox.x, pBox.y + pBox.h) ||
+                checkCollision(pBox.x + pBox.w, pBox.y + pBox.h)) {
+                
+                createExplosion(plane.x, plane.y, 30, COLOR_PLANE);
+                endGame();
+                return;
+            }
+
+            // Check if plane hit bottom of canvas
+            if (plane.y >= CANVAS_HEIGHT - CELL_SIZE) {
+                createExplosion(plane.x, plane.y, 30, COLOR_PLANE);
+                endGame();
+                return;
+            }
+
+            // 2. Move Bombs
+            for (let i = bombs.length - 1; i >= 0; i--) {
+                let b = bombs[i];
+                b.y += BOMB_SPEED;
+
+                // Check out of bounds
+                if (b.y > CANVAS_HEIGHT) {
+                    bombs.splice(i, 1);
+                    continue;
+                }
+
+                // Check collision with buildings
+                const bCol = Math.floor(b.x / CELL_SIZE);
+                const bRow = Math.floor(b.y / CELL_SIZE);
+
+                if (isSolid(bCol, bRow)) {
+                    // HIT!
+                    explodeBomb(bCol, bRow);
+                    bombs.splice(i, 1);
+                }
+            }
+
+            // 3. Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= dt * 0.003; // Fade out speed
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function isSolid(c, r) {
+            if (c < 0 || c >= GRID_COLS || r < 0 || r >= GRID_ROWS) return false;
+            return grid[c][r] === 1;
+        }
+
+        function checkCollision(x, y) {
+            const c = Math.floor(x / CELL_SIZE);
+            const r = Math.floor(y / CELL_SIZE);
+            return isSolid(c, r);
+        }
+
+        function explodeBomb(c, r) {
+            let points = 0;
+            const radius = 2; // Destroy 2x2 area
+
+            for(let dc = -1; dc <= 1; dc++) {
+                for(let dr = -1; dr <= 1; dr++) {
+                    // Simple circle-ish approximation or just square area
+                    let tc = c + dc;
+                    let tr = r + dr;
+                    
+                    if (tc >= 0 && tc < GRID_COLS && tr >= 0 && tr < GRID_ROWS) {
+                        if (grid[tc][tr] === 1) {
+                            grid[tc][tr] = 0;
+                            points += 5;
+                            createExplosion(tc * CELL_SIZE, tr * CELL_SIZE, 2, COLOR_BUILDING);
+                        }
+                    }
+                }
+            }
+
+            score += points;
+            scoreEl.innerText = score;
+        }
+
+        function createExplosion(x, y, count, baseColor) {
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x: x + Math.random() * CELL_SIZE * 2 - CELL_SIZE,
+                    y: y + Math.random() * CELL_SIZE * 2 - CELL_SIZE,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: (Math.random() - 0.5) * 3,
+                    life: 1.0,
+                    color: Math.random() > 0.6 ? COLOR_BOMB : (baseColor || COLOR_PARTICLE)
+                });
+            }
+        }
+
+        /**
+         * Rendering
+         */
+        function draw() {
+            // Clear
+            ctx.fillStyle = COLOR_SKY;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Draw Buildings
+            ctx.beginPath();
+            for (let c = 0; c < GRID_COLS; c++) {
+                // Optimization: Draw strips instead of individual pixels if possible, 
+                // but for this grid size, individual rects are fine.
+                for (let r = 0; r < GRID_ROWS; r++) {
+                    if (grid[c][r] === 1) {
+                        ctx.fillStyle = (c % 2 === 0) ? COLOR_BUILDING : COLOR_BUILDING_ACCENT;
+                        // Tiny gap for brick effect
+                        ctx.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+
+            // Draw Bombs
+            ctx.fillStyle = COLOR_BOMB;
+            bombs.forEach(b => {
+                ctx.fillRect(b.x - 2, b.y - 2, 4, 4);
+            });
+
+            // Draw Plane
+            // Plane Body
+            ctx.fillStyle = COLOR_PLANE;
+            ctx.fillRect(plane.x, plane.y, 12, 6); 
+            // Tail
+            ctx.fillStyle = '#bae6fd'; 
+            ctx.fillRect(plane.x - 2, plane.y - 2, 4, 4);
+            // Wing
+            ctx.fillStyle = '#e0f2fe';
+            ctx.fillRect(plane.x + 4, plane.y + 2, 6, 2);
+
+            // Draw Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 2, 2);
+            });
+            ctx.globalAlpha = 1.0;
+        }
+
+        function loop(timestamp) {
+            if (!isGameRunning) return;
+            const dt = timestamp - lastTime;
+            lastTime = timestamp;
+
+            update(dt);
+            draw();
+
+            animationFrameId = requestAnimationFrame(loop);
+        }
+
+        // Initial Draw
+        ctx.fillStyle = COLOR_SKY;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    </script>
+</body>
+</html>
