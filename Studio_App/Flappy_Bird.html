@@ -253,7 +253,7 @@ WINDOW_HEIGHT: 600
         const difficulties = {
             easy: {
                 gravity: 0.7, // Lower gravity for slower fall
-                jumpStrength: -13, // Higher jump for more control
+                jumpStrength: -13, // Larger absolute value for jump, meaning a stronger/bigger jump (easier to control)
                 pipeSpeed: 2.5, // Slower pipes
                 pipeGapHeight: 180, // Wider gap
                 pipeSpawnInterval: 1800, // Pipes appear less frequently
@@ -261,7 +261,7 @@ WINDOW_HEIGHT: 600
             },
             medium: {
                 gravity: 0.8,
-                jumpStrength: -12,
+                jumpStrength: -12, // Medium jump strength
                 pipeSpeed: 3,
                 pipeGapHeight: 150,
                 pipeSpawnInterval: 1500,
@@ -269,7 +269,7 @@ WINDOW_HEIGHT: 600
             },
             hard: {
                 gravity: 0.9, // Higher gravity for faster fall
-                jumpStrength: -11, // Lower jump for less control
+                jumpStrength: -11, // Smaller absolute value for jump, meaning a weaker/smaller jump (harder to control)
                 pipeSpeed: 3.5, // Faster pipes
                 pipeGapHeight: 120, // Narrower gap
                 pipeSpawnInterval: 1200, // Pipes appear more frequently
@@ -277,7 +277,7 @@ WINDOW_HEIGHT: 600
             },
             impossible: {
                 gravity: 1.0, // Even higher gravity
-                jumpStrength: -10, // Even lower jump strength
+                jumpStrength: -10, // Smallest absolute value for jump, meaning a very weak/small jump (very hard to control)
                 pipeSpeed: 4, // Even faster pipes
                 pipeGapHeight: 100, // Even narrower gap
                 pipeSpawnInterval: 1000, // Pipes appear even more frequently
