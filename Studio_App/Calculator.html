@@ -1,0 +1,377 @@
+<!--
+APP_NAME: Calculator
+APP_ICON: https://win98icons.alexmeub.com/icons/png/calculator-0.png
+APP_CATEGORY: Utilities
+WINDOW_WIDTH: 320
+WINDOW_HEIGHT: 520
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f9f9f9;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow: hidden; /* Prevent body scrollbars */
+        }
+
+        .calculator {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 320px; /* Constrain width for a typical calculator feel */
+            height: 100%;
+            max-height: 520px; /* Constrain height */
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        .display {
+            background-color: #f0f0f0;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px; /* Slightly less rounded than container */
+            min-height: 80px;
+            margin-bottom: 15px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            font-size: 2.8em;
+            color: #333;
+            text-align: right;
+            overflow: hidden;
+            word-break: break-all;
+            line-height: 1.2;
+            box-sizing: border-box;
+            transition: font-size 0.1s;
+        }
+
+        .display .previous-operand {
+            font-size: 0.4em;
+            color: #666;
+            min-height: 1.2em; /* Ensure space for previous operand */
+        }
+
+        .display .current-operand {
+            font-size: 1em;
+            font-weight: 500;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            flex-grow: 1; /* Allow buttons to take available space */
+        }
+
+        .button {
+            background-color: #f3f3f3;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px 10px; /* Adjust padding for better look */
+            font-size: 1.6em;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: background-color 0.1s, border-color 0.1s, box-shadow 0.1s;
+            color: #333;
+        }
+
+        .button:hover {
+            background-color: #e6e6e6;
+            border-color: #d0d0d0;
+        }
+
+        .button:active {
+            background-color: #dcdcdc;
+            border-color: #c0c0c0;
+        }
+
+        .button.operator {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .button.operator:hover {
+            background-color: #d0d0d0;
+        }
+
+        .button.operator:active {
+            background-color: #c0c0c0;
+        }
+
+        .button.equals {
+            background-color: #0078d4;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .button.equals:hover {
+            background-color: #0063ad;
+            border-color: #005bb0;
+        }
+
+        .button.equals:active {
+            background-color: #00509a;
+            border-color: #00458a;
+        }
+
+        .button.clear {
+            background-color: #ffcccc; /* Soft red for clear */
+            color: #cc0000;
+        }
+
+        .button.clear:hover {
+            background-color: #ffb3b3;
+            border-color: #ff9999;
+        }
+
+        .button.clear:active {
+            background-color: #ff9999;
+            border-color: #ff8080;
+        }
+
+        /* Specific grid positioning for 0 and = buttons */
+        .button[data-span="col2"] {
+            grid-column: span 2;
+        }
+        .button[data-span="row2"] {
+            grid-row: span 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <div class="previous-operand" data-previous-operand></div>
+            <div class="current-operand" data-current-operand>0</div>
+        </div>
+        <div class="buttons">
+            <button class="button clear" data-clear>C</button>
+            <button class="button operator" data-operator="divide">÷</button>
+            <button class="button operator" data-operator="multiply">×</button>
+            <button class="button operator" data-operator="subtract">−</button>
+
+            <button class="button number" data-number>7</button>
+            <button class="button number" data-number>8</button>
+            <button class="button number" data-number>9</button>
+            <button class="button operator" data-operator="add">+</button>
+
+            <button class="button number" data-number>4</button>
+            <button class="button number" data-number>5</button>
+            <button class="button number" data-number>6</button>
+            <button class="button decimal" data-decimal>.</button>
+
+            <button class="button number" data-number>1</button>
+            <button class="button number" data-number>2</button>
+            <button class="button number" data-number>3</button>
+            <button class="button equals" data-equals data-span="row2">=</button>
+
+            <button class="button number" data-number data-span="col2">0</button>
+            <!-- The decimal button now sits above the equals button. This arrangement is common.
+                 The equals button spans two rows (last two rows, last column).
+                 The 0 button spans two columns (last row, first two columns).
+                 The decimal button takes the last row, third column. -->
+        </div>
+    </div>
+
+    <script>
+        class Calculator {
+            constructor(previousOperandTextElement, currentOperandTextElement) {
+                this.previousOperandTextElement = previousOperandTextElement;
+                this.currentOperandTextElement = currentOperandTextElement;
+                this.clear();
+            }
+
+            clear() {
+                this.currentOperand = '0';
+                this.previousOperand = '';
+                this.operation = undefined;
+                this.justCalculated = false; // Flag to indicate if the last action was '='
+            }
+
+            appendNumber(number) {
+                if (this.currentOperand.length > 15 && !this.currentOperand.includes('e')) return; // Limit input length, allow scientific notation
+                
+                if (this.justCalculated || this.currentOperand === '0') {
+                    this.currentOperand = number.toString();
+                    this.justCalculated = false;
+                } else {
+                    this.currentOperand = this.currentOperand.toString() + number.toString();
+                }
+            }
+
+            addDecimal() {
+                if (this.currentOperand.includes('.')) return;
+                if (this.justCalculated) {
+                    this.currentOperand = '0.';
+                    this.justCalculated = false;
+                } else {
+                    this.currentOperand += '.';
+                }
+            }
+
+            chooseOperation(operation) {
+                if (this.currentOperand === '') return; // No current number to operate on
+                if (this.previousOperand !== '') {
+                    this.compute(); // If there's a previous operation, compute it first
+                }
+                this.operation = operation;
+                this.previousOperand = this.currentOperand;
+                this.currentOperand = ''; // Clear current operand for next input
+                this.justCalculated = false; // Reset flag
+            }
+
+            compute() {
+                let computation;
+                const prev = parseFloat(this.previousOperand);
+                const current = parseFloat(this.currentOperand);
+
+                if (isNaN(prev) || isNaN(current)) return;
+
+                switch (this.operation) {
+                    case 'add':
+                        computation = prev + current;
+                        break;
+                    case 'subtract':
+                        computation = prev - current;
+                        break;
+                    case 'multiply':
+                        computation = prev * current;
+                        break;
+                    case 'divide':
+                        if (current === 0) {
+                            computation = 'Error';
+                        } else {
+                            computation = prev / current;
+                        }
+                        break;
+                    default:
+                        return;
+                }
+                this.currentOperand = String(computation);
+                this.operation = undefined;
+                this.previousOperand = '';
+                this.justCalculated = true; // Set flag after computation
+            }
+
+            // Formats number for display, handles large numbers and decimals
+            getDisplayNumber(number) {
+                if (typeof number === 'string' && number.includes('Error')) return number;
+                const stringNumber = number.toString();
+                const integerDigits = parseFloat(stringNumber.split('.')[0]);
+                const decimalDigits = stringNumber.split('.')[1];
+                let integerDisplay;
+
+                if (isNaN(integerDigits)) {
+                    integerDisplay = '';
+                } else {
+                    // Use toLocaleString for comma separation, but handle potential scientific notation
+                    if (Math.abs(integerDigits) > 999999999999999) { // If integer part is too large
+                        integerDisplay = integerDigits.toPrecision(15); // Fallback to precision
+                        return integerDisplay; // Return early if it's already a huge number
+                    } else {
+                        integerDisplay = integerDigits.toLocaleString('en', { maximumFractionDigits: 0 });
+                    }
+                }
+
+                if (decimalDigits != null) {
+                    return `${integerDisplay}.${decimalDigits}`;
+                } else {
+                    return integerDisplay;
+                }
+            }
+
+            updateDisplay() {
+                this.currentOperandTextElement.innerText = this.getDisplayNumber(this.currentOperand);
+                if (this.operation != null) {
+                    this.previousOperandTextElement.innerText = `${this.getDisplayNumber(this.previousOperand)} ${this.getOperatorSymbol(this.operation)}`;
+                } else {
+                    this.previousOperandTextElement.innerText = '';
+                }
+
+                // Adjust font size for current operand if it's too long
+                const currentOperandLength = this.currentOperandTextElement.innerText.length;
+                if (currentOperandLength > 12 && currentOperandLength <= 16) {
+                    this.currentOperandTextElement.style.fontSize = '2.2em';
+                } else if (currentOperandLength > 16) {
+                    this.currentOperandTextElement.style.fontSize = '1.8em';
+                } else {
+                    this.currentOperandTextElement.style.fontSize = '2.8em';
+                }
+            }
+
+            getOperatorSymbol(operation) {
+                switch (operation) {
+                    case 'divide': return '÷';
+                    case 'multiply': return '×';
+                    case 'subtract': return '−';
+                    case 'add': return '+';
+                    default: return '';
+                }
+            }
+        }
+
+        const numberButtons = document.querySelectorAll('[data-number]');
+        const operatorButtons = document.querySelectorAll('[data-operator]');
+        const equalsButton = document.querySelector('[data-equals]');
+        const clearButton = document.querySelector('[data-clear]');
+        const decimalButton = document.querySelector('[data-decimal]');
+        const previousOperandTextElement = document.querySelector('[data-previous-operand]');
+        const currentOperandTextElement = document.querySelector('[data-current-operand]');
+
+        const calculator = new Calculator(previousOperandTextElement, currentOperandTextElement);
+
+        numberButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                calculator.appendNumber(button.innerText);
+                calculator.updateDisplay();
+            });
+        });
+
+        operatorButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                calculator.chooseOperation(button.dataset.operator);
+                calculator.updateDisplay();
+            });
+        });
+
+        equalsButton.addEventListener('click', button => {
+            calculator.compute();
+            calculator.updateDisplay();
+        });
+
+        clearButton.addEventListener('click', button => {
+            calculator.clear();
+            calculator.updateDisplay();
+        });
+
+        decimalButton.addEventListener('click', button => {
+            calculator.addDecimal();
+            calculator.updateDisplay();
+        });
+
+        // Initial display update
+        calculator.updateDisplay();
+    </script>
+</body>
+</html>
