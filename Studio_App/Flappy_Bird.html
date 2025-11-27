@@ -1,0 +1,510 @@
+<!--
+APP_NAME: Flappy Bird
+APP_ICON: https://win98icons.alexmeub.com/icons/png/mplayer-1.png
+APP_CATEGORY: Games
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 600
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird</title>
+    <style>
+        :root {
+            --primary-color: #0078d4;
+            --secondary-bg-color: #f3f3f3;
+            --border-color: #e0e0e0;
+            --input-border-color: #d1d1d1;
+            --text-color: #333333;
+            --light-text-color: #666666;
+            --background-color: #ffffff;
+            --shadow-color: rgba(0,0,0,0.05);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            overflow: hidden; /* Prevent body scroll */
+            user-select: none; /* Prevent text selection in game */
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            max-width: 400px; /* Constrain game width */
+            max-height: 600px; /* Constrain game height */
+            background-color: var(--background-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Keep game elements within bounds */
+        }
+
+        .game-area {
+            position: relative;
+            width: 100%;
+            height: 100%; /* Full height of app-container */
+            background-color: #70c5ce; /* Sky blue */
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        .bird {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #ffd700; /* Gold */
+            border-radius: 50%;
+            left: 50px;
+            top: 250px; /* Initial position, will be set by JS */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            border: 1px solid #ccaa00;
+            z-index: 10;
+        }
+
+        .pipe {
+            position: absolute;
+            width: 50px;
+            background-color: #74a821; /* Green */
+            border: 2px solid #557c17;
+            border-radius: 4px; /* Rounded corners for pipes */
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+        }
+
+        .pipe-top {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .pipe-bottom {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40px;
+            background-color: #d2b48c; /* Sandy brown */
+            border-top: 2px solid #5a4b41;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10; /* Ensure ground is on top of pipes */
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.85); /* Slightly less transparent */
+            backdrop-filter: blur(2px); /* Subtle blur effect */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 20;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            pointer-events: none; /* Allow clicks to pass through by default */
+        }
+
+        .game-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto; /* Enable clicks when active */
+        }
+
+        .game-overlay h2 {
+            font-size: 2.2em;
+            margin-bottom: 8px;
+            color: var(--primary-color);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .game-overlay p {
+            font-size: 1.1em;
+            margin-bottom: 25px;
+            color: var(--text-color);
+        }
+
+        .score-display {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 15;
+            pointer-events: none; /* Do not interfere with clicks */
+        }
+
+        .button {
+            padding: 10px 20px;
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            background-color: var(--primary-color);
+            color: #ffffff;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 1px 3px var(--shadow-color);
+            outline: none;
+        }
+
+        .button:hover {
+            background-color: #0063af;
+            border-color: #0063af;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .button:active {
+            background-color: #004a8b;
+            border-color: #004a8b;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        /* Responsive adjustments for smaller windows */
+        @media (max-width: 400px) {
+            .app-container {
+                border-radius: 0; /* No rounded corners if it fills the iframe */
+                box-shadow: none;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="game-area" id="gameArea">
+            <div class="bird" id="bird"></div>
+            <div class="score-display" id="scoreDisplay">0</div>
+            <div class="ground" id="ground"></div>
+
+            <div class="game-overlay" id="startOverlay">
+                <h2>Flappy Bird</h2>
+                <p>Press space or click to flap!</p>
+                <button class="button" onclick="startGame()">Start Game</button>
+            </div>
+
+            <div class="game-overlay" id="gameOverOverlay">
+                <h2>Game Over!</h2>
+                <p>Your score: <span id="finalScore">0</span></p>
+                <button class="button" onclick="resetGame()">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gameArea = document.getElementById('gameArea');
+        const bird = document.getElementById('bird');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const startOverlay = document.getElementById('startOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const finalScoreSpan = document.getElementById('finalScore');
+        const ground = document.getElementById('ground');
+
+        let birdY = 0; // Will be initialized by updateDimensions/resetGame
+        let birdVelocity = 0;
+        const gravity = 0.5;
+        const jumpStrength = -8; // Negative for upward movement
+
+        let pipes = [];
+        const pipeWidth = 50;
+        const pipeGapHeight = 150; // Gap for the bird to fly through
+        const pipeSpeed = 2;
+        const pipeSpawnInterval = 1800; // ms between pipe spawns
+        let pipeTimer;
+
+        let score = 0;
+        let gameStarted = false;
+        let isGameOver = false;
+        let animationFrameId;
+
+        // Dynamic dimensions - will be updated during game lifecycle
+        let gameAreaWidth;
+        let gameAreaHeight;
+        let playableHeight; // Height above the ground for bird/pipes
+        let birdWidth;
+        let birdHeight;
+        let groundHeight;
+
+        function updateDimensions() {
+            gameAreaWidth = gameArea.clientWidth;
+            gameAreaHeight = gameArea.clientHeight;
+            birdWidth = bird.clientWidth;
+            birdHeight = bird.clientHeight;
+            groundHeight = ground.clientHeight;
+            playableHeight = gameAreaHeight - groundHeight;
+        }
+
+        function updateBirdPosition() {
+            if (!gameStarted || isGameOver) return;
+
+            birdVelocity += gravity;
+            birdY += birdVelocity;
+
+            // Keep bird within top bounds
+            if (birdY < 0) {
+                birdY = 0;
+                birdVelocity = 0;
+            }
+
+            // Collision with ground (using playableHeight)
+            if (birdY + birdHeight >= playableHeight) {
+                birdY = playableHeight - birdHeight; // Set bird on ground
+                birdVelocity = 0;
+                endGame();
+                return; // Stop further updates if game ended
+            }
+
+            bird.style.top = `${birdY}px`;
+        }
+
+        function flap() {
+            if (isGameOver) return; // Prevent flapping if game is over
+            if (!gameStarted) {
+                startGame(); // Start game on first flap/click if not started
+                return;
+            }
+            birdVelocity = jumpStrength;
+        }
+
+        function createPipe() {
+            if (!gameStarted || isGameOver) return;
+
+            // Min and max heights for the *top* pipe
+            const minPipeHeight = 50;
+            // The max height for the top pipe ensures there's always space for the gap and min bottom pipe
+            const maxTopPipeHeight = playableHeight - pipeGapHeight - minPipeHeight;
+
+            // Ensure maxTopPipeHeight is not less than minPipeHeight to avoid negative or zero range
+            if (maxTopPipeHeight < minPipeHeight) {
+                // This means the playable area is too small for a pipe and gap.
+                // Handle as an error or just return. For now, we'll try to use minPipeHeight.
+                console.warn("Playable area too small for proper pipes.");
+                return;
+            }
+
+            const topPipeHeight = Math.floor(Math.random() * (maxTopPipeHeight - minPipeHeight + 1)) + minPipeHeight;
+            const bottomPipeHeight = playableHeight - topPipeHeight - pipeGapHeight;
+
+            const pipeX = gameAreaWidth;
+
+            const pipeTop = document.createElement('div');
+            pipeTop.classList.add('pipe', 'pipe-top');
+            pipeTop.style.width = `${pipeWidth}px`;
+            pipeTop.style.height = `${topPipeHeight}px`;
+            pipeTop.style.left = `${pipeX}px`;
+            pipeTop.style.top = `0px`;
+            gameArea.appendChild(pipeTop);
+
+            const pipeBottom = document.createElement('div');
+            pipeBottom.classList.add('pipe', 'pipe-bottom');
+            pipeBottom.style.width = `${pipeWidth}px`;
+            pipeBottom.style.height = `${bottomPipeHeight}px`;
+            pipeBottom.style.left = `${pipeX}px`;
+            pipeBottom.style.top = `${topPipeHeight + pipeGapHeight}px`;
+            gameArea.appendChild(pipeBottom);
+
+            pipes.push({
+                x: pipeX,
+                topHeight: topPipeHeight,
+                bottomHeight: bottomPipeHeight,
+                pipeTopElement: pipeTop,
+                pipeBottomElement: pipeBottom,
+                passed: false // To track if bird has passed this pipe for scoring
+            });
+        }
+
+        function updatePipes() {
+            if (!gameStarted || isGameOver) return;
+
+            pipes.forEach(pipe => {
+                pipe.x -= pipeSpeed;
+                pipe.pipeTopElement.style.left = `${pipe.x}px`;
+                pipe.pipeBottomElement.style.left = `${pipe.x}px`;
+
+                // Scoring: Check if bird has passed the pipe's horizontal center
+                // The bird's X position is fixed (bird.offsetLeft). The pipe moves.
+                // When the pipe's right edge (pipe.x + pipeWidth) moves past bird's left edge,
+                // and the bird's left edge is past pipe's right edge for scoring.
+                // A common scoring point is when the pipe passes the bird's fixed X position.
+                if (pipe.x + pipeWidth < bird.offsetLeft && !pipe.passed) {
+                    score++;
+                    scoreDisplay.textContent = score;
+                    pipe.passed = true; // Mark as passed
+                }
+            });
+
+            // Remove off-screen pipes
+            if (pipes.length > 0 && pipes[0].x + pipeWidth < 0) {
+                gameArea.removeChild(pipes[0].pipeTopElement);
+                gameArea.removeChild(pipes[0].pipeBottomElement);
+                pipes.shift();
+            }
+        }
+
+        function checkCollisions() {
+            // Collision with ground is handled in updateBirdPosition()
+            
+            // Collision with pipes
+            for (let i = 0; i < pipes.length; i++) {
+                const p = pipes[i];
+
+                const birdRight = bird.offsetLeft + birdWidth;
+                const birdLeft = bird.offsetLeft;
+                const birdTop = birdY;
+                const birdBottom = birdY + birdHeight;
+
+                const pipeRight = p.x + pipeWidth;
+                const pipeLeft = p.x;
+                const pipeTopBottom = p.topHeight; // Bottom edge of top pipe
+                const pipeBottomTop = p.topHeight + pipeGapHeight; // Top edge of bottom pipe
+
+                // Check for horizontal overlap
+                if (birdRight > pipeLeft && birdLeft < pipeRight) {
+                    // Check for vertical collision with top pipe OR bottom pipe
+                    if (birdTop < pipeTopBottom || birdBottom > pipeBottomTop) {
+                        endGame();
+                        return; // Exit on first collision
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (isGameOver) {
+                cancelAnimationFrame(animationFrameId);
+                return;
+            }
+
+            updateBirdPosition();
+            updatePipes();
+            checkCollisions();
+            
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            if (gameStarted) return; // Prevent multiple starts
+            
+            updateDimensions(); // Ensure dimensions are fresh at start
+            resetGame(false); // Reset state without showing game over overlay
+            
+            startOverlay.classList.remove('active');
+            gameOverOverlay.classList.remove('active');
+
+            gameStarted = true;
+            isGameOver = false;
+            score = 0;
+            scoreDisplay.textContent = score;
+            
+            // Re-initialize bird position in the middle of the playable area
+            birdY = playableHeight / 2 - birdHeight / 2;
+            birdVelocity = 0;
+            bird.style.top = `${birdY}px`;
+
+            // Clear any existing pipes from previous game
+            pipes.forEach(p => {
+                if (p.pipeTopElement.parentNode === gameArea) {
+                    gameArea.removeChild(p.pipeTopElement);
+                }
+                if (p.pipeBottomElement.parentNode === gameArea) {
+                    gameArea.removeChild(p.pipeBottomElement);
+                }
+            });
+            pipes = [];
+
+            pipeTimer = setInterval(createPipe, pipeSpawnInterval);
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            gameStarted = false;
+            clearInterval(pipeTimer); // Stop pipe generation
+            cancelAnimationFrame(animationFrameId); // Stop animation loop
+
+            finalScoreSpan.textContent = score;
+            gameOverOverlay.classList.add('active');
+        }
+
+        function resetGame(showStartScreen = true) {
+            isGameOver = true; // Ensure game is marked over to stop any running loop
+            gameStarted = false;
+            clearInterval(pipeTimer);
+            cancelAnimationFrame(animationFrameId);
+
+            updateDimensions(); // Update dimensions during reset
+
+            birdY = playableHeight / 2 - birdHeight / 2; // Center bird vertically
+            birdVelocity = 0;
+            bird.style.top = `${birdY}px`;
+            
+            score = 0;
+            scoreDisplay.textContent = score;
+
+            // Remove all pipes from the DOM
+            pipes.forEach(p => {
+                if (p.pipeTopElement.parentNode === gameArea) {
+                    gameArea.removeChild(p.pipeTopElement);
+                }
+                if (p.pipeBottomElement.parentNode === gameArea) {
+                    gameArea.removeChild(p.pipeBottomElement);
+                }
+            });
+            pipes = []; // Clear the pipes array
+
+            gameOverOverlay.classList.remove('active');
+            if (showStartScreen) {
+                startOverlay.classList.add('active');
+            } else {
+                startOverlay.classList.remove('active');
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault(); // Prevent page scroll
+                flap();
+            }
+        });
+
+        // Click anywhere in the game area to flap
+        gameArea.addEventListener('click', (e) => {
+            // Only flap if the click is not on an overlay button
+            if (!e.target.closest('.game-overlay.active button')) {
+                flap();
+            }
+        });
+        
+        // Initialize game on load, showing start screen
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDimensions(); // Get initial dimensions
+            resetGame(true); // Show start screen
+        });
+
+        // Add a resize listener to keep dimensions up-to-date, though it's less critical
+        // if app-container has fixed max-width/height in the OS iframe environment.
+        window.addEventListener('resize', updateDimensions);
+
+    </script>
+</body>
+</html>
