@@ -1,9 +1,9 @@
 {
   "id": "SkyBomber",
   "name": "Sky Bomber",
-  "description": "Generated App",
+  "description": "Created with Gemini Studio",
   "category": "Custom",
   "icon": "https://i.ibb.co/3y2znvTP/ebd4bb254b5e.png",
-  "width": 940,
-  "height": 600
+  "width": 390,
+  "height": 540
 }
