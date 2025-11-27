@@ -1,8 +1,8 @@
 <!--
 APP_NAME: L-I Tetris
 APP_ICON: https://i.ibb.co/Z1xhPMXk/99405da8a4a2.png
-WINDOW_WIDTH: 420
-WINDOW_HEIGHT: 700
+WINDOW_WIDTH: 320
+WINDOW_HEIGHT: 580
 STORE_ID: li-tetris-v1
 -->
 <!DOCTYPE html>
@@ -19,6 +19,7 @@ STORE_ID: li-tetris-v1
         --text-color: #202020;
         --accent-i: #06b6d4; /* Cyan */
         --accent-l: #f97316; /* Orange */
+        --accent-j: #3b82f6; /* Blue for Reversed L */
         --border-radius: 8px;
         --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         --font-stack: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -43,9 +44,9 @@ STORE_ID: li-tetris-v1
         flex-direction: column;
         align-items: center;
         width: 100%;
-        max-width: 400px;
+        max-width: 320px;
         height: 100%;
-        padding: 20px;
+        padding: 12px;
         box-sizing: border-box;
     }
 
@@ -55,11 +56,12 @@ STORE_ID: li-tetris-v1
         justify-content: space-between;
         align-items: center;
         width: 100%;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         background: var(--card-bg);
-        padding: 12px 20px;
+        padding: 8px 16px;
         border-radius: var(--border-radius);
         box-shadow: var(--shadow);
+        box-sizing: border-box;
     }
 
     .score-box {
@@ -68,7 +70,7 @@ STORE_ID: li-tetris-v1
     }
 
     .score-label {
-        font-size: 11px;
+        font-size: 10px;
         text-transform: uppercase;
         color: #666;
         font-weight: 600;
@@ -76,10 +78,11 @@ STORE_ID: li-tetris-v1
     }
 
     .score-value {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 700;
         color: var(--text-color);
         font-variant-numeric: tabular-nums;
+        line-height: 1.1;
     }
 
     .level-box {
@@ -90,10 +93,12 @@ STORE_ID: li-tetris-v1
     .game-wrapper {
         position: relative;
         background: var(--card-bg);
-        padding: 10px;
+        padding: 8px;
         border-radius: var(--border-radius);
         box-shadow: var(--shadow);
         border: 1px solid rgba(0,0,0,0.05);
+        display: flex;
+        justify-content: center;
     }
 
     canvas {
@@ -110,8 +115,8 @@ STORE_ID: li-tetris-v1
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(4px);
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(2px);
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -119,6 +124,9 @@ STORE_ID: li-tetris-v1
         border-radius: var(--border-radius);
         z-index: 10;
         transition: opacity 0.3s;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
     }
 
     .overlay.hidden {
@@ -127,22 +135,23 @@ STORE_ID: li-tetris-v1
     }
 
     .overlay h1 {
-        margin: 0 0 10px 0;
-        font-size: 32px;
+        margin: 0 0 8px 0;
+        font-size: 28px;
         color: var(--text-color);
     }
 
     .overlay p {
-        margin: 0 0 20px 0;
+        margin: 0 0 16px 0;
         color: #666;
+        font-size: 14px;
     }
 
     .btn {
         background-color: var(--primary-color);
         color: white;
         border: none;
-        padding: 10px 24px;
-        font-size: 16px;
+        padding: 8px 20px;
+        font-size: 14px;
         font-weight: 600;
         border-radius: 6px;
         cursor: pointer;
@@ -160,18 +169,18 @@ STORE_ID: li-tetris-v1
 
     /* Controls (On screen) */
     .controls {
-        margin-top: 20px;
+        margin-top: 12px;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
         width: 100%;
     }
 
     .ctrl-btn {
         background: var(--card-bg);
         border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 15px 0;
+        border-radius: 6px;
+        height: 48px;
         font-size: 20px;
         color: #444;
         cursor: pointer;
@@ -180,6 +189,7 @@ STORE_ID: li-tetris-v1
         justify-content: center;
         align-items: center;
         transition: all 0.1s;
+        user-select: none;
     }
 
     .ctrl-btn:hover {
@@ -194,10 +204,11 @@ STORE_ID: li-tetris-v1
     }
     
     .ctrl-btn.large {
-        grid-column: span 3;
+        grid-column: span 1;
         background-color: #f0f9ff;
         border-color: #bae6fd;
         color: var(--primary-color);
+        font-weight: bold;
     }
 
     /* Utility */
@@ -222,11 +233,12 @@ STORE_ID: li-tetris-v1
     </div>
 
     <div class="game-wrapper">
+        <!-- 12 cols * 20px = 240px width -->
         <canvas id="tetris" width="240" height="400"></canvas>
         
         <div id="overlay" class="overlay">
             <h1>L-I Tetris</h1>
-            <p>Only L and I pieces.</p>
+            <p>I: Size 1-4 | L: Flip</p>
             <button class="btn" id="start-btn">Start Game</button>
         </div>
 
@@ -239,15 +251,16 @@ STORE_ID: li-tetris-v1
 
     <div class="controls">
         <button class="ctrl-btn" id="btn-left">←</button>
-        <button class="ctrl-btn" id="btn-rotate">↻</button>
+        <button class="ctrl-btn large" id="btn-down">↓</button>
         <button class="ctrl-btn" id="btn-right">→</button>
-        <button class="ctrl-btn large" id="btn-down">↓ Drop</button>
+        <button class="ctrl-btn" id="btn-rotate">↻</button>
     </div>
 </div>
 
 <script>
 /**
- * L-I Tetris Logic
+ * L-I Tetris Logic (Updated)
+ * Features: Small window, I piece variants (1-4), L piece variants (Normal/Reversed)
  */
 const canvas = document.getElementById('tetris');
 const context = canvas.getContext('2d');
@@ -280,33 +293,65 @@ let isGameOver = false;
 
 // --- Colors ---
 // 0: Empty
-// 1: I (Cyan)
+// 1: I (Cyan) - All sizes
 // 2: L (Orange)
-// 3: I-Active
-// 4: L-Active
+// 3: J / Reversed L (Blue)
 const COLORS = [
     null,
     '#06b6d4', // I - Cyan
     '#f97316', // L - Orange
+    '#3b82f6', // J - Blue (Reversed L)
 ];
 
 // --- Shapes ---
-// Strictly L and I as requested.
-// We define them in a way that index matches color.
 function createPiece(type) {
     if (type === 'I') {
-        return [
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-        ];
+        // I can be 1-4 pieces long randomly
+        const len = (Math.random() * 4 | 0) + 1; // 1, 2, 3, or 4
+        
+        switch(len) {
+            case 1:
+                return [[1]]; // 1x1
+            case 2:
+                // 3x3 container for rotation space, though 2x1 also works. 
+                // Using 3x3 ensures centered feel.
+                return [
+                    [0, 1, 0],
+                    [0, 1, 0],
+                    [0, 0, 0]
+                ];
+            case 3:
+                return [
+                    [0, 1, 0],
+                    [0, 1, 0],
+                    [0, 1, 0]
+                ];
+            default: // 4
+                return [
+                    [0, 1, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 1, 0, 0]
+                ];
+        }
     } else if (type === 'L') {
-        return [
-            [0, 2, 0],
-            [0, 2, 0],
-            [0, 2, 2],
-        ];
+        // L can be reversed (50/50 chance)
+        const reversed = Math.random() > 0.5;
+        if (reversed) {
+            // Reversed L (J) - Color Index 3
+            return [
+                [0, 3, 0],
+                [0, 3, 0],
+                [3, 3, 0]
+            ];
+        } else {
+            // Standard L - Color Index 2
+            return [
+                [0, 2, 0],
+                [0, 2, 0],
+                [0, 2, 2]
+            ];
+        }
     }
 }
 
@@ -361,7 +406,7 @@ function draw() {
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     drawMatrix(arena, {x: 0, y: 0});
-    if (!isGameOver) {
+    if (!isGameOver && player.matrix) {
         drawMatrix(player.matrix, player.pos);
     }
 }
@@ -397,6 +442,7 @@ function rotate(matrix, dir) {
 
 function playerReset() {
     const pieces = 'IL';
+    // createPiece now handles randomization logic internally
     player.matrix = createPiece(pieces[pieces.length * Math.random() | 0]);
     player.pos.y = 0;
     // Center the piece
@@ -500,7 +546,7 @@ document.addEventListener('keydown', event => {
         playerMove(1);
     } else if (event.keyCode === 40) { // Down
         playerDrop();
-    } else if (event.keyCode === 38) { // Up (Rotate)
+    } else if (event.keyCode === 38 || event.keyCode === 32) { // Up or Space (Rotate)
         playerRotate(1);
     }
 });
@@ -509,10 +555,27 @@ document.addEventListener('keydown', event => {
 document.getElementById('btn-left').addEventListener('click', () => !isPaused && playerMove(-1));
 document.getElementById('btn-right').addEventListener('click', () => !isPaused && playerMove(1));
 document.getElementById('btn-rotate').addEventListener('click', () => !isPaused && playerRotate(1));
-document.getElementById('btn-down').addEventListener('mousedown', () => {
-    // Quick drop simulation on hold? Just single drop for simplicity
-    if(!isPaused) playerDrop(); 
-});
+
+// Touch support for repeating drop
+let dropIntervalId;
+const btnDown = document.getElementById('btn-down');
+
+function startDropping() {
+    if(isPaused) return;
+    playerDrop();
+    dropIntervalId = setInterval(() => {
+        if(!isPaused) playerDrop();
+    }, 100);
+}
+function stopDropping() {
+    clearInterval(dropIntervalId);
+}
+btnDown.addEventListener('mousedown', startDropping);
+btnDown.addEventListener('mouseup', stopDropping);
+btnDown.addEventListener('mouseleave', stopDropping);
+btnDown.addEventListener('touchstart', (e) => { e.preventDefault(); startDropping(); });
+btnDown.addEventListener('touchend', (e) => { e.preventDefault(); stopDropping(); });
+
 
 // Start / Restart
 const startBtn = document.getElementById('start-btn');
