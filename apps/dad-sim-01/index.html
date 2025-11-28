@@ -10,7 +10,7 @@ STORE_ID: dad-sim-01
 <html lang="hu">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ApuSzimulátor</title>
     <style>
         :root {
@@ -27,6 +27,10 @@ STORE_ID: dad-sim-01
             --shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
         }
 
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background-color: var(--bg-color);
@@ -37,33 +41,32 @@ STORE_ID: dad-sim-01
             align-items: center;
             justify-content: center;
             height: 100vh;
+            width: 100vw;
             overflow: hidden;
             user-select: none;
             color: var(--text-main);
         }
 
-        body.mobile-mode {
-            padding: 0;
-        }
-
+        /* Standard Desktop/Window Mode */
         #app-container {
             width: 100%;
             height: 100%;
-            max-width: 100%;
             display: flex;
             flex-direction: column;
             background: var(--card-bg);
             position: relative;
             overflow: hidden;
+            transition: all 0.2s ease;
         }
         
-        @media (min-width: 400px) {
+        @media (min-width: 400px) and (min-height: 600px) {
             #app-container {
-                border-radius: var(--radius);
-                box-shadow: var(--shadow);
+                /* Only round corners if not full mobile screen */
+                border-radius: var(--radius); 
             }
         }
 
+        /* --- Header --- */
         header {
             padding: 12px 16px;
             display: flex;
@@ -73,6 +76,7 @@ STORE_ID: dad-sim-01
             background: #fff;
             z-index: 10;
             flex-shrink: 0;
+            height: 50px;
         }
 
         h1 {
@@ -94,19 +98,20 @@ STORE_ID: dad-sim-01
             gap: 4px;
         }
 
+        /* --- Game Area --- */
         .game-area {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center; /* Centered for balance */
             position: relative;
             padding: 15px;
             overflow-y: auto;
             background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
         }
 
-        /* Avatar & Animations */
+        /* --- Avatar --- */
         .avatar-container {
             position: relative;
             width: 120px;
@@ -114,7 +119,7 @@ STORE_ID: dad-sim-01
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 10px 0 20px 0;
+            margin: 0 0 20px 0;
             background: #eef4f9;
             border-radius: 50%;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
@@ -135,7 +140,7 @@ STORE_ID: dad-sim-01
             transform: scale(0.9) !important;
         }
 
-        /* Animation States */
+        /* Animations */
         @keyframes chew {
             0% { transform: scale(1); }
             50% { transform: scale(1.1) rotate(5deg); }
@@ -243,7 +248,7 @@ STORE_ID: dad-sim-01
             transform: rotate(45deg);
         }
 
-        /* Stats */
+        /* --- Stats --- */
         .stats-container {
             width: 100%;
             max-width: 340px;
@@ -295,7 +300,7 @@ STORE_ID: dad-sim-01
             font-weight: 500;
         }
 
-        /* Controls */
+        /* --- Controls --- */
         .controls {
             padding: 16px;
             background: #fff;
@@ -305,7 +310,7 @@ STORE_ID: dad-sim-01
             gap: 10px;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
             overflow-y: auto;
-            max-height: 250px;
+            max-height: 40%;
             flex-shrink: 0;
         }
 
@@ -325,7 +330,8 @@ STORE_ID: dad-sim-01
             gap: 8px;
             transition: all 0.2s;
             border: 1px solid transparent;
-            min-height: 48px;
+            min-height: 44px;
+            position: relative;
         }
 
         button:hover {
@@ -383,7 +389,7 @@ STORE_ID: dad-sim-01
             border: 1px dashed #ccc !important;
         }
 
-        /* Sleep Mode */
+        /* --- Overlays --- */
         .night-overlay {
             position: absolute;
             top: 0;
@@ -422,7 +428,6 @@ STORE_ID: dad-sim-01
             100% { transform: translate(30px, -60px) scale(1.5) rotate(10deg); opacity: 0; }
         }
 
-        /* Toast */
         .message-toast {
             position: absolute;
             bottom: 20px;
@@ -445,7 +450,6 @@ STORE_ID: dad-sim-01
             transform: translateX(-50%) translateY(0);
         }
 
-        /* Vomit Overlay - Green tint */
         .sick-overlay {
             position: absolute;
             inset: 0;
@@ -459,64 +463,101 @@ STORE_ID: dad-sim-01
             opacity: 1;
         }
 
-        /* Mobile / Compact Mode Optimizations */
-        /* Applied when body has .mobile-mode OR when screen is very small */
-        body.mobile-mode .avatar-container,
-        @media (max-height: 600px) and (max-width: 400px) .avatar-container {
-            width: 90px;
-            height: 90px;
-            margin: 5px 0 10px 0;
-        }
-
-        body.mobile-mode .avatar,
-        @media (max-height: 600px) and (max-width: 400px) .avatar {
-            font-size: 50px;
-        }
-
-        body.mobile-mode .game-area,
-        @media (max-height: 600px) and (max-width: 400px) .game-area {
-            padding: 10px;
-        }
-
-        body.mobile-mode .stats-container,
-        @media (max-height: 600px) and (max-width: 400px) .stats-container {
-            padding: 8px 12px;
-            gap: 6px;
-            margin-bottom: 5px;
-        }
-
-        body.mobile-mode .stat-row,
-        @media (max-height: 600px) and (max-width: 400px) .stat-row {
-            font-size: 0.8rem;
-            margin-bottom: 2px;
-            gap: 6px;
-        }
-
-        body.mobile-mode .controls,
-        @media (max-height: 600px) and (max-width: 400px) .controls {
-            padding: 10px;
-            gap: 8px;
-        }
-
-        body.mobile-mode button,
-        @media (max-height: 600px) and (max-width: 400px) button {
-            min-height: 38px;
-            padding: 8px;
-            font-size: 0.85rem;
-        }
+        /* ==========================================================================
+           DYNAMIC MOBILE OPTIMIZATION
+           Adapts UI scale based on viewport height/width using fluid typography and clamp
+           ========================================================================== */
         
-        body.mobile-mode header h1,
-        @media (max-height: 600px) and (max-width: 400px) header h1 {
-            font-size: 1rem;
+        body.mobile-mode #app-container,
+        @media (max-width: 420px), (max-height: 650px) {
+            
+            /* Fluid Header */
+            header {
+                padding: 1.5vh 3vw;
+                height: auto;
+                min-height: 44px;
+            }
+            header h1 {
+                font-size: clamp(0.9rem, 4vw, 1.1rem);
+            }
+            .money-badge {
+                padding: 0.5vh 2vw;
+                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+            }
+
+            /* Fluid Game Area Padding */
+            .game-area {
+                padding: 1vh 3vw;
+                justify-content: flex-start;
+            }
+
+            /* Fluid Avatar - Scales with Viewport Height */
+            .avatar-container {
+                width: clamp(70px, 18vh, 130px);
+                height: clamp(70px, 18vh, 130px);
+                margin: 1vh 0 2vh 0;
+            }
+            .avatar {
+                font-size: clamp(40px, 10vh, 75px);
+            }
+            
+            /* Fluid Stats */
+            .stats-container {
+                width: 100%;
+                padding: 1.5vh 3vw;
+                gap: 0.8vh;
+            }
+            .stat-row {
+                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+                gap: 2vw;
+            }
+            .stat-icon {
+                font-size: clamp(0.9rem, 4vw, 1.1rem);
+                width: clamp(16px, 5vw, 24px);
+            }
+            .progress-bar-bg {
+                height: clamp(6px, 1.2vh, 10px);
+            }
+            .weight-display {
+                font-size: clamp(0.7rem, 3vw, 0.85rem);
+                margin-top: 0.5vh;
+            }
+
+            /* Fluid Controls */
+            .controls {
+                padding: 1.5vh 3vw;
+                gap: 1vh;
+            }
+            
+            button {
+                min-height: clamp(36px, 6vh, 48px);
+                padding: 0.5vh 1vw;
+                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+                gap: 1vw;
+            }
+            
+            /* Adjust cost label size */
+            .cost-label {
+                font-size: 0.8em;
+                display: inline-block;
+            }
+            
+            /* Thought bubble adjustment */
+            .thought-cloud {
+                font-size: clamp(1.1rem, 5vw, 1.4rem);
+                padding: 0.5vh 2vw;
+                top: -15%;
+                left: -15%;
+            }
         }
 
     </style>
 </head>
-<body>
+<body class="">
 
     <div id="app-container">
         <header>
-            <h1>ApuSzimulátor 96</h1>
+            <h1>ApuSzimulátor</h1>
             <div class="money-badge">
                 <span>💰</span>
                 <span id="money-display">2000 Ft</span>
@@ -576,14 +617,14 @@ STORE_ID: dad-sim-01
             </button>
             
             <button onclick="game.meetFriends()" id="btn-friends" class="social">
-                <span>🍻</span> Találkozás a barátokkal <span class="cost-label">-2000</span>
+                <span>🍻</span> Barátok <span class="cost-label">-2k</span>
             </button>
             
             <button onclick="game.feed()" id="btn-feed">
-                <span>🍔</span> Etetés <span class="cost-label">-500</span>
+                <span>🍔</span> Evés <span class="cost-label">-500</span>
             </button>
             <button onclick="game.drink()" id="btn-drink">
-                <span>🍺</span> Sör <span class="cost-label">-300</span>
+                <span>🍺</span> Ivás <span class="cost-label">-300</span>
             </button>
             
             <button onclick="game.sport()" id="btn-sport">
@@ -664,15 +705,25 @@ STORE_ID: dad-sim-01
                 this.timer = setInterval(() => this.tick(), 2000);
                 this.updateUI();
                 this.showToast("Szia! Vigyázz apura!");
+                
+                // Check if mobile mode class is added dynamically
+                const checkMobile = () => {
+                    if (document.body.classList.contains('mobile-mode')) {
+                        // Logic if needed in JS, but CSS handles layout
+                    }
+                };
+                
+                const observer = new MutationObserver(checkMobile);
+                observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
             }
 
             tick() {
                 if (this.isSleeping) {
                     // FAST SLEEP: Recover much faster
-                    this.stats.energy = Math.min(100, this.stats.energy + 20); // Faster gain
+                    this.stats.energy = Math.min(100, this.stats.energy + 20); 
                     this.stats.hunger = Math.max(0, this.stats.hunger - 1);
-                    this.stats.health = Math.min(100, this.stats.health + 4); // Faster healing
-                    this.alcoholLevel = Math.max(0, this.alcoholLevel - 10); // Faster sobriety
+                    this.stats.health = Math.min(100, this.stats.health + 4); 
+                    this.alcoholLevel = Math.max(0, this.alcoholLevel - 10); 
                     
                     if (this.stats.energy >= 100) {
                         this.wakeUp();
@@ -718,7 +769,7 @@ STORE_ID: dad-sim-01
                 this.setBar(this.ui.hunger, this.stats.hunger, '#107c10', '#d83b01');
                 this.setBar(this.ui.energy, this.stats.energy, '#ffb900', '#d83b01');
                 this.setBar(this.ui.mood, this.stats.mood, '#0078d4', '#e81123');
-                this.setBar(this.ui.health, this.stats.health, '#d92b2b', '#757575'); // Health is always red/heart colored, turns grey if low
+                this.setBar(this.ui.health, this.stats.health, '#d92b2b', '#757575');
 
                 // Text Stats
                 this.ui.weight.innerText = this.stats.weight.toFixed(1);
@@ -741,12 +792,12 @@ STORE_ID: dad-sim-01
                     face = '🤢';
                     containerClass = 'anim-sick';
                 } else if (this.alcoholLevel > 70) {
-                    face = '🥴'; // Wasted
+                    face = '🥴'; 
                     containerClass = 'anim-drunk';
                 } else if (this.alcoholLevel > 30) {
-                    face = '☺️'; // Tipsy
+                    face = '☺️'; 
                 } else if (this.stats.health < 30) {
-                    face = '🤒'; // Sickly
+                    face = '🤒'; 
                 } else if (this.stats.mood < 20) {
                     face = '🤬'; 
                 } else if (this.stats.hunger < 20) {
@@ -772,13 +823,9 @@ STORE_ID: dad-sim-01
                 this.ui.alert.classList.toggle('visible', needsAttention && !this.isSleeping);
 
                 // --- Button Logic ---
-                
-                // Global Disable (Sick or Sleeping)
                 const globalDisable = this.isSleeping || this.isSick || this.isActionLocked;
-                const btns = [this.ui.btnFeed, this.ui.btnDrink, this.ui.btnTv, this.ui.btnSport, this.ui.btnFriends];
-                btns.forEach(btn => btn.disabled = globalDisable);
                 
-                // Work Button - Special Logic (Too tired)
+                // Work Button
                 const workBtn = this.ui.btnWork;
                 if (this.stats.energy < 25) {
                     workBtn.disabled = true;
@@ -790,11 +837,12 @@ STORE_ID: dad-sim-01
                     workBtn.innerHTML = `<span>💼</span> Munka <span class="cost-label">+1500</span>`;
                 }
 
-                // Friends logic override (needs money)
+                // Others
+                const btns = [this.ui.btnFeed, this.ui.btnDrink, this.ui.btnTv, this.ui.btnSport, this.ui.btnFriends];
+                btns.forEach(btn => btn.disabled = globalDisable);
+
                 if (!globalDisable) {
-                    if (this.stats.money < 2000) {
-                        this.ui.btnFriends.disabled = true;
-                    }
+                    if (this.stats.money < 2000) this.ui.btnFriends.disabled = true;
                     if (this.stats.money < 500) this.ui.btnFeed.disabled = true;
                     if (this.stats.money < 300) this.ui.btnDrink.disabled = true;
                 }
@@ -802,7 +850,6 @@ STORE_ID: dad-sim-01
 
             setBar(element, value, goodColor, badColor) {
                 element.style.width = `${value}%`;
-                // Simple color logic: below 30 is bad
                 element.style.backgroundColor = value < 30 ? badColor : goodColor;
             }
 
@@ -811,20 +858,15 @@ STORE_ID: dad-sim-01
             }
 
             // --- Actions ---
-
             work() {
                 if (this.isActionLocked) return;
-                
-                // Logic check (redundant if button disabled, but safe)
                 if (this.stats.energy < 25) {
                     this.showToast("Túl fáradt vagyok a munkához!");
-                    this.showThought("😴");
                     return;
                 }
 
                 this.resetInteraction();
-                
-                this.animateAction('anim-chewing'); // Bobbing head logic
+                this.animateAction('anim-chewing');
                 
                 this.stats.money += 1500;
                 this.changeStat('energy', -20);
@@ -838,8 +880,7 @@ STORE_ID: dad-sim-01
             meetFriends() {
                 if (this.isActionLocked) return;
                 if (this.stats.money < 2000) {
-                    this.showToast("Nincs elég pénzem a fiúkra...");
-                    this.showThought("💸");
+                    this.showToast("Nincs elég pénzem...");
                     return;
                 }
 
@@ -847,10 +888,10 @@ STORE_ID: dad-sim-01
                 this.resetInteraction();
                 this.animateAction('anim-dance');
 
-                this.changeStat('mood', 50); // Big boost
-                this.changeStat('hunger', -10); // Ate some snacks
-                this.changeStat('energy', -30); // Tiresome
-                this.alcoholLevel += 45; // Drank quite a bit
+                this.changeStat('mood', 50);
+                this.changeStat('hunger', -10);
+                this.changeStat('energy', -30);
+                this.alcoholLevel += 45;
 
                 if (this.alcoholLevel >= 100) {
                     setTimeout(() => this.vomit(), 1000);
@@ -863,14 +904,13 @@ STORE_ID: dad-sim-01
             sport() {
                 if (this.isActionLocked) return;
                 this.resetInteraction();
-                
                 this.animateAction('anim-sport');
 
                 this.stats.weight = Math.max(55, this.stats.weight - 0.5);
                 this.changeStat('health', 5);
                 this.changeStat('energy', -20);
                 this.changeStat('hunger', -15);
-                this.changeStat('mood', 5); // Endorphins
+                this.changeStat('mood', 5);
 
                 this.showToast("Hú, ez fárasztó volt!");
                 this.showThought("💪");
@@ -901,7 +941,7 @@ STORE_ID: dad-sim-01
             drink() {
                 if (this.isActionLocked) return;
                  if (this.stats.money < 300) {
-                    this.showToast("Nincs elég pénzed sörre!");
+                    this.showToast("Nincs elég pénzed!");
                     return;
                 }
 
@@ -954,12 +994,10 @@ STORE_ID: dad-sim-01
             tv() {
                 if (this.isActionLocked) return;
                 this.resetInteraction();
-                
                 this.changeStat('mood', 12);
                 this.changeStat('energy', -3);
-                
                 this.showToast("Jó a műsor!");
-                this.showThought("⚽");
+                this.showThought("📺");
             }
 
             toggleSleep() {
@@ -986,7 +1024,6 @@ STORE_ID: dad-sim-01
             }
 
             // --- Helpers ---
-
             changeStat(stat, amount) {
                 this.stats[stat] = Math.max(0, Math.min(100, this.stats[stat] + amount));
                 this.updateUI();
@@ -1033,7 +1070,6 @@ STORE_ID: dad-sim-01
         window.addEventListener('DOMContentLoaded', () => {
             window.game = new DadGame();
         });
-
     </script>
 </body>
 </html>
