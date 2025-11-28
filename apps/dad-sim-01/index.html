@@ -1,6 +1,7 @@
 <!--
 APP_NAME: ApuSzimulátor
 APP_ICON: https://i.ibb.co/twDdLS0p/0b1e71d85026.png
+APP_CATEGORY: Games
 WINDOW_WIDTH: 380
 WINDOW_HEIGHT: 650
 STORE_ID: dad-sim-01
@@ -42,7 +43,7 @@ STORE_ID: dad-sim-01
         }
 
         body.mobile-mode {
-            padding: 5px;
+            padding: 0;
         }
 
         #app-container {
@@ -71,6 +72,7 @@ STORE_ID: dad-sim-01
             border-bottom: 1px solid #e5e5e5;
             background: #fff;
             z-index: 10;
+            flex-shrink: 0;
         }
 
         h1 {
@@ -117,6 +119,7 @@ STORE_ID: dad-sim-01
             border-radius: 50%;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            flex-shrink: 0;
         }
 
         .avatar {
@@ -253,6 +256,7 @@ STORE_ID: dad-sim-01
             backdrop-filter: blur(5px);
             border: 1px solid rgba(0,0,0,0.05);
             margin-bottom: 10px;
+            flex-shrink: 0;
         }
 
         .stat-row {
@@ -302,6 +306,7 @@ STORE_ID: dad-sim-01
             box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
             overflow-y: auto;
             max-height: 250px;
+            flex-shrink: 0;
         }
 
         button {
@@ -452,6 +457,57 @@ STORE_ID: dad-sim-01
         }
         .sick-overlay.visible {
             opacity: 1;
+        }
+
+        /* Mobile / Compact Mode Optimizations */
+        /* Applied when body has .mobile-mode OR when screen is very small */
+        body.mobile-mode .avatar-container,
+        @media (max-height: 600px) and (max-width: 400px) .avatar-container {
+            width: 90px;
+            height: 90px;
+            margin: 5px 0 10px 0;
+        }
+
+        body.mobile-mode .avatar,
+        @media (max-height: 600px) and (max-width: 400px) .avatar {
+            font-size: 50px;
+        }
+
+        body.mobile-mode .game-area,
+        @media (max-height: 600px) and (max-width: 400px) .game-area {
+            padding: 10px;
+        }
+
+        body.mobile-mode .stats-container,
+        @media (max-height: 600px) and (max-width: 400px) .stats-container {
+            padding: 8px 12px;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+
+        body.mobile-mode .stat-row,
+        @media (max-height: 600px) and (max-width: 400px) .stat-row {
+            font-size: 0.8rem;
+            margin-bottom: 2px;
+            gap: 6px;
+        }
+
+        body.mobile-mode .controls,
+        @media (max-height: 600px) and (max-width: 400px) .controls {
+            padding: 10px;
+            gap: 8px;
+        }
+
+        body.mobile-mode button,
+        @media (max-height: 600px) and (max-width: 400px) button {
+            min-height: 38px;
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+        
+        body.mobile-mode header h1,
+        @media (max-height: 600px) and (max-width: 400px) header h1 {
+            font-size: 1rem;
         }
 
     </style>
@@ -612,10 +668,11 @@ STORE_ID: dad-sim-01
 
             tick() {
                 if (this.isSleeping) {
-                    this.stats.energy = Math.min(100, this.stats.energy + 8);
+                    // FAST SLEEP: Recover much faster
+                    this.stats.energy = Math.min(100, this.stats.energy + 20); // Faster gain
                     this.stats.hunger = Math.max(0, this.stats.hunger - 1);
-                    this.stats.health = Math.min(100, this.stats.health + 1); // Sleep heals
-                    this.alcoholLevel = Math.max(0, this.alcoholLevel - 5);
+                    this.stats.health = Math.min(100, this.stats.health + 4); // Faster healing
+                    this.alcoholLevel = Math.max(0, this.alcoholLevel - 10); // Faster sobriety
                     
                     if (this.stats.energy >= 100) {
                         this.wakeUp();
