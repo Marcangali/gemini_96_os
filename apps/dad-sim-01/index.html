@@ -721,7 +721,7 @@ STORE_ID: dad-sim-01
                     sport: ["Izomláz!", "No pain no gain!", "Ez fájt...", "Formában vagyok!", "Fogyjon a háj!"],
                     sportTired: ["Nem bírom...", "Majd leszakad a karom.", "Inkább aludnék.", "Nincs erőm ugrálni."],
                     tv: ["Jó ez a műsor!", "Csak a foci!", "Híradó... unalmas.", "Reklám, reklám..."],
-                    tvSleep: ["Hopp, elaludtam...", "Mi volt a film vége?", "Zzz... pihentem kicsit.", "Belealudtam a híradóba."],
+                    tvSleep: ["Jaj, bealudtam a tévén...", "Hopp, elbóbiskoltam.", "Miről maradtam le?", "Na, jól bealudtam."],
                     friends: ["Nagy buli volt!", "Régen találkoztunk!", "Apu kirúg a hámból!", "Jó társaság!"]
                 };
 
@@ -1127,16 +1127,17 @@ STORE_ID: dad-sim-01
                 if (this.isActionLocked) return;
                 this.resetInteraction();
 
-                // DEPENDENCY: Low energy + TV = Fall asleep & Energy Boost
+                // DEPENDENCY: Low energy + TV = Fall asleep without GUI, recover max up to 30%
                 if (this.stats.energy < 30) {
-                    this.showToast(this.getRandomMsg('tvSleep'));
+                    this.showToast("Jaj, bealudtam a tévén...");
                     this.showThought("💤");
                     
-                    // Random 10-20% energy boost
-                    const bonus = Math.floor(Math.random() * 11) + 10; // 10 to 20
-                    this.stats.energy = Math.min(100, this.stats.energy + bonus);
+                    // Recover some energy, but cap total energy at 30
+                    // This simulates a rough nap, not a full sleep
+                    let recovery = Math.floor(Math.random() * 10) + 10; // +10 to +20
+                    this.stats.energy = Math.min(30, this.stats.energy + recovery);
                     
-                    this.sleep();
+                    this.updateUI();
                     return;
                 }
 
