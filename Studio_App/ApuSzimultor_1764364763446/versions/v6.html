@@ -1,0 +1,1075 @@
+<!--
+APP_NAME: ApuSzimulátor
+APP_ICON: https://i.ibb.co/twDdLS0p/0b1e71d85026.png
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 650
+STORE_ID: dad-sim-01
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ApuSzimulátor</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --card-bg: #ffffff;
+            --primary: #0078d4;
+            --primary-hover: #006cc1;
+            --text-main: #202020;
+            --text-sub: #606060;
+            --success: #107c10;
+            --warning: #d83b01;
+            --danger: #e81123;
+            --radius: 12px;
+            --shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            user-select: none;
+            color: var(--text-main);
+        }
+
+        /* Standard Desktop/Window Mode */
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: var(--card-bg);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        @media (min-width: 400px) and (min-height: 600px) {
+            #app-container {
+                /* Only round corners if not full mobile screen */
+                border-radius: var(--radius); 
+            }
+        }
+
+        /* --- Header --- */
+        header {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+            background: #fff;
+            z-index: 10;
+            flex-shrink: 0;
+            height: 50px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .money-badge {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* --- Game Area --- */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* Centered for balance */
+            position: relative;
+            padding: 15px;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
+        }
+
+        /* --- Avatar --- */
+        .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0 20px 0;
+            background: #eef4f9;
+            border-radius: 50%;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            flex-shrink: 0;
+        }
+
+        .avatar {
+            font-size: 70px;
+            line-height: 1;
+            cursor: pointer;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1));
+            transition: transform 0.2s;
+            user-select: none;
+        }
+        
+        .avatar:active {
+            transform: scale(0.9) !important;
+        }
+
+        /* Animations */
+        @keyframes chew {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes wobble {
+            0%, 100% { transform: rotate(0deg) translateX(0); }
+            25% { transform: rotate(5deg) translateX(5px); }
+            75% { transform: rotate(-5deg) translateX(-5px); }
+        }
+
+        @keyframes sick-shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        
+        @keyframes workout {
+            0% { transform: translateY(0) scale(1,1); }
+            50% { transform: translateY(5px) scale(1.1, 0.9); }
+            100% { transform: translateY(0) scale(1,1); }
+        }
+
+        @keyframes dance {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-10deg) scale(1.1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+            75% { transform: rotate(-5deg) scale(1); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+
+        .anim-chewing .avatar { animation: chew 0.3s infinite; }
+        .anim-drunk .avatar { animation: wobble 2.5s infinite ease-in-out; }
+        .anim-sick .avatar { animation: sick-shake 0.8s infinite; filter: hue-rotate(90deg); }
+        .anim-sport .avatar { animation: workout 0.6s infinite; }
+        .anim-dance .avatar { animation: dance 0.5s infinite; }
+
+        /* Bubbles */
+        .status-bubble {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--danger);
+            color: white;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
+
+        .status-bubble.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .thought-cloud {
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            background: white;
+            border: 2px solid #e5e5e5;
+            padding: 6px 10px;
+            border-radius: 16px;
+            font-size: 1.4rem;
+            opacity: 0;
+            transform: scale(0) translateY(10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .thought-cloud.visible {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        .thought-cloud::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            right: 15px;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-bottom: 2px solid #e5e5e5;
+            border-right: 2px solid #e5e5e5;
+            transform: rotate(45deg);
+        }
+
+        /* --- Stats --- */
+        .stats-container {
+            width: 100%;
+            max-width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(255,255,255,0.8);
+            padding: 12px;
+            border-radius: var(--radius);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.05);
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+
+        .stat-icon {
+            font-size: 1.1rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .progress-bar-bg {
+            flex: 1;
+            height: 10px;
+            background: #efefef;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 100%;
+            border-radius: 5px;
+            transition: width 0.5s ease-out, background-color 0.3s;
+        }
+        
+        .weight-display {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            text-align: right;
+            font-weight: 500;
+        }
+
+        /* --- Controls --- */
+        .controls {
+            padding: 16px;
+            background: #fff;
+            border-top: 1px solid #eee;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+            overflow-y: auto;
+            max-height: 40%;
+            flex-shrink: 0;
+        }
+
+        button {
+            border: none;
+            background: #f8f8f8;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            min-height: 44px;
+            position: relative;
+        }
+
+        button:hover {
+            background: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            border-color: #eee;
+        }
+
+        button:active {
+            transform: translateY(0);
+            background: #f0f0f0;
+        }
+
+        button.primary {
+            background: var(--primary);
+            color: white;
+            grid-column: span 2;
+        }
+        button.primary:hover {
+            background: var(--primary-hover);
+            color: white;
+        }
+        
+        button.social {
+            background: #605e5c;
+            color: white;
+            grid-column: span 2;
+        }
+        button.social:hover {
+            background: #4d4b49;
+            color: white;
+        }
+
+        .cost-label {
+            font-size: 0.75em;
+            opacity: 0.7;
+            font-weight: normal;
+            margin-left: 2px;
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            background: #f0f0f0 !important;
+            color: #a0a0a0 !important;
+            box-shadow: none !important;
+            border-color: transparent !important;
+        }
+        
+        button.locked-btn {
+            background-color: #e6e6e6 !important;
+            color: #888 !important;
+            border: 1px dashed #ccc !important;
+        }
+
+        /* --- Overlays --- */
+        .night-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 20, 0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s;
+            backdrop-filter: blur(2px);
+        }
+
+        body.sleeping .night-overlay {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .zzz {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #8c9eff;
+            animation: floatZ 2.5s infinite ease-in-out;
+            position: absolute;
+        }
+
+        @keyframes floatZ {
+            0% { transform: translate(0, 0) scale(1) rotate(-10deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translate(30px, -60px) scale(1.5) rotate(10deg); opacity: 0; }
+        }
+
+        .message-toast {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(30, 30, 30, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 50;
+        }
+        .message-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .sick-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, transparent 50%, rgba(100, 255, 0, 0.2));
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 40;
+        }
+        .sick-overlay.visible {
+            opacity: 1;
+        }
+
+        /* ==========================================================================
+           DYNAMIC MOBILE OPTIMIZATION
+           Adapts UI scale based on viewport height/width using fluid typography and clamp
+           ========================================================================== */
+        
+        body.mobile-mode #app-container,
+        @media (max-width: 420px), (max-height: 650px) {
+            
+            /* Fluid Header */
+            header {
+                padding: 1.5vh 3vw;
+                height: auto;
+                min-height: 44px;
+            }
+            header h1 {
+                font-size: clamp(0.9rem, 4vw, 1.1rem);
+            }
+            .money-badge {
+                padding: 0.5vh 2vw;
+                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+            }
+
+            /* Fluid Game Area Padding */
+            .game-area {
+                padding: 1vh 3vw;
+                justify-content: flex-start;
+            }
+
+            /* Fluid Avatar - Scales with Viewport Height */
+            .avatar-container {
+                width: clamp(70px, 18vh, 130px);
+                height: clamp(70px, 18vh, 130px);
+                margin: 1vh 0 2vh 0;
+            }
+            .avatar {
+                font-size: clamp(40px, 10vh, 75px);
+            }
+            
+            /* Fluid Stats */
+            .stats-container {
+                width: 100%;
+                padding: 1.5vh 3vw;
+                gap: 0.8vh;
+            }
+            .stat-row {
+                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+                gap: 2vw;
+            }
+            .stat-icon {
+                font-size: clamp(0.9rem, 4vw, 1.1rem);
+                width: clamp(16px, 5vw, 24px);
+            }
+            .progress-bar-bg {
+                height: clamp(6px, 1.2vh, 10px);
+            }
+            .weight-display {
+                font-size: clamp(0.7rem, 3vw, 0.85rem);
+                margin-top: 0.5vh;
+            }
+
+            /* Fluid Controls */
+            .controls {
+                padding: 1.5vh 3vw;
+                gap: 1vh;
+            }
+            
+            button {
+                min-height: clamp(36px, 6vh, 48px);
+                padding: 0.5vh 1vw;
+                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+                gap: 1vw;
+            }
+            
+            /* Adjust cost label size */
+            .cost-label {
+                font-size: 0.8em;
+                display: inline-block;
+            }
+            
+            /* Thought bubble adjustment */
+            .thought-cloud {
+                font-size: clamp(1.1rem, 5vw, 1.4rem);
+                padding: 0.5vh 2vw;
+                top: -15%;
+                left: -15%;
+            }
+        }
+
+    </style>
+</head>
+<body class="">
+
+    <div id="app-container">
+        <header>
+            <h1>ApuSzimulátor</h1>
+            <div class="money-badge">
+                <span>💰</span>
+                <span id="money-display">2000 Ft</span>
+            </div>
+        </header>
+
+        <div class="game-area">
+            <div class="sick-overlay" id="sick-overlay"></div>
+            
+            <div class="avatar-container" id="avatar-container">
+                <div class="thought-cloud" id="thought">🍕</div>
+                <div class="status-bubble" id="alert-bubble">!</div>
+                <div class="avatar" id="avatar">👨</div>
+            </div>
+
+            <div class="stats-container">
+                <!-- Health -->
+                <div class="stat-row">
+                    <span class="stat-icon" title="Egészség">❤️</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="fill-health" style="width: 100%; background: #d92b2b;"></div>
+                    </div>
+                </div>
+                <!-- Hunger -->
+                <div class="stat-row">
+                    <span class="stat-icon" title="Jóllakottság">🍗</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="fill-hunger" style="width: 80%; background: #107c10;"></div>
+                    </div>
+                </div>
+                <!-- Energy -->
+                <div class="stat-row">
+                    <span class="stat-icon" title="Energia">⚡</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="fill-energy" style="width: 60%; background: #ffb900;"></div>
+                    </div>
+                </div>
+                <!-- Mood -->
+                <div class="stat-row">
+                    <span class="stat-icon" title="Jókedv">😊</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="fill-mood" style="width: 90%; background: #0078d4;"></div>
+                    </div>
+                </div>
+                
+                <div class="weight-display">
+                    Testsúly: <span id="weight-display">80.0</span> kg ⚖️
+                </div>
+            </div>
+
+            <div class="message-toast" id="toast">Helló!</div>
+        </div>
+
+        <div class="controls">
+            <button onclick="game.work()" id="btn-work" class="primary">
+                <span>💼</span> Munka <span class="cost-label">+1500</span>
+            </button>
+            
+            <button onclick="game.meetFriends()" id="btn-friends" class="social">
+                <span>🍻</span> Barátok <span class="cost-label">-2k</span>
+            </button>
+            
+            <button onclick="game.feed()" id="btn-feed">
+                <span>🍔</span> Evés <span class="cost-label">-500</span>
+            </button>
+            <button onclick="game.drink()" id="btn-drink">
+                <span>🍺</span> Ivás <span class="cost-label">-300</span>
+            </button>
+            
+            <button onclick="game.sport()" id="btn-sport">
+                <span>🏋️</span> Edzés
+            </button>
+            <button onclick="game.tv()" id="btn-tv">
+                <span>📺</span> Tévé
+            </button>
+            
+            <button onclick="game.toggleSleep()" id="btn-sleep" style="grid-column: span 2;">
+                <span>😴</span> Alvás
+            </button>
+        </div>
+
+        <div class="night-overlay" onclick="game.wakeUp()">
+            <div class="zzz" style="left: 45%; top: 50%; animation-delay: 0s">Z</div>
+            <div class="zzz" style="left: 55%; top: 45%; animation-delay: 0.8s; font-size: 1.8rem">z</div>
+            <div class="zzz" style="left: 50%; top: 40%; animation-delay: 1.6s; font-size: 1.2rem">z</div>
+            <p style="margin-top: 140px; font-size: 0.9rem; color: #8c9eff; opacity: 0.8;">(Kattints az ébresztéshez)</p>
+        </div>
+    </div>
+
+    <script>
+        class DadGame {
+            constructor() {
+                // Initial Stats
+                this.stats = {
+                    hunger: 60,
+                    energy: 70,
+                    mood: 80,
+                    health: 100,
+                    weight: 82.0, // kg
+                    money: 2000   // Ft
+                };
+
+                // State Flags
+                this.isSleeping = false;
+                this.isActionLocked = false;
+                this.isSick = false;
+
+                // Hidden Stats
+                this.alcoholLevel = 0; // 0-100
+                this.boredomCounter = 0; 
+                this.sickTurnCounter = 0;
+
+                this.timer = null;
+
+                // UI Elements
+                this.ui = {
+                    hunger: document.getElementById('fill-hunger'),
+                    energy: document.getElementById('fill-energy'),
+                    mood: document.getElementById('fill-mood'),
+                    health: document.getElementById('fill-health'),
+                    weight: document.getElementById('weight-display'),
+                    money: document.getElementById('money-display'),
+                    
+                    avatar: document.getElementById('avatar'),
+                    avatarContainer: document.getElementById('avatar-container'),
+                    alert: document.getElementById('alert-bubble'),
+                    thought: document.getElementById('thought'),
+                    toast: document.getElementById('toast'),
+                    body: document.body,
+                    sickOverlay: document.getElementById('sick-overlay'),
+                    
+                    btnFeed: document.getElementById('btn-feed'),
+                    btnDrink: document.getElementById('btn-drink'),
+                    btnTv: document.getElementById('btn-tv'),
+                    btnWork: document.getElementById('btn-work'),
+                    btnSport: document.getElementById('btn-sport'),
+                    btnFriends: document.getElementById('btn-friends'),
+                    btnSleep: document.getElementById('btn-sleep')
+                };
+
+                this.init();
+            }
+
+            init() {
+                this.timer = setInterval(() => this.tick(), 2000);
+                this.updateUI();
+                this.showToast("Szia! Vigyázz apura!");
+                
+                // Check if mobile mode class is added dynamically
+                const checkMobile = () => {
+                    if (document.body.classList.contains('mobile-mode')) {
+                        // Logic if needed in JS, but CSS handles layout
+                    }
+                };
+                
+                const observer = new MutationObserver(checkMobile);
+                observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+            }
+
+            tick() {
+                if (this.isSleeping) {
+                    // FAST SLEEP: Recover much faster
+                    this.stats.energy = Math.min(100, this.stats.energy + 20); 
+                    this.stats.hunger = Math.max(0, this.stats.hunger - 1);
+                    this.stats.health = Math.min(100, this.stats.health + 4); 
+                    this.alcoholLevel = Math.max(0, this.alcoholLevel - 10); 
+                    
+                    if (this.stats.energy >= 100) {
+                        this.wakeUp();
+                        this.showToast("Kipihentem magam!");
+                    }
+                } else {
+                    // Decay
+                    this.stats.hunger = Math.max(0, this.stats.hunger - 2);
+                    this.stats.energy = Math.max(0, this.stats.energy - 1);
+                    this.stats.mood = Math.max(0, this.stats.mood - 1);
+                    this.alcoholLevel = Math.max(0, this.alcoholLevel - 3);
+
+                    // Health Logic
+                    // Too fat or too skinny damages health
+                    if (this.stats.weight > 110 || this.stats.weight < 60) {
+                        this.stats.health = Math.max(0, this.stats.health - 1);
+                    }
+                    // Starvation damages health
+                    if (this.stats.hunger < 10) {
+                        this.stats.health = Math.max(0, this.stats.health - 2);
+                    }
+
+                    // Boredom
+                    this.boredomCounter++;
+                    if (this.boredomCounter > 10) {
+                        this.stats.mood = Math.max(0, this.stats.mood - 2);
+                    }
+
+                    // Random events
+                    if (Math.random() < 0.05) this.showThought();
+                }
+                
+                // Critical health check
+                if (this.stats.health < 20 && !this.isSick) {
+                    this.showThought("🏥");
+                }
+
+                this.updateUI();
+            }
+
+            updateUI() {
+                // Bars
+                this.setBar(this.ui.hunger, this.stats.hunger, '#107c10', '#d83b01');
+                this.setBar(this.ui.energy, this.stats.energy, '#ffb900', '#d83b01');
+                this.setBar(this.ui.mood, this.stats.mood, '#0078d4', '#e81123');
+                this.setBar(this.ui.health, this.stats.health, '#d92b2b', '#757575');
+
+                // Text Stats
+                this.ui.weight.innerText = this.stats.weight.toFixed(1);
+                this.ui.money.innerText = `${this.stats.money} Ft`;
+
+                // Avatar State
+                let face = '👨'; 
+                let containerClass = '';
+                
+                // Weight visual modifier
+                let scaleX = 1;
+                if (this.stats.weight > 100) scaleX = 1.1;
+                if (this.stats.weight > 120) scaleX = 1.2;
+                if (this.stats.weight < 65) scaleX = 0.9;
+                this.ui.avatar.style.transform = `scaleX(${scaleX})`;
+
+                if (this.isSleeping) {
+                    face = '😴';
+                } else if (this.isSick) {
+                    face = '🤢';
+                    containerClass = 'anim-sick';
+                } else if (this.alcoholLevel > 70) {
+                    face = '🥴'; 
+                    containerClass = 'anim-drunk';
+                } else if (this.alcoholLevel > 30) {
+                    face = '☺️'; 
+                } else if (this.stats.health < 30) {
+                    face = '🤒'; 
+                } else if (this.stats.mood < 20) {
+                    face = '🤬'; 
+                } else if (this.stats.hunger < 20) {
+                    face = '😵'; 
+                } else if (this.stats.energy < 20) {
+                    face = '😫'; 
+                } else if (this.stats.mood > 90) {
+                    face = '😎'; 
+                }
+
+                this.ui.avatar.innerText = face;
+                
+                // Reset animation class unless locked by action
+                if (!this.isActionLocked || this.isSick) {
+                     this.ui.avatarContainer.className = 'avatar-container ' + containerClass;
+                }
+
+                // Overlays
+                this.ui.sickOverlay.classList.toggle('visible', this.isSick);
+
+                // Alert
+                const needsAttention = this.stats.hunger < 20 || this.stats.energy < 20 || this.stats.mood < 20 || this.stats.health < 40;
+                this.ui.alert.classList.toggle('visible', needsAttention && !this.isSleeping);
+
+                // --- Button Logic ---
+                const globalDisable = this.isSleeping || this.isSick || this.isActionLocked;
+                
+                // Work Button
+                const workBtn = this.ui.btnWork;
+                if (this.stats.energy < 25) {
+                    workBtn.disabled = true;
+                    workBtn.classList.add('locked-btn');
+                    workBtn.innerHTML = `<span>🔒</span> Túl fáradt!`;
+                } else {
+                    workBtn.disabled = globalDisable;
+                    workBtn.classList.remove('locked-btn');
+                    workBtn.innerHTML = `<span>💼</span> Munka <span class="cost-label">+1500</span>`;
+                }
+
+                // Others
+                const btns = [this.ui.btnFeed, this.ui.btnDrink, this.ui.btnTv, this.ui.btnSport, this.ui.btnFriends];
+                btns.forEach(btn => btn.disabled = globalDisable);
+
+                if (!globalDisable) {
+                    if (this.stats.money < 2000) this.ui.btnFriends.disabled = true;
+                    if (this.stats.money < 500) this.ui.btnFeed.disabled = true;
+                    if (this.stats.money < 300) this.ui.btnDrink.disabled = true;
+                }
+            }
+
+            setBar(element, value, goodColor, badColor) {
+                element.style.width = `${value}%`;
+                element.style.backgroundColor = value < 30 ? badColor : goodColor;
+            }
+
+            resetInteraction() {
+                this.boredomCounter = 0;
+            }
+
+            // --- Actions ---
+            work() {
+                if (this.isActionLocked) return;
+                if (this.stats.energy < 25) {
+                    this.showToast("Túl fáradt vagyok a munkához!");
+                    return;
+                }
+
+                this.resetInteraction();
+                this.animateAction('anim-chewing');
+                
+                this.stats.money += 1500;
+                this.changeStat('energy', -20);
+                this.changeStat('mood', -15);
+                this.changeStat('hunger', -15);
+
+                this.showToast("Kemény munka, de megéri!");
+                this.showThought("💼");
+            }
+
+            meetFriends() {
+                if (this.isActionLocked) return;
+                if (this.stats.money < 2000) {
+                    this.showToast("Nincs elég pénzem...");
+                    return;
+                }
+
+                this.stats.money -= 2000;
+                this.resetInteraction();
+                this.animateAction('anim-dance');
+
+                this.changeStat('mood', 50);
+                this.changeStat('hunger', -10);
+                this.changeStat('energy', -30);
+                this.alcoholLevel += 45;
+
+                if (this.alcoholLevel >= 100) {
+                    setTimeout(() => this.vomit(), 1000);
+                } else {
+                    this.showToast("Ez hatalmas buli volt!");
+                    this.showThought("🍻");
+                }
+            }
+
+            sport() {
+                if (this.isActionLocked) return;
+                this.resetInteraction();
+                this.animateAction('anim-sport');
+
+                this.stats.weight = Math.max(55, this.stats.weight - 0.5);
+                this.changeStat('health', 5);
+                this.changeStat('energy', -20);
+                this.changeStat('hunger', -15);
+                this.changeStat('mood', 5);
+
+                this.showToast("Hú, ez fárasztó volt!");
+                this.showThought("💪");
+            }
+
+            feed() {
+                if (this.isActionLocked) return;
+                if (this.stats.money < 500) {
+                    this.showToast("Nincs elég pénzed!");
+                    return;
+                }
+                
+                this.stats.money -= 500;
+                this.resetInteraction();
+                this.animateAction('anim-chewing');
+                
+                this.alcoholLevel = Math.max(0, this.alcoholLevel - 10);
+                this.stats.weight += 0.4;
+                
+                this.changeStat('hunger', 30);
+                this.changeStat('mood', 5);
+                this.changeStat('energy', -2); 
+                
+                this.showToast("Hmm, finom!");
+                this.showThought("🍗");
+            }
+
+            drink() {
+                if (this.isActionLocked) return;
+                 if (this.stats.money < 300) {
+                    this.showToast("Nincs elég pénzed!");
+                    return;
+                }
+
+                this.stats.money -= 300;
+                this.resetInteraction();
+                this.alcoholLevel += 35; 
+                this.stats.weight += 0.2;
+                
+                if (this.alcoholLevel >= 100) {
+                    this.vomit();
+                    return;
+                }
+
+                this.animateAction('anim-chewing');
+                
+                this.changeStat('hunger', 5);
+                this.changeStat('mood', 15);
+                this.changeStat('energy', -5);
+                this.changeStat('health', -2);
+
+                if (this.alcoholLevel > 60) {
+                    this.showToast("Még... még egyet...");
+                } else {
+                    this.showToast("Egészségedre!");
+                }
+            }
+
+            vomit() {
+                this.isSick = true;
+                this.isActionLocked = true;
+                
+                this.stats.hunger = 10;
+                this.stats.energy = Math.max(0, this.stats.energy - 30);
+                this.stats.mood = Math.max(0, this.stats.mood - 40);
+                this.stats.health = Math.max(0, this.stats.health - 10);
+                this.alcoholLevel = 0;
+                
+                this.showToast("Jaj ne! Túl sok volt!");
+                this.showThought("🤮");
+                this.updateUI();
+
+                setTimeout(() => {
+                    this.isSick = false;
+                    this.isActionLocked = false;
+                    this.showToast("Uh... soha többet...");
+                    this.updateUI();
+                }, 4000);
+            }
+
+            tv() {
+                if (this.isActionLocked) return;
+                this.resetInteraction();
+                this.changeStat('mood', 12);
+                this.changeStat('energy', -3);
+                this.showToast("Jó a műsor!");
+                this.showThought("📺");
+            }
+
+            toggleSleep() {
+                if (this.isSick) return;
+                if (this.isSleeping) this.wakeUp();
+                else this.sleep();
+            }
+
+            sleep() {
+                this.resetInteraction();
+                this.isSleeping = true;
+                this.ui.body.classList.add('sleeping');
+                this.ui.btnSleep.innerHTML = "<span>☀️</span> Ébresztés";
+                this.showToast("Jó éjszakát!");
+                this.updateUI();
+            }
+
+            wakeUp() {
+                this.isSleeping = false;
+                this.ui.body.classList.remove('sleeping');
+                this.ui.btnSleep.innerHTML = "<span>😴</span> Alvás";
+                this.showToast("Jó reggelt!");
+                this.updateUI();
+            }
+
+            // --- Helpers ---
+            changeStat(stat, amount) {
+                this.stats[stat] = Math.max(0, Math.min(100, this.stats[stat] + amount));
+                this.updateUI();
+            }
+
+            animateAction(className) {
+                if (this.alcoholLevel > 70) return;
+                this.ui.avatarContainer.classList.add(className);
+                setTimeout(() => {
+                    this.ui.avatarContainer.classList.remove(className);
+                    this.updateUI(); 
+                }, 800);
+            }
+
+            showToast(msg) {
+                this.ui.toast.innerText = msg;
+                this.ui.toast.classList.add('show');
+                setTimeout(() => {
+                    this.ui.toast.classList.remove('show');
+                }, 2000);
+            }
+
+            showThought(emoji) {
+                if(emoji) {
+                     this.ui.thought.innerText = emoji;
+                } else {
+                    if (this.alcoholLevel > 50) this.ui.thought.innerText = "🌀";
+                    else if (this.stats.hunger < 50) this.ui.thought.innerText = "🍔";
+                    else if (this.stats.money < 500) this.ui.thought.innerText = "💸";
+                    else if (this.stats.weight > 100) this.ui.thought.innerText = "🏃";
+                    else {
+                        const randoms = ["🚗", "🔧", "🎸", "🍺"];
+                        this.ui.thought.innerText = randoms[Math.floor(Math.random() * randoms.length)];
+                    }
+                }
+                
+                this.ui.thought.classList.add('visible');
+                setTimeout(() => {
+                    this.ui.thought.classList.remove('visible');
+                }, 2000);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            window.game = new DadGame();
+        });
+    </script>
+</body>
+</html>
