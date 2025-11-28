@@ -2,7 +2,7 @@
 APP_NAME: ApuSzimulátor
 APP_ICON: https://i.ibb.co/twDdLS0p/0b1e71d85026.png
 WINDOW_WIDTH: 380
-WINDOW_HEIGHT: 620
+WINDOW_HEIGHT: 650
 STORE_ID: dad-sim-01
 -->
 <!DOCTYPE html>
@@ -165,10 +165,19 @@ STORE_ID: dad-sim-01
             100% { transform: translateY(0) scale(1,1); }
         }
 
+        @keyframes dance {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-10deg) scale(1.1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+            75% { transform: rotate(-5deg) scale(1); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+
         .anim-chewing .avatar { animation: chew 0.3s infinite; }
         .anim-drunk .avatar { animation: wobble 2.5s infinite ease-in-out; }
         .anim-sick .avatar { animation: sick-shake 0.8s infinite; filter: hue-rotate(90deg); }
         .anim-sport .avatar { animation: workout 0.6s infinite; }
+        .anim-dance .avatar { animation: dance 0.5s infinite; }
 
         /* Bubbles */
         .status-bubble {
@@ -291,6 +300,8 @@ STORE_ID: dad-sim-01
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+            overflow-y: auto;
+            max-height: 250px;
         }
 
         button {
@@ -309,6 +320,7 @@ STORE_ID: dad-sim-01
             gap: 8px;
             transition: all 0.2s;
             border: 1px solid transparent;
+            min-height: 48px;
         }
 
         button:hover {
@@ -330,6 +342,17 @@ STORE_ID: dad-sim-01
         }
         button.primary:hover {
             background: var(--primary-hover);
+            color: white;
+        }
+        
+        button.social {
+            background: #605e5c;
+            color: white;
+            grid-column: span 2;
+        }
+        button.social:hover {
+            background: #4d4b49;
+            color: white;
         }
 
         .cost-label {
@@ -340,10 +363,19 @@ STORE_ID: dad-sim-01
         }
         
         button:disabled {
-            opacity: 0.5;
+            opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
-            background: #f0f0f0;
+            transform: none !important;
+            background: #f0f0f0 !important;
+            color: #a0a0a0 !important;
+            box-shadow: none !important;
+            border-color: transparent !important;
+        }
+        
+        button.locked-btn {
+            background-color: #e6e6e6 !important;
+            color: #888 !important;
+            border: 1px dashed #ccc !important;
         }
 
         /* Sleep Mode */
@@ -483,11 +515,12 @@ STORE_ID: dad-sim-01
         </div>
 
         <div class="controls">
-            <button onclick="game.work()" id="btn-work">
-                <span>💼</span> Munka <span class="cost-label">+$$$</span>
+            <button onclick="game.work()" id="btn-work" class="primary">
+                <span>💼</span> Munka <span class="cost-label">+1500</span>
             </button>
-            <button onclick="game.sport()" id="btn-sport">
-                <span>🏋️</span> Edzés <span class="cost-label">-Súly</span>
+            
+            <button onclick="game.meetFriends()" id="btn-friends" class="social">
+                <span>🍻</span> Találkozás a barátokkal <span class="cost-label">-2000</span>
             </button>
             
             <button onclick="game.feed()" id="btn-feed">
@@ -497,10 +530,14 @@ STORE_ID: dad-sim-01
                 <span>🍺</span> Sör <span class="cost-label">-300</span>
             </button>
             
+            <button onclick="game.sport()" id="btn-sport">
+                <span>🏋️</span> Edzés
+            </button>
             <button onclick="game.tv()" id="btn-tv">
                 <span>📺</span> Tévé
             </button>
-            <button onclick="game.toggleSleep()" id="btn-sleep">
+            
+            <button onclick="game.toggleSleep()" id="btn-sleep" style="grid-column: span 2;">
                 <span>😴</span> Alvás
             </button>
         </div>
@@ -559,7 +596,9 @@ STORE_ID: dad-sim-01
                     btnDrink: document.getElementById('btn-drink'),
                     btnTv: document.getElementById('btn-tv'),
                     btnWork: document.getElementById('btn-work'),
-                    btnSport: document.getElementById('btn-sport')
+                    btnSport: document.getElementById('btn-sport'),
+                    btnFriends: document.getElementById('btn-friends'),
+                    btnSleep: document.getElementById('btn-sleep')
                 };
 
                 this.init();
@@ -675,10 +714,33 @@ STORE_ID: dad-sim-01
                 const needsAttention = this.stats.hunger < 20 || this.stats.energy < 20 || this.stats.mood < 20 || this.stats.health < 40;
                 this.ui.alert.classList.toggle('visible', needsAttention && !this.isSleeping);
 
-                // Buttons
-                const disabled = this.isSleeping || this.isSick || this.isActionLocked;
-                const btns = [this.ui.btnFeed, this.ui.btnDrink, this.ui.btnTv, this.ui.btnWork, this.ui.btnSport];
-                btns.forEach(btn => btn.disabled = disabled);
+                // --- Button Logic ---
+                
+                // Global Disable (Sick or Sleeping)
+                const globalDisable = this.isSleeping || this.isSick || this.isActionLocked;
+                const btns = [this.ui.btnFeed, this.ui.btnDrink, this.ui.btnTv, this.ui.btnSport, this.ui.btnFriends];
+                btns.forEach(btn => btn.disabled = globalDisable);
+                
+                // Work Button - Special Logic (Too tired)
+                const workBtn = this.ui.btnWork;
+                if (this.stats.energy < 25) {
+                    workBtn.disabled = true;
+                    workBtn.classList.add('locked-btn');
+                    workBtn.innerHTML = `<span>🔒</span> Túl fáradt!`;
+                } else {
+                    workBtn.disabled = globalDisable;
+                    workBtn.classList.remove('locked-btn');
+                    workBtn.innerHTML = `<span>💼</span> Munka <span class="cost-label">+1500</span>`;
+                }
+
+                // Friends logic override (needs money)
+                if (!globalDisable) {
+                    if (this.stats.money < 2000) {
+                        this.ui.btnFriends.disabled = true;
+                    }
+                    if (this.stats.money < 500) this.ui.btnFeed.disabled = true;
+                    if (this.stats.money < 300) this.ui.btnDrink.disabled = true;
+                }
             }
 
             setBar(element, value, goodColor, badColor) {
@@ -695,17 +757,50 @@ STORE_ID: dad-sim-01
 
             work() {
                 if (this.isActionLocked) return;
+                
+                // Logic check (redundant if button disabled, but safe)
+                if (this.stats.energy < 25) {
+                    this.showToast("Túl fáradt vagyok a munkához!");
+                    this.showThought("😴");
+                    return;
+                }
+
                 this.resetInteraction();
                 
                 this.animateAction('anim-chewing'); // Bobbing head logic
                 
                 this.stats.money += 1500;
-                this.changeStat('energy', -15);
-                this.changeStat('mood', -10);
-                this.changeStat('hunger', -10);
+                this.changeStat('energy', -20);
+                this.changeStat('mood', -15);
+                this.changeStat('hunger', -15);
 
                 this.showToast("Kemény munka, de megéri!");
                 this.showThought("💼");
+            }
+
+            meetFriends() {
+                if (this.isActionLocked) return;
+                if (this.stats.money < 2000) {
+                    this.showToast("Nincs elég pénzem a fiúkra...");
+                    this.showThought("💸");
+                    return;
+                }
+
+                this.stats.money -= 2000;
+                this.resetInteraction();
+                this.animateAction('anim-dance');
+
+                this.changeStat('mood', 50); // Big boost
+                this.changeStat('hunger', -10); // Ate some snacks
+                this.changeStat('energy', -30); // Tiresome
+                this.alcoholLevel += 45; // Drank quite a bit
+
+                if (this.alcoholLevel >= 100) {
+                    setTimeout(() => this.vomit(), 1000);
+                } else {
+                    this.showToast("Ez hatalmas buli volt!");
+                    this.showThought("🍻");
+                }
             }
 
             sport() {
@@ -820,7 +915,7 @@ STORE_ID: dad-sim-01
                 this.resetInteraction();
                 this.isSleeping = true;
                 this.ui.body.classList.add('sleeping');
-                document.getElementById('btn-sleep').innerHTML = "<span>☀️</span> Ébresztés";
+                this.ui.btnSleep.innerHTML = "<span>☀️</span> Ébresztés";
                 this.showToast("Jó éjszakát!");
                 this.updateUI();
             }
@@ -828,7 +923,7 @@ STORE_ID: dad-sim-01
             wakeUp() {
                 this.isSleeping = false;
                 this.ui.body.classList.remove('sleeping');
-                document.getElementById('btn-sleep').innerHTML = "<span>😴</span> Alvás";
+                this.ui.btnSleep.innerHTML = "<span>😴</span> Alvás";
                 this.showToast("Jó reggelt!");
                 this.updateUI();
             }
