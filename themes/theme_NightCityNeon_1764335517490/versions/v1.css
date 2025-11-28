@@ -1,0 +1,16 @@
+body.theme-nightcity {
+  --window-bg: #1a1a2e;
+  --window-titlebar-bg: linear-gradient(90deg, #00ffff, #ff00ff);
+  --window-titlebar-inactive-bg: linear-gradient(90deg, #008080, #800080);
+  --window-titlebar-text: #e0e0e0;
+  --button-bg: #2c2c4e;
+  --content-bg: #0f0f1a;
+  --window-border-color: #00ffff;
+  --taskbar-bg: #0f0f1a;
+  --taskbar-border-top-color: #ff00ff;
+  --start-menu-item-bg: #1a1a2e;
+  --start-menu-item-color: #e0e0e0;
+  --start-menu-item-hover-bg: #2c2c4e;
+  --start-menu-item-hover-color: #00ffff;
+  --start-menu-item-border-color: #00ffff;
+}
