@@ -25,11 +25,11 @@ STORE_ID: dad-sim-01
             --danger: #e81123;
             --radius: 12px;
             --shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-            --controls-height: 160px; /* Reserved space for fixed bottom controls */
         }
 
         * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -39,8 +39,6 @@ STORE_ID: dad-sim-01
             padding: 0;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
             height: 100vh;
             width: 100vw;
             overflow: hidden;
@@ -52,7 +50,7 @@ STORE_ID: dad-sim-01
             width: 100%;
             height: 100%;
             display: flex;
-            flex-direction: column;
+            flex-direction: column; /* Flex column layout ensures footer stays at bottom */
             background: var(--card-bg);
             position: relative;
             overflow: hidden;
@@ -74,7 +72,7 @@ STORE_ID: dad-sim-01
             border-bottom: 1px solid #e5e5e5;
             background: #fff;
             z-index: 10;
-            flex-shrink: 0;
+            flex: 0 0 auto; /* Don't shrink */
             height: 50px;
         }
 
@@ -145,16 +143,14 @@ STORE_ID: dad-sim-01
 
         /* --- Game Area --- */
         .game-area {
-            flex: 1;
+            flex: 1; /* Takes up all remaining space */
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Aligns content to top */
+            justify-content: flex-start;
             position: relative;
             padding: 10px;
-            /* CRITICAL FIX: Padding bottom ensures content isn't hidden behind fixed controls */
-            padding-bottom: var(--controls-height); 
-            overflow-y: auto;
+            overflow-y: auto; /* Scrollable if needed */
             overflow-x: hidden;
             background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
             transition: background 1s ease;
@@ -448,12 +444,9 @@ STORE_ID: dad-sim-01
             box-shadow: 0 0 15px rgba(100, 100, 255, 0.2);
         }
 
-        /* --- FIXED CONTROLS AREA --- */
+        /* --- FLEX CONTROLS AREA --- */
         .controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
+            flex: 0 0 auto; /* Fixed height relative to content */
             padding: 8px;
             background: #fff;
             border-top: 1px solid #eee;
@@ -461,9 +454,9 @@ STORE_ID: dad-sim-01
             grid-template-columns: repeat(3, 1fr); /* 3 Fixed Columns */
             gap: 6px;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
-            z-index: 50; /* Ensure on top */
-            height: var(--controls-height);
+            z-index: 50;
             transition: all 0.3s ease;
+            width: 100%;
         }
 
         button.action-btn {
@@ -472,7 +465,7 @@ STORE_ID: dad-sim-01
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             padding: 4px;
             border-radius: 8px;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-main);
             cursor: pointer;
@@ -482,7 +475,7 @@ STORE_ID: dad-sim-01
             gap: 6px;
             transition: all 0.2s;
             border: 1px solid transparent;
-            height: 42px; /* Fixed height for consistency */
+            height: 48px; /* Comfortable touch target */
             position: relative;
             white-space: nowrap;
         }
@@ -640,8 +633,7 @@ STORE_ID: dad-sim-01
 
         /* --- COMPACT MODE / RESPONSIVE OVERRIDES --- */
         body.compact-ui .controls button.action-btn,
-        body.mobile-mode .controls button.action-btn,
-        @media (max-width: 340px) {
+        body.mobile-mode .controls button.action-btn {
             flex-direction: column;
             padding: 2px;
             height: 44px;
@@ -650,17 +642,33 @@ STORE_ID: dad-sim-01
         }
         
         body.compact-ui .controls button.action-btn .btn-text,
-        body.mobile-mode .controls button.action-btn .btn-text,
-        @media (max-width: 340px) {
+        body.mobile-mode .controls button.action-btn .btn-text {
             display: none !important;
         }
         
         body.compact-ui .controls button.action-btn > span:first-child,
-        body.mobile-mode .controls button.action-btn > span:first-child,
-        @media (max-width: 340px) {
+        body.mobile-mode .controls button.action-btn > span:first-child {
             font-size: 1.4rem;
             margin: 0;
             line-height: 1;
+        }
+
+        /* Responsive Fixes for Small Screens */
+        @media (max-width: 400px) {
+            button.action-btn {
+                padding: 2px;
+                font-size: 0.75rem;
+                gap: 4px;
+                height: 42px;
+            }
+            .cost-label {
+                font-size: 0.65em;
+            }
+            /* If screen is very narrow, force icon only mode or smaller text layout */
+            .controls {
+                gap: 4px;
+                padding: 4px;
+            }
         }
 
         /* Super Short Screens (Landscape Mobile) */
@@ -668,9 +676,6 @@ STORE_ID: dad-sim-01
             header {
                 padding: 4px 10px;
                 height: 40px;
-            }
-            :root {
-                --controls-height: 140px;
             }
             .controls {
                 padding: 4px;
@@ -736,9 +741,9 @@ STORE_ID: dad-sim-01
 
         .message-toast {
             position: absolute;
-            bottom: calc(var(--controls-height) + 15px); /* Position above controls */
+            bottom: 20px;
             left: 50%;
-            transform: translateX(-50%) translateY(20px);
+            transform: translateX(-50%) translateY(50px);
             background: rgba(30, 30, 30, 0.95);
             color: white;
             padding: 8px 16px;
@@ -749,7 +754,7 @@ STORE_ID: dad-sim-01
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             white-space: nowrap;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 200; /* Above regular elements */
+            z-index: 200;
             text-align: center;
             max-width: 90%;
             overflow: hidden;
@@ -842,11 +847,11 @@ STORE_ID: dad-sim-01
                     <span id="btn-sleep-text">Alvás</span>
                 </button>
             </div>
+            
+             <!-- Toast inside game area to position relatively -->
+             <div class="message-toast" id="toast">Helló!</div>
         </div>
         
-        <!-- Toast moved outside game-area for better Z-index relative to fixed controls -->
-        <div class="message-toast" id="toast">Helló!</div>
-
         <!-- Settings Modal -->
         <div class="settings-overlay" id="settings-overlay">
             <div class="settings-content">
@@ -862,7 +867,7 @@ STORE_ID: dad-sim-01
             </div>
         </div>
 
-        <!-- FIXED CONTROLS: 3 Buttons per Row (Grid 3x3) Pinned to Bottom -->
+        <!-- FIXED CONTROLS: Flex layout ensures they are never cut off -->
         <div class="controls">
             <!-- Row 1 -->
             <button onclick="game.work()" id="btn-work" class="action-btn primary">
@@ -1072,8 +1077,8 @@ STORE_ID: dad-sim-01
                 } else {
                     // AWAKE MECHANICS
                     
-                    // Digestion
-                    let hours SinceEat = this.totalGameHours - this.lastAteTotalHours;
+                    // Digestion - Fix syntax error here
+                    let hoursSinceEat = this.totalGameHours - this.lastAteTotalHours;
                     let hungerDecay = (hoursSinceEat < 3) ? 0.05 : 1.5;
                     this.stats.hunger = Math.max(0, this.stats.hunger - hungerDecay);
 
