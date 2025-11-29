@@ -148,13 +148,13 @@ STORE_ID: dad-sim-01
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* Vertically center content */
+            justify-content: center;
             position: relative;
             padding: 10px;
             overflow-y: auto;
             background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
             transition: background 1s ease;
-            min-height: 0; /* Important for flex nested scrolling */
+            min-height: 0;
         }
         
         .game-area.night-mode-bg {
@@ -174,7 +174,7 @@ STORE_ID: dad-sim-01
             border-radius: 50%;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            flex-shrink: 0; /* Prevent squishing */
+            flex-shrink: 0;
             z-index: 20;
         }
 
@@ -289,7 +289,7 @@ STORE_ID: dad-sim-01
 
         .thought-cloud {
             position: absolute;
-            top: -70px; /* Adjusted from -20px to move higher */
+            top: -70px;
             left: -30px;
             background: white;
             border: 2px solid #e5e5e5;
@@ -450,10 +450,10 @@ STORE_ID: dad-sim-01
             background: #fff;
             border-top: 1px solid #eee;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr); /* CHANGED to 3 columns per request */
             gap: 6px;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
-            flex-shrink: 0; /* Keep controls visible */
+            flex-shrink: 0;
             transition: all 0.3s ease;
             z-index: 30;
         }
@@ -464,7 +464,7 @@ STORE_ID: dad-sim-01
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             padding: 8px;
             border-radius: 8px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 600;
             color: var(--text-main);
             cursor: pointer;
@@ -474,7 +474,7 @@ STORE_ID: dad-sim-01
             gap: 6px;
             transition: all 0.2s;
             border: 1px solid transparent;
-            min-height: 38px;
+            min-height: 44px;
             position: relative;
             white-space: nowrap;
         }
@@ -499,7 +499,7 @@ STORE_ID: dad-sim-01
         button.primary {
             background: var(--primary);
             color: white;
-            grid-column: span 2;
+            /* grid-column: span 2; Removed span */
         }
         button.primary:hover {
             background: var(--primary-hover);
@@ -632,30 +632,26 @@ STORE_ID: dad-sim-01
         input:checked + .slider:before { transform: translateX(18px); }
 
         /* --- COMPACT MODE / RESPONSIVE OVERRIDES --- */
-        body.compact-ui .controls,
-        body.mobile-mode .controls,
-        @media (max-width: 340px) {
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 4px !important;
-        }
+        /* Applied when screen is small or mobile mode is active */
         body.compact-ui .controls button.action-btn,
         body.mobile-mode .controls button.action-btn,
-        @media (max-width: 340px) {
-            grid-column: span 1 !important;
+        @media (max-width: 320px) {
             flex-direction: column;
             padding: 4px;
-            min-height: 40px;
+            min-height: 46px;
             justify-content: center;
         }
+        
         body.compact-ui .controls button.action-btn .btn-text,
         body.mobile-mode .controls button.action-btn .btn-text,
-        @media (max-width: 340px) {
+        @media (max-width: 320px) {
             display: none !important;
         }
+        
         body.compact-ui .controls button.action-btn > span:first-child,
         body.mobile-mode .controls button.action-btn > span:first-child,
-        @media (max-width: 340px) {
-            font-size: 1.2rem;
+        @media (max-width: 320px) {
+            font-size: 1.4rem;
             margin: 0;
             line-height: 1;
         }
@@ -692,7 +688,6 @@ STORE_ID: dad-sim-01
                 font-size: 0.8rem;
             }
         }
-
 
         /* --- Overlays --- */
         .night-overlay {
@@ -788,7 +783,6 @@ STORE_ID: dad-sim-01
                     <span>💰</span>
                     <span id="money-display">2000 Ft</span>
                 </div>
-                <!-- Sleep button removed from here -->
                 <button class="icon-btn" onclick="game.toggleSettings()" title="Beállítások">⚙️</button>
             </div>
         </header>
@@ -837,7 +831,6 @@ STORE_ID: dad-sim-01
                 </div>
             </div>
 
-            <!-- New Prominent Sleep Button Positioned Here -->
             <div class="sleep-btn-container">
                 <button id="btn-sleep-main" class="sleep-action-btn" onclick="game.toggleSleep()">
                     <span>😴</span>
@@ -863,13 +856,12 @@ STORE_ID: dad-sim-01
             </div>
         </div>
 
+        <!-- REORGANIZED CONTROLS: 3 Buttons per Row (Grid 3x3) -->
         <div class="controls">
-            <!-- Row 1: Work (Full width normally, spans in grid) -->
+            <!-- Row 1 -->
             <button onclick="game.work()" id="btn-work" class="action-btn primary">
                 <span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>
             </button>
-            
-            <!-- Row 2 -->
             <button onclick="game.feed()" id="btn-feed" class="action-btn">
                 <span>🍔</span> <span class="btn-text">Evés <span class="cost-label">-500</span></span>
             </button>
@@ -877,23 +869,21 @@ STORE_ID: dad-sim-01
                 <span>🍺</span> <span class="btn-text">Ivás <span class="cost-label">-300</span></span>
             </button>
             
-            <!-- Row 3 -->
+            <!-- Row 2 -->
             <button onclick="game.tv()" id="btn-tv" class="action-btn">
                 <span>📺</span> <span class="btn-text">Tévé</span>
             </button>
             <button onclick="game.sport()" id="btn-sport" class="action-btn">
                 <span>🏋️</span> <span class="btn-text">Edzés</span>
             </button>
-
-            <!-- Row 4 -->
             <button onclick="game.meetFriends()" id="btn-friends" class="action-btn social">
                 <span>🍻</span> <span class="btn-text">Barátok <span class="cost-label">-2k</span></span>
             </button>
+
+            <!-- Row 3 -->
             <button onclick="game.diy()" id="btn-diy" class="action-btn">
                 <span>🛠️</span> <span class="btn-text">Barkács</span>
             </button>
-
-            <!-- Row 5 -->
             <button onclick="game.car()" id="btn-car" class="action-btn">
                 <span>🚗</span> <span class="btn-text">Autó <span class="cost-label">-1k</span></span>
             </button>
@@ -993,7 +983,7 @@ STORE_ID: dad-sim-01
                     btnWork: document.getElementById('btn-work'),
                     btnSport: document.getElementById('btn-sport'),
                     btnFriends: document.getElementById('btn-friends'),
-                    btnSleep: document.getElementById('btn-sleep-main'), // New Button reference
+                    btnSleep: document.getElementById('btn-sleep-main'),
                     btnDiy: document.getElementById('btn-diy'),
                     btnCar: document.getElementById('btn-car'),
                     btnFishing: document.getElementById('btn-fishing'),
@@ -1015,16 +1005,20 @@ STORE_ID: dad-sim-01
                 this.updateUI();
                 this.showToast("Szia! Vigyázz apura!");
                 
-                // Check initial size
+                // Check initial size and set listener
                 this.checkResponsiveness();
                 window.addEventListener('resize', () => this.checkResponsiveness());
             }
             
             checkResponsiveness() {
-                // Auto-enable compact mode if screen is super narrow
-                if (window.innerWidth < 300) {
-                    this.toggleCompactMode(true);
-                    document.getElementById('chk-compact').checked = true;
+                // Check for 'mobile-mode' class on body or if window width is small
+                const isMobile = document.body.classList.contains('mobile-mode') || window.innerWidth < 360;
+                
+                if (isMobile) {
+                    if (!this.isCompactMode) {
+                        this.toggleCompactMode(true);
+                        document.getElementById('chk-compact').checked = true;
+                    }
                 }
             }
 
