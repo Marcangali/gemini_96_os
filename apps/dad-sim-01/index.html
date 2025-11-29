@@ -1122,8 +1122,21 @@ STORE_ID: dad-sim-01
                     let hungerDecay = (hoursSinceEat < 3) ? 0.05 : 1.5;
                     this.stats.hunger = Math.max(0, this.stats.hunger - hungerDecay);
 
-                    this.stats.energy = Math.max(0, this.stats.energy - 0.8);
-                    this.stats.mood = Math.max(0, this.stats.mood - 0.3);
+                    // Energy Decay - REALISM LOGIC
+                    let energyDecay = 0.8;
+                    // Heavy weight makes you tired faster
+                    if (this.stats.weight > 100) energyDecay += 0.2;
+                    if (this.stats.weight > 120) energyDecay += 0.3;
+                    // Low hunger (starving) makes you tired faster
+                    if (this.stats.hunger < 20) energyDecay += 0.5;
+
+                    this.stats.energy = Math.max(0, this.stats.energy - energyDecay);
+                    
+                    // Mood Decay
+                    let moodDecay = 0.3;
+                    if (this.stats.energy < 10) moodDecay += 0.5; // Grumpy when tired
+                    this.stats.mood = Math.max(0, this.stats.mood - moodDecay);
+                    
                     this.alcoholLevel = Math.max(0, this.alcoholLevel - 0.5);
 
                     // Health Logic
@@ -1354,8 +1367,9 @@ STORE_ID: dad-sim-01
                 this.animateAction('anim-chewing'); 
                 
                 this.stats.money += 1500;
-                this.stats.energy = Math.max(0, this.stats.energy - 30);
-                this.stats.mood = Math.max(0, this.stats.mood - 15);
+                // Realistic logic: Working is tiring and stressful
+                this.stats.energy = Math.max(0, this.stats.energy - 35);
+                this.stats.mood = Math.max(0, this.stats.mood - 20);
                 this.stats.hunger = Math.max(0, this.stats.hunger - 15);
                 
                 if (this.stats.energy < 20) {
@@ -1399,13 +1413,29 @@ STORE_ID: dad-sim-01
                 this.resetInteraction();
                 this.animateAction('anim-sport');
 
+                // Realism Logic Updates
+                // Heavier weight = more effort/energy drain
+                let weightFactor = Math.max(0, (this.stats.weight - 80) * 0.4);
+                let energyCost = 30 + weightFactor;
+
                 this.stats.weight = Math.max(55, this.stats.weight - 0.6);
                 this.stats.health = Math.min(100, this.stats.health + 5);
-                this.stats.energy = Math.max(0, this.stats.energy - 25);
-                this.stats.hunger = Math.max(0, this.stats.hunger - 20);
+                
+                // Explicitly reduce energy significantly
+                this.stats.energy = Math.max(0, this.stats.energy - energyCost);
+                
+                // Hunger increases (value decreases)
+                this.stats.hunger = Math.max(0, this.stats.hunger - 25);
                 this.stats.mood = Math.min(100, this.stats.mood + 10);
 
-                this.displayMessage(this.getRandomMsg('sport'));
+                // If working out on empty stomach, lose health
+                if (this.stats.hunger < 20) {
+                    this.stats.health -= 5;
+                    this.displayMessage("Szédülök... enni kéne előbb!");
+                } else {
+                    this.displayMessage(this.getRandomMsg('sport'));
+                }
+                
                 this.showThought("💪");
             }
 
@@ -1484,9 +1514,10 @@ STORE_ID: dad-sim-01
                 this.lastAteTotalHours = this.totalGameHours;
 
                 if (this.stats.hunger > 90) {
+                    // Food Coma Logic
                     this.displayMessage(this.getRandomMsg('eatFull'));
                     this.stats.health -= 2; 
-                    this.stats.energy -= 10; 
+                    this.stats.energy = Math.max(0, this.stats.energy - 20); // Massive energy drop
                 } else {
                     this.displayMessage(this.getRandomMsg('eat'));
                     this.stats.energy = Math.min(100, this.stats.energy + 5);
@@ -1514,7 +1545,7 @@ STORE_ID: dad-sim-01
                 
                 this.stats.hunger = Math.min(100, this.stats.hunger + 5);
                 this.stats.mood = Math.min(100, this.stats.mood + 15);
-                this.stats.energy -= 5;
+                this.stats.energy -= 10; // Alcohol makes you sleepy (Realism)
                 this.stats.health -= 2;
 
                 if (this.alcoholLevel > 50) {
