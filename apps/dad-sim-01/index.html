@@ -155,6 +155,7 @@ STORE_ID: dad-sim-01
             background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
             transition: background 1s ease;
             width: 100%;
+            min-height: 0; /* Allows this flex item to shrink below its content's intrinsic height */
         }
         
         .game-area.night-mode-bg {
@@ -1077,7 +1078,7 @@ STORE_ID: dad-sim-01
                 } else {
                     // AWAKE MECHANICS
                     
-                    // Digestion - Fix syntax error here
+                    // Digestion
                     let hoursSinceEat = this.totalGameHours - this.lastAteTotalHours;
                     let hungerDecay = (hoursSinceEat < 3) ? 0.05 : 1.5;
                     this.stats.hunger = Math.max(0, this.stats.hunger - hungerDecay);
