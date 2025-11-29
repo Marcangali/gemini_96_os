@@ -905,7 +905,8 @@ STORE_ID: dad-sim-01
                     tv: ["Jó ez a műsor!", "Csak a foci!", "Híradó... unalmas.", "Reklám, reklám..."],
                     tvSleep: ["Jaj, bealudtam a tévén...", "Hopp, elbóbiskoltam.", "Miről maradtam le?", "Na, jól bealudtam."],
                     friends: ["Nagy buli volt!", "Régen találkoztunk!", "Apu kirúg a hámból!", "Jó társaság!"],
-                    angry: ["Ne ütögessél már!", "Hagyjál békén!", "Mi a bajod?!", "Ne ütögessél már vagy valami!", "Au!"]
+                    angry: ["Ne ütögessél már!", "Hagyjál békén!", "Mi a bajod?!", "Ne ütögessél már vagy valami!", "Au!"],
+                    hurt: ["Ez fájt!", "Jaj!", "Most miért?", "Elég legyen!"]
                 };
 
                 // UI Elements
@@ -1205,9 +1206,14 @@ STORE_ID: dad-sim-01
                     
                     // The angry effect
                     this.stats.mood = Math.max(0, this.stats.mood - 10);
+                    // Also decrease health when hit too much
+                    this.stats.health = Math.max(0, this.stats.health - 5);
+                    
                     this.showThought("🤬");
                     this.showToast(this.getRandomMsg('angry'));
                     this.animateAction('anim-angry');
+                    
+                    this.updateUI();
                 }
             }
 
