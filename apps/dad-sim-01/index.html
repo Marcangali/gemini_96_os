@@ -1,6 +1,6 @@
 <!--
 APP_NAME: ApuSzimulátor
-APP_ICON: https://i.ibb.co/FkXtH5Sy/7a03b77f6a7e.png
+APP_ICON: https://i.ibb.co/RknkGy7H/2603f3135863.png
 APP_CATEGORY: Games
 WINDOW_WIDTH: 380
 WINDOW_HEIGHT: 650
@@ -25,6 +25,7 @@ STORE_ID: dad-sim-01
             --danger: #e81123;
             --radius: 12px;
             --shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+            --controls-height: 160px; /* Reserved space for fixed bottom controls */
         }
 
         * {
@@ -148,13 +149,16 @@ STORE_ID: dad-sim-01
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Aligns content to top */
             position: relative;
             padding: 10px;
+            /* CRITICAL FIX: Padding bottom ensures content isn't hidden behind fixed controls */
+            padding-bottom: var(--controls-height); 
             overflow-y: auto;
+            overflow-x: hidden;
             background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
             transition: background 1s ease;
-            min-height: 0;
+            width: 100%;
         }
         
         .game-area.night-mode-bg {
@@ -169,7 +173,7 @@ STORE_ID: dad-sim-01
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 0 15px 0;
+            margin: 10px 0 15px 0;
             background: #eef4f9;
             border-radius: 50%;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
@@ -396,7 +400,7 @@ STORE_ID: dad-sim-01
         /* --- Central Sleep Button --- */
         .sleep-btn-container {
             margin-top: 15px;
-            margin-bottom: 5px;
+            margin-bottom: 20px;
             z-index: 25;
             display: flex;
             justify-content: center;
@@ -444,25 +448,29 @@ STORE_ID: dad-sim-01
             box-shadow: 0 0 15px rgba(100, 100, 255, 0.2);
         }
 
-        /* --- Controls --- */
+        /* --- FIXED CONTROLS AREA --- */
         .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
             padding: 8px;
             background: #fff;
             border-top: 1px solid #eee;
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* CHANGED to 3 columns per request */
+            grid-template-columns: repeat(3, 1fr); /* 3 Fixed Columns */
             gap: 6px;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
-            flex-shrink: 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+            z-index: 50; /* Ensure on top */
+            height: var(--controls-height);
             transition: all 0.3s ease;
-            z-index: 30;
         }
 
         button.action-btn {
             border: none;
             background: #f8f8f8;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            padding: 8px;
+            padding: 4px;
             border-radius: 8px;
             font-size: 0.8rem;
             font-weight: 600;
@@ -474,7 +482,7 @@ STORE_ID: dad-sim-01
             gap: 6px;
             transition: all 0.2s;
             border: 1px solid transparent;
-            min-height: 44px;
+            height: 42px; /* Fixed height for consistency */
             position: relative;
             white-space: nowrap;
         }
@@ -499,7 +507,6 @@ STORE_ID: dad-sim-01
         button.primary {
             background: var(--primary);
             color: white;
-            /* grid-column: span 2; Removed span */
         }
         button.primary:hover {
             background: var(--primary-hover);
@@ -632,60 +639,58 @@ STORE_ID: dad-sim-01
         input:checked + .slider:before { transform: translateX(18px); }
 
         /* --- COMPACT MODE / RESPONSIVE OVERRIDES --- */
-        /* Applied when screen is small or mobile mode is active */
         body.compact-ui .controls button.action-btn,
         body.mobile-mode .controls button.action-btn,
-        @media (max-width: 320px) {
+        @media (max-width: 340px) {
             flex-direction: column;
-            padding: 4px;
-            min-height: 46px;
+            padding: 2px;
+            height: 44px;
             justify-content: center;
+            font-size: 0.7rem;
         }
         
         body.compact-ui .controls button.action-btn .btn-text,
         body.mobile-mode .controls button.action-btn .btn-text,
-        @media (max-width: 320px) {
+        @media (max-width: 340px) {
             display: none !important;
         }
         
         body.compact-ui .controls button.action-btn > span:first-child,
         body.mobile-mode .controls button.action-btn > span:first-child,
-        @media (max-width: 320px) {
+        @media (max-width: 340px) {
             font-size: 1.4rem;
             margin: 0;
             line-height: 1;
         }
 
         /* Super Short Screens (Landscape Mobile) */
-        @media (max-height: 500px) {
+        @media (max-height: 550px) {
             header {
                 padding: 4px 10px;
                 height: 40px;
             }
-            .game-area {
-                padding: 5px;
+            :root {
+                --controls-height: 140px;
+            }
+            .controls {
+                padding: 4px;
+                gap: 4px;
+            }
+            button.action-btn {
+                height: 38px;
+                font-size: 0.8rem;
             }
             .avatar-container {
-                width: 80px;
-                height: 80px;
-                margin-bottom: 8px;
+                width: 90px;
+                height: 90px;
+                margin: 5px 0 10px 0;
             }
             .avatar {
-                font-size: 50px;
+                font-size: 55px;
             }
             .stats-container {
                 gap: 4px;
                 padding: 6px;
-            }
-            .stat-row {
-                font-size: 0.75rem;
-            }
-            .controls {
-                padding: 4px;
-            }
-            button.action-btn {
-                min-height: 32px;
-                font-size: 0.8rem;
             }
         }
 
@@ -731,7 +736,7 @@ STORE_ID: dad-sim-01
 
         .message-toast {
             position: absolute;
-            bottom: 20px;
+            bottom: calc(var(--controls-height) + 15px); /* Position above controls */
             left: 50%;
             transform: translateX(-50%) translateY(20px);
             background: rgba(30, 30, 30, 0.95);
@@ -744,7 +749,7 @@ STORE_ID: dad-sim-01
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             white-space: nowrap;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 50;
+            z-index: 200; /* Above regular elements */
             text-align: center;
             max-width: 90%;
             overflow: hidden;
@@ -837,9 +842,10 @@ STORE_ID: dad-sim-01
                     <span id="btn-sleep-text">Alvás</span>
                 </button>
             </div>
-
-            <div class="message-toast" id="toast">Helló!</div>
         </div>
+        
+        <!-- Toast moved outside game-area for better Z-index relative to fixed controls -->
+        <div class="message-toast" id="toast">Helló!</div>
 
         <!-- Settings Modal -->
         <div class="settings-overlay" id="settings-overlay">
@@ -856,7 +862,7 @@ STORE_ID: dad-sim-01
             </div>
         </div>
 
-        <!-- REORGANIZED CONTROLS: 3 Buttons per Row (Grid 3x3) -->
+        <!-- FIXED CONTROLS: 3 Buttons per Row (Grid 3x3) Pinned to Bottom -->
         <div class="controls">
             <!-- Row 1 -->
             <button onclick="game.work()" id="btn-work" class="action-btn primary">
@@ -1067,7 +1073,7 @@ STORE_ID: dad-sim-01
                     // AWAKE MECHANICS
                     
                     // Digestion
-                    let hoursSinceEat = this.totalGameHours - this.lastAteTotalHours;
+                    let hours SinceEat = this.totalGameHours - this.lastAteTotalHours;
                     let hungerDecay = (hoursSinceEat < 3) ? 0.05 : 1.5;
                     this.stats.hunger = Math.max(0, this.stats.hunger - hungerDecay);
 
