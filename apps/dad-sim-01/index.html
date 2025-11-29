@@ -82,6 +82,12 @@ STORE_ID: dad-sim-01
             display: flex;
             flex-direction: column;
         }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 
         h1 {
             margin: 0;
@@ -110,6 +116,25 @@ STORE_ID: dad-sim-01
             display: flex;
             align-items: center;
             gap: 4px;
+        }
+        
+        .icon-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            transition: background 0.2s;
+            box-shadow: none !important;
+        }
+        .icon-btn:hover {
+            background: #f0f0f0;
         }
 
         /* --- Game Area --- */
@@ -326,7 +351,7 @@ STORE_ID: dad-sim-01
             height: 100%;
             width: 100%;
             border-radius: 5px;
-            transition: width 1s linear, background-color 0.3s; /* Smooth linear for tick updates */
+            transition: width 1s linear, background-color 0.3s;
         }
         
         .weight-display {
@@ -352,9 +377,10 @@ STORE_ID: dad-sim-01
             overflow-y: auto;
             max-height: 40%;
             flex-shrink: 0;
+            transition: all 0.3s ease;
         }
 
-        button {
+        button.action-btn {
             border: none;
             background: #f8f8f8;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
@@ -374,14 +400,14 @@ STORE_ID: dad-sim-01
             position: relative;
         }
 
-        button:hover {
+        button.action-btn:hover {
             background: #fff;
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.08);
             border-color: #eee;
         }
 
-        button:active {
+        button.action-btn:active {
             transform: translateY(0);
             background: #f0f0f0;
         }
@@ -413,7 +439,7 @@ STORE_ID: dad-sim-01
             margin-left: 2px;
         }
         
-        button:disabled {
+        button.action-btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none !important;
@@ -428,6 +454,125 @@ STORE_ID: dad-sim-01
             color: #888 !important;
             border: 1px dashed #ccc !important;
         }
+
+        /* --- Settings Modal --- */
+        .settings-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .settings-overlay.open {
+            display: flex;
+            opacity: 1;
+        }
+        .settings-content {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: var(--radius);
+            width: 85%;
+            max-width: 300px;
+            box-shadow: var(--shadow);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .settings-overlay.open .settings-content {
+            transform: scale(1);
+        }
+        .settings-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+        }
+        .close-settings-btn {
+            width: 100%;
+            padding: 10px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .close-settings-btn:hover {
+            background: #e0e0e0;
+        }
+
+        /* Checkbox styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:focus + .slider { box-shadow: 0 0 1px var(--primary); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* --- COMPACT MODE (ICONS ONLY) --- */
+        body.compact-ui .controls {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        body.compact-ui .controls button.action-btn {
+            grid-column: span 1 !important; /* Force single column */
+            flex-direction: column;
+            padding: 8px 4px;
+            min-height: 52px;
+            justify-content: center;
+        }
+        body.compact-ui .controls button.action-btn .btn-text {
+            display: none !important;
+        }
+        body.compact-ui .controls button.action-btn > span:first-child {
+            font-size: 1.6rem;
+            margin: 0;
+            line-height: 1;
+        }
+        /* Sleep needs to span 2 to complete the 4-column grid row nicely (4+3 items = 7 items) */
+        /* Row 1: 4 items. Row 2: 2 items + sleep(2) = 4 items. Total 7. */
+        body.compact-ui .controls button#btn-sleep {
+            grid-column: span 2 !important;
+        }
+
 
         /* --- Overlays --- */
         .night-overlay {
@@ -561,7 +706,7 @@ STORE_ID: dad-sim-01
                 gap: 1vh;
             }
             
-            button {
+            button.action-btn {
                 min-height: clamp(36px, 6vh, 48px);
                 padding: 0.5vh 1vw;
                 font-size: clamp(0.75rem, 3.5vw, 0.9rem);
@@ -590,9 +735,12 @@ STORE_ID: dad-sim-01
                 <h1>ApuSzimulátor</h1>
                 <div class="clock-display" id="clock-display">⏰ 08:00</div>
             </div>
-            <div class="money-badge">
-                <span>💰</span>
-                <span id="money-display">2000 Ft</span>
+            <div class="header-right">
+                <div class="money-badge">
+                    <span>💰</span>
+                    <span id="money-display">2000 Ft</span>
+                </div>
+                <button class="icon-btn" onclick="game.toggleSettings()" title="Beállítások">⚙️</button>
             </div>
         </header>
 
@@ -643,31 +791,47 @@ STORE_ID: dad-sim-01
             <div class="message-toast" id="toast">Helló!</div>
         </div>
 
+        <!-- Settings Modal -->
+        <div class="settings-overlay" id="settings-overlay">
+            <div class="settings-content">
+                <div class="settings-header">Beállítások</div>
+                <div class="settings-row">
+                    <span>Csak ikonok (Kompakt)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chk-compact" onchange="game.toggleCompactMode(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button class="close-settings-btn" onclick="game.toggleSettings()">Bezárás</button>
+            </div>
+        </div>
+
         <div class="controls">
-            <button onclick="game.work()" id="btn-work" class="primary">
-                <span>💼</span> Munka <span class="cost-label">+1500</span>
+            <!-- Note: Wrapped text in .btn-text for hiding in compact mode -->
+            <button onclick="game.work()" id="btn-work" class="action-btn primary">
+                <span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>
             </button>
             
-            <button onclick="game.meetFriends()" id="btn-friends" class="social">
-                <span>🍻</span> Barátok <span class="cost-label">-2k</span>
+            <button onclick="game.meetFriends()" id="btn-friends" class="action-btn social">
+                <span>🍻</span> <span class="btn-text">Barátok <span class="cost-label">-2k</span></span>
             </button>
             
-            <button onclick="game.feed()" id="btn-feed">
-                <span>🍔</span> Evés <span class="cost-label">-500</span>
+            <button onclick="game.feed()" id="btn-feed" class="action-btn">
+                <span>🍔</span> <span class="btn-text">Evés <span class="cost-label">-500</span></span>
             </button>
-            <button onclick="game.drink()" id="btn-drink">
-                <span>🍺</span> Ivás <span class="cost-label">-300</span>
-            </button>
-            
-            <button onclick="game.sport()" id="btn-sport">
-                <span>🏋️</span> Edzés
-            </button>
-            <button onclick="game.tv()" id="btn-tv">
-                <span>📺</span> Tévé
+            <button onclick="game.drink()" id="btn-drink" class="action-btn">
+                <span>🍺</span> <span class="btn-text">Ivás <span class="cost-label">-300</span></span>
             </button>
             
-            <button onclick="game.toggleSleep()" id="btn-sleep" style="grid-column: span 2;">
-                <span>😴</span> Alvás
+            <button onclick="game.sport()" id="btn-sport" class="action-btn">
+                <span>🏋️</span> <span class="btn-text">Edzés</span>
+            </button>
+            <button onclick="game.tv()" id="btn-tv" class="action-btn">
+                <span>📺</span> <span class="btn-text">Tévé</span>
+            </button>
+            
+            <button onclick="game.toggleSleep()" id="btn-sleep" class="action-btn" style="grid-column: span 2;">
+                <span>😴</span> <span class="btn-text">Alvás</span>
             </button>
         </div>
 
@@ -702,6 +866,7 @@ STORE_ID: dad-sim-01
                 this.isSleeping = false;
                 this.isActionLocked = false;
                 this.isSick = false;
+                this.isCompactMode = false;
 
                 // Hidden Stats
                 this.alcoholLevel = 0; // 0-100
@@ -750,7 +915,9 @@ STORE_ID: dad-sim-01
                     btnWork: document.getElementById('btn-work'),
                     btnSport: document.getElementById('btn-sport'),
                     btnFriends: document.getElementById('btn-friends'),
-                    btnSleep: document.getElementById('btn-sleep')
+                    btnSleep: document.getElementById('btn-sleep'),
+                    
+                    settingsOverlay: document.getElementById('settings-overlay')
                 };
 
                 this.init();
@@ -765,7 +932,7 @@ STORE_ID: dad-sim-01
                 
                 // Mobile check observer
                 const observer = new MutationObserver(() => {
-                    // CSS handles layout changes
+                    // CSS handles layout changes automatically
                 });
                 observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
             }
@@ -792,15 +959,12 @@ STORE_ID: dad-sim-01
 
             processStats() {
                 // Base decay rates per tick (1 second)
-                // Calibration: 
-                // 1 Game Hour = 5 Seconds.
+                // Calibration: 1 Game Hour = 5 Seconds.
                 
                 if (this.isSleeping) {
                     // SLEEP MECHANICS
-                    // Base gain increased by 175% (Original 2 -> 2 * 2.75 = 5.5)
                     let energyGain = 5.5;
 
-                    // Faster charging at night (21:00 - 06:00)
                     if (this.gameHour >= 21 || this.gameHour < 6) {
                         energyGain *= 1.5; 
                     }
@@ -809,10 +973,8 @@ STORE_ID: dad-sim-01
                     this.stats.health = Math.min(100, this.stats.health + 0.5); 
                     this.alcoholLevel = Math.max(0, this.alcoholLevel - 2); 
                     
-                    // While sleeping, hunger drops very slowly
                     this.stats.hunger = Math.max(0, this.stats.hunger - 0.2);
 
-                    // Auto wakeup if slept enough
                     if (this.stats.energy >= 100) {
                         this.wakeUp();
                         this.showToast("Teljesen kipihentem magam!");
@@ -820,7 +982,7 @@ STORE_ID: dad-sim-01
                 } else {
                     // AWAKE MECHANICS
                     
-                    // --- DIGESTION SYSTEM (REALISM) ---
+                    // Digestion
                     let hoursSinceEat = this.totalGameHours - this.lastAteTotalHours;
                     let hungerDecay = 0;
 
@@ -831,12 +993,8 @@ STORE_ID: dad-sim-01
                     }
                     this.stats.hunger = Math.max(0, this.stats.hunger - hungerDecay);
 
-                    // Energy decays constantly (~1 per tick means 100s to tire, roughly 20 game hours)
                     this.stats.energy = Math.max(0, this.stats.energy - 0.8);
-                    
-                    // Mood decays slowly
                     this.stats.mood = Math.max(0, this.stats.mood - 0.3);
-                    
                     this.alcoholLevel = Math.max(0, this.alcoholLevel - 0.5);
 
                     // Health Logic
@@ -941,17 +1099,17 @@ STORE_ID: dad-sim-01
                 if (this.stats.energy < 15) {
                     workBtn.disabled = true;
                     workBtn.classList.add('locked-btn');
-                    workBtn.innerHTML = `<span>🔒</span> Túl fáradt!`;
+                    workBtn.innerHTML = `<span>🔒</span> <span class="btn-text">Túl fáradt!</span>`;
                 } else {
                     workBtn.disabled = globalDisable;
                     workBtn.classList.remove('locked-btn');
-                    workBtn.innerHTML = `<span>💼</span> Munka <span class="cost-label">+1500</span>`;
+                    workBtn.innerHTML = `<span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>`;
                 }
 
-                // Sport Button Logic (New dependency)
+                // Sport Button
                 const sportBtn = this.ui.btnSport;
                 if (this.stats.energy < 30) {
-                    sportBtn.classList.add('locked-btn'); // Visual feedback
+                    sportBtn.classList.add('locked-btn');
                 } else {
                     sportBtn.classList.remove('locked-btn');
                 }
@@ -982,6 +1140,25 @@ STORE_ID: dad-sim-01
 
             resetInteraction() {
                 this.boredomCounter = 0;
+            }
+
+            // --- Settings ---
+            toggleSettings() {
+                const isOpen = this.ui.settingsOverlay.classList.contains('open');
+                if (isOpen) {
+                    this.ui.settingsOverlay.classList.remove('open');
+                } else {
+                    this.ui.settingsOverlay.classList.add('open');
+                }
+            }
+
+            toggleCompactMode(enabled) {
+                this.isCompactMode = enabled;
+                if (enabled) {
+                    this.ui.body.classList.add('compact-ui');
+                } else {
+                    this.ui.body.classList.remove('compact-ui');
+                }
             }
 
             // --- Actions ---
@@ -1028,7 +1205,6 @@ STORE_ID: dad-sim-01
             sport() {
                 if (this.isActionLocked) return;
                 
-                // DEPENDENCY: Low energy -> No sport
                 if (this.stats.energy < 30) {
                     this.showToast(this.getRandomMsg('sportTired'));
                     this.showThought("😫");
@@ -1127,14 +1303,11 @@ STORE_ID: dad-sim-01
                 if (this.isActionLocked) return;
                 this.resetInteraction();
 
-                // DEPENDENCY: Low energy + TV = Fall asleep without GUI, recover max up to 30%
                 if (this.stats.energy < 30) {
                     this.showToast("Jaj, bealudtam a tévén...");
                     this.showThought("💤");
                     
-                    // Recover some energy, but cap total energy at 30
-                    // This simulates a rough nap, not a full sleep
-                    let recovery = Math.floor(Math.random() * 10) + 10; // +10 to +20
+                    let recovery = Math.floor(Math.random() * 10) + 10; 
                     this.stats.energy = Math.min(30, this.stats.energy + recovery);
                     
                     this.updateUI();
@@ -1157,7 +1330,7 @@ STORE_ID: dad-sim-01
                 this.resetInteraction();
                 this.isSleeping = true;
                 this.ui.body.classList.add('sleeping');
-                this.ui.btnSleep.innerHTML = "<span>☀️</span> Ébresztés";
+                this.ui.btnSleep.innerHTML = "<span>☀️</span> <span class='btn-text'>Ébresztés</span>";
                 if (!this.stats.energy < 30) {
                    this.showToast("Jó éjszakát!");
                 }
@@ -1167,7 +1340,7 @@ STORE_ID: dad-sim-01
             wakeUp() {
                 this.isSleeping = false;
                 this.ui.body.classList.remove('sleeping');
-                this.ui.btnSleep.innerHTML = "<span>😴</span> Alvás";
+                this.ui.btnSleep.innerHTML = "<span>😴</span> <span class='btn-text'>Alvás</span>";
                 this.showToast("Jó reggelt!");
                 this.updateUI();
             }
