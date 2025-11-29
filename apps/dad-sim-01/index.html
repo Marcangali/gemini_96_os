@@ -1,6 +1,7 @@
 <!--
 APP_NAME: ApuSzimulátor
 APP_ICON: https://i.ibb.co/FkXtH5Sy/7a03b77f6a7e.png
+APP_CATEGORY: Games
 WINDOW_WIDTH: 380
 WINDOW_HEIGHT: 650
 STORE_ID: dad-sim-01
@@ -46,7 +47,6 @@ STORE_ID: dad-sim-01
             color: var(--text-main);
         }
 
-        /* Standard Desktop/Window Mode */
         #app-container {
             width: 100%;
             height: 100%;
@@ -66,7 +66,7 @@ STORE_ID: dad-sim-01
 
         /* --- Header --- */
         header {
-            padding: 12px 16px;
+            padding: 10px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -74,29 +74,34 @@ STORE_ID: dad-sim-01
             background: #fff;
             z-index: 10;
             flex-shrink: 0;
-            height: 54px;
+            height: 50px;
         }
 
         .header-left {
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         
         .header-right {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-shrink: 0;
         }
 
         h1 {
             margin: 0;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .clock-display {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-sub);
             font-variant-numeric: tabular-nums;
             display: flex;
@@ -108,13 +113,14 @@ STORE_ID: dad-sim-01
             background: #f0fdf4;
             color: #15803d;
             border: 1px solid #bbf7d0;
-            padding: 4px 10px;
+            padding: 2px 8px;
             border-radius: 20px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 700;
             display: flex;
             align-items: center;
             gap: 4px;
+            white-space: nowrap;
         }
         
         .icon-btn {
@@ -142,12 +148,13 @@ STORE_ID: dad-sim-01
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: center; /* Vertically center content */
             position: relative;
-            padding: 15px;
+            padding: 10px;
             overflow-y: auto;
             background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
             transition: background 1s ease;
+            min-height: 0; /* Important for flex nested scrolling */
         }
         
         .game-area.night-mode-bg {
@@ -167,7 +174,7 @@ STORE_ID: dad-sim-01
             border-radius: 50%;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            flex-shrink: 0;
+            flex-shrink: 0; /* Prevent squishing */
             z-index: 20;
         }
 
@@ -321,16 +328,16 @@ STORE_ID: dad-sim-01
         /* --- Stats --- */
         .stats-container {
             width: 100%;
-            max-width: 340px;
+            max-width: 320px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            background: rgba(255,255,255,0.8);
+            gap: 6px;
+            background: rgba(255,255,255,0.7);
             padding: 10px;
             border-radius: var(--radius);
             backdrop-filter: blur(5px);
             border: 1px solid rgba(0,0,0,0.05);
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             flex-shrink: 0;
             transition: background 0.5s;
         }
@@ -345,18 +352,18 @@ STORE_ID: dad-sim-01
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         .stat-icon {
             font-size: 1rem;
-            width: 22px;
+            width: 20px;
             text-align: center;
         }
 
         .progress-bar-bg {
             flex: 1;
-            height: 8px;
+            height: 6px;
             background: #efefef;
             border-radius: 4px;
             overflow: hidden;
@@ -375,38 +382,89 @@ STORE_ID: dad-sim-01
         }
         
         .weight-display {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-sub);
             text-align: right;
             font-weight: 500;
+            margin-top: 2px;
         }
 
         .game-area.night-mode-bg .weight-display {
             color: #aaa;
         }
 
+        /* --- Central Sleep Button --- */
+        .sleep-btn-container {
+            margin-top: 15px;
+            margin-bottom: 5px;
+            z-index: 25;
+            display: flex;
+            justify-content: center;
+        }
+
+        .sleep-action-btn {
+            background: #2b3a42;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid transparent;
+        }
+
+        .sleep-action-btn:hover {
+            background: #374a54;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        .sleep-action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .sleep-action-btn.wake-mode {
+            background: #ffdb8e;
+            color: #4a3b00;
+            border-color: #f7c948;
+        }
+
+        .sleep-action-btn.wake-mode:hover {
+            background: #ffe3a8;
+        }
+
+        .game-area.night-mode-bg .sleep-action-btn:not(.wake-mode) {
+            background: #4a4a6a;
+            box-shadow: 0 0 15px rgba(100, 100, 255, 0.2);
+        }
+
         /* --- Controls --- */
         .controls {
-            padding: 12px;
+            padding: 8px;
             background: #fff;
             border-top: 1px solid #eee;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 6px;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
-            overflow-y: auto;
-            max-height: 45%;
-            flex-shrink: 0;
+            flex-shrink: 0; /* Keep controls visible */
             transition: all 0.3s ease;
+            z-index: 30;
         }
 
         button.action-btn {
             border: none;
             background: #f8f8f8;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-main);
             cursor: pointer;
@@ -416,14 +474,20 @@ STORE_ID: dad-sim-01
             gap: 6px;
             transition: all 0.2s;
             border: 1px solid transparent;
-            min-height: 42px;
+            min-height: 38px;
             position: relative;
+            white-space: nowrap;
+        }
+        
+        button.action-btn .btn-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         button.action-btn:hover {
             background: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08);
             border-color: #eee;
         }
 
@@ -452,8 +516,8 @@ STORE_ID: dad-sim-01
         }
 
         .cost-label {
-            font-size: 0.75em;
-            opacity: 0.7;
+            font-size: 0.7em;
+            opacity: 0.8;
             font-weight: normal;
             margin-left: 2px;
         }
@@ -567,29 +631,66 @@ STORE_ID: dad-sim-01
         input:focus + .slider { box-shadow: 0 0 1px var(--primary); }
         input:checked + .slider:before { transform: translateX(18px); }
 
-        /* --- COMPACT MODE (ICONS ONLY) --- */
-        body.compact-ui .controls {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 5px !important;
-            padding: 8px !important;
+        /* --- COMPACT MODE / RESPONSIVE OVERRIDES --- */
+        body.compact-ui .controls,
+        body.mobile-mode .controls,
+        @media (max-width: 340px) {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 4px !important;
         }
-        body.compact-ui .controls button.action-btn {
+        body.compact-ui .controls button.action-btn,
+        body.mobile-mode .controls button.action-btn,
+        @media (max-width: 340px) {
             grid-column: span 1 !important;
             flex-direction: column;
             padding: 4px;
-            min-height: 42px;
+            min-height: 40px;
             justify-content: center;
         }
-        body.compact-ui .controls button.action-btn .btn-text {
+        body.compact-ui .controls button.action-btn .btn-text,
+        body.mobile-mode .controls button.action-btn .btn-text,
+        @media (max-width: 340px) {
             display: none !important;
         }
-        body.compact-ui .controls button.action-btn > span:first-child {
-            font-size: 1.3rem;
+        body.compact-ui .controls button.action-btn > span:first-child,
+        body.mobile-mode .controls button.action-btn > span:first-child,
+        @media (max-width: 340px) {
+            font-size: 1.2rem;
             margin: 0;
             line-height: 1;
         }
-        body.compact-ui .controls button#btn-sleep {
-            grid-column: span 4 !important;
+
+        /* Super Short Screens (Landscape Mobile) */
+        @media (max-height: 500px) {
+            header {
+                padding: 4px 10px;
+                height: 40px;
+            }
+            .game-area {
+                padding: 5px;
+            }
+            .avatar-container {
+                width: 80px;
+                height: 80px;
+                margin-bottom: 8px;
+            }
+            .avatar {
+                font-size: 50px;
+            }
+            .stats-container {
+                gap: 4px;
+                padding: 6px;
+            }
+            .stat-row {
+                font-size: 0.75rem;
+            }
+            .controls {
+                padding: 4px;
+            }
+            button.action-btn {
+                min-height: 32px;
+                font-size: 0.8rem;
+            }
         }
 
 
@@ -672,53 +773,6 @@ STORE_ID: dad-sim-01
             opacity: 1;
         }
 
-        /* --- Mobile / Responsiveness --- */
-        body.mobile-mode #app-container,
-        @media (max-width: 420px), (max-height: 650px) {
-            header {
-                padding: 1vh 3vw;
-                height: 48px;
-            }
-            h1 { font-size: 1rem; }
-            .money-badge { font-size: 0.8rem; }
-
-            .game-area {
-                padding: 10px;
-                justify-content: flex-start;
-            }
-
-            .avatar-container {
-                width: 100px;
-                height: 100px;
-                margin-bottom: 10px;
-            }
-            .avatar {
-                font-size: 60px;
-            }
-            
-            .stats-container {
-                padding: 8px;
-                gap: 6px;
-            }
-            .stat-row {
-                font-size: 0.8rem;
-            }
-            .progress-bar-bg {
-                height: 6px;
-            }
-
-            .controls {
-                padding: 8px;
-                gap: 6px;
-            }
-            
-            button.action-btn {
-                min-height: 40px;
-                padding: 6px;
-                font-size: 0.85rem;
-            }
-        }
-
     </style>
 </head>
 <body class="">
@@ -734,6 +788,7 @@ STORE_ID: dad-sim-01
                     <span>💰</span>
                     <span id="money-display">2000 Ft</span>
                 </div>
+                <!-- Sleep button removed from here -->
                 <button class="icon-btn" onclick="game.toggleSettings()" title="Beállítások">⚙️</button>
             </div>
         </header>
@@ -782,6 +837,14 @@ STORE_ID: dad-sim-01
                 </div>
             </div>
 
+            <!-- New Prominent Sleep Button Positioned Here -->
+            <div class="sleep-btn-container">
+                <button id="btn-sleep-main" class="sleep-action-btn" onclick="game.toggleSleep()">
+                    <span>😴</span>
+                    <span id="btn-sleep-text">Alvás</span>
+                </button>
+            </div>
+
             <div class="message-toast" id="toast">Helló!</div>
         </div>
 
@@ -801,7 +864,7 @@ STORE_ID: dad-sim-01
         </div>
 
         <div class="controls">
-            <!-- Row 1: Work (Full width) -->
+            <!-- Row 1: Work (Full width normally, spans in grid) -->
             <button onclick="game.work()" id="btn-work" class="action-btn primary">
                 <span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>
             </button>
@@ -836,11 +899,6 @@ STORE_ID: dad-sim-01
             </button>
             <button onclick="game.fishing()" id="btn-fishing" class="action-btn">
                 <span>🎣</span> <span class="btn-text">Peca <span class="cost-label">-200</span></span>
-            </button>
-            
-            <!-- Row 6: Sleep (Full width) -->
-            <button onclick="game.toggleSleep()" id="btn-sleep" class="action-btn" style="grid-column: span 2;">
-                <span>😴</span> <span class="btn-text">Alvás</span>
             </button>
         </div>
 
@@ -935,7 +993,7 @@ STORE_ID: dad-sim-01
                     btnWork: document.getElementById('btn-work'),
                     btnSport: document.getElementById('btn-sport'),
                     btnFriends: document.getElementById('btn-friends'),
-                    btnSleep: document.getElementById('btn-sleep'),
+                    btnSleep: document.getElementById('btn-sleep-main'), // New Button reference
                     btnDiy: document.getElementById('btn-diy'),
                     btnCar: document.getElementById('btn-car'),
                     btnFishing: document.getElementById('btn-fishing'),
@@ -957,11 +1015,17 @@ STORE_ID: dad-sim-01
                 this.updateUI();
                 this.showToast("Szia! Vigyázz apura!");
                 
-                // Mobile check observer
-                const observer = new MutationObserver(() => {
-                    // CSS handles layout changes automatically
-                });
-                observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+                // Check initial size
+                this.checkResponsiveness();
+                window.addEventListener('resize', () => this.checkResponsiveness());
+            }
+            
+            checkResponsiveness() {
+                // Auto-enable compact mode if screen is super narrow
+                if (window.innerWidth < 300) {
+                    this.toggleCompactMode(true);
+                    document.getElementById('chk-compact').checked = true;
+                }
             }
 
             tick() {
@@ -1465,7 +1529,11 @@ STORE_ID: dad-sim-01
                 this.resetInteraction();
                 this.isSleeping = true;
                 this.ui.body.classList.add('sleeping');
-                this.ui.btnSleep.innerHTML = "<span>☀️</span> <span class='btn-text'>Ébresztés</span>";
+                
+                // Button styling update
+                this.ui.btnSleep.classList.add('wake-mode');
+                this.ui.btnSleep.innerHTML = "<span>☀️</span><span>Ébresztés</span>";
+                
                 if (!this.stats.energy < 30) {
                    this.showToast("Jó éjszakát!");
                 }
@@ -1475,7 +1543,11 @@ STORE_ID: dad-sim-01
             wakeUp() {
                 this.isSleeping = false;
                 this.ui.body.classList.remove('sleeping');
-                this.ui.btnSleep.innerHTML = "<span>😴</span> <span class='btn-text'>Alvás</span>";
+                
+                // Button styling update
+                this.ui.btnSleep.classList.remove('wake-mode');
+                this.ui.btnSleep.innerHTML = "<span>😴</span><span>Alvás</span>";
+                
                 this.showToast("Jó reggelt!");
                 this.updateUI();
             }
