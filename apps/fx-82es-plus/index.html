@@ -1,0 +1,689 @@
+<!--
+APP_NAME: FX-Calc 82ES
+APP_ICON: https://i.ibb.co/Xxf10tBt/86eca837e285.png
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 640
+STORE_ID: fx-82es-plus
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FX-Calc 82ES</title>
+<style>
+    :root {
+        --bg-body: #f0f0f0;
+        --calc-body: #2c3e50;
+        --calc-body-highlight: #34495e;
+        --screen-bg: #c5dca0;
+        --screen-text: #1a1a1a;
+        --key-dark: #2c2c2c;
+        --key-dark-shadow: #1a1a1a;
+        --key-light: #e0e0e0;
+        --key-light-shadow: #b0b0b0;
+        --key-orange: #d35400;
+        --key-orange-shadow: #a04000;
+        --key-blue: #2980b9;
+        --key-text-white: #ecf0f1;
+        --key-text-dark: #2c3e50;
+        --label-shift: #f1c40f;
+        --label-alpha: #e74c3c;
+    }
+
+    * {
+        box-sizing: border-box;
+        user-select: none;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-body);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* Calculator Chassis */
+    #calculator {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--calc-body-highlight), var(--calc-body));
+        display: flex;
+        flex-direction: column;
+        padding: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        position: relative;
+    }
+
+    /* Screen Area */
+    .screen-container {
+        background-color: #111;
+        padding: 8px 8px 4px 8px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+    }
+
+    .lcd-screen {
+        background-color: var(--screen-bg);
+        width: 100%;
+        height: 80px;
+        border-radius: 4px;
+        position: relative;
+        padding: 4px 8px;
+        font-family: 'Courier New', Courier, monospace;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    .indicators {
+        font-size: 10px;
+        color: #333;
+        display: flex;
+        gap: 8px;
+        height: 12px;
+    }
+    .indicator {
+        opacity: 0.2;
+    }
+    .indicator.active {
+        opacity: 1;
+        font-weight: bold;
+    }
+
+    .input-line {
+        font-size: 18px;
+        color: var(--screen-text);
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        height: 24px;
+        line-height: 24px;
+        width: 100%;
+    }
+    
+    .cursor {
+        display: inline-block;
+        width: 2px;
+        height: 1em;
+        background-color: #000;
+        animation: blink 1s infinite;
+        vertical-align: text-bottom;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .result-line {
+        font-size: 24px;
+        color: var(--screen-text);
+        text-align: right;
+        font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        height: 30px;
+        line-height: 30px;
+    }
+
+    /* Branding */
+    .brand {
+        color: #fff;
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+        padding: 0 5px;
+    }
+    .brand-name { font-weight: bold; letter-spacing: 1px; }
+    .brand-model { font-style: italic; font-size: 12px; color: #ccc; }
+
+    /* Keypad Grid */
+    .keypad {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(7, 1fr);
+        gap: 8px;
+    }
+
+    /* Buttons */
+    .btn {
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        transition: transform 0.05s, box-shadow 0.05s;
+        box-shadow: 0 3px 0;
+        padding: 0;
+    }
+
+    .btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 1px 0 !important;
+    }
+
+    .btn-label-top {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 9px;
+        color: var(--label-shift);
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    .btn-label-top-right {
+        position: absolute;
+        top: -12px;
+        right: 0;
+        font-size: 9px;
+        color: var(--label-alpha);
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    /* Button Styles */
+    .btn-dark {
+        background-color: var(--key-dark);
+        color: var(--key-text-white);
+        box-shadow: 0 3px 0 var(--key-dark-shadow);
+    }
+    .btn-light {
+        background-color: var(--key-light);
+        color: var(--key-text-dark);
+        box-shadow: 0 3px 0 var(--key-light-shadow);
+        font-size: 18px;
+    }
+    .btn-orange {
+        background-color: var(--key-orange);
+        color: white;
+        box-shadow: 0 3px 0 var(--key-orange-shadow);
+    }
+    
+    .btn-nav {
+        background-color: #555;
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        margin: auto;
+        box-shadow: 0 3px 0 #222;
+        color: white;
+        font-size: 10px;
+    }
+    
+    .nav-area {
+        grid-column: span 2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-shift {
+        font-size: 11px;
+        background-color: #555;
+        color: var(--label-shift);
+        box-shadow: 0 3px 0 #333;
+    }
+    .btn-alpha {
+        font-size: 11px;
+        background-color: #555;
+        color: var(--label-alpha);
+        box-shadow: 0 3px 0 #333;
+    }
+
+    .btn-small-text {
+        font-size: 12px;
+    }
+
+    /* Specific row alignments */
+    .row-1 { grid-row: 1; }
+    .row-2 { grid-row: 2; }
+    .row-3 { grid-row: 3; }
+    .row-4 { grid-row: 4; }
+    .row-5 { grid-row: 5; }
+    .row-6 { grid-row: 6; }
+    .row-7 { grid-row: 7; }
+
+    /* Mobile Adaptations */
+    body.mobile-mode #calculator {
+        border-radius: 0;
+        padding: 10px;
+    }
+    body.mobile-mode .btn {
+        font-size: 16px;
+    }
+    body.mobile-mode .btn-light {
+        font-size: 20px;
+    }
+
+</style>
+</head>
+<body>
+
+<div id="calculator">
+    
+    <div class="brand">
+        <span class="brand-name">CASIO</span>
+        <span class="brand-model">fx-82ES PLUS</span>
+    </div>
+
+    <div class="screen-container">
+        <div class="lcd-screen">
+            <div class="indicators">
+                <span id="ind-shift" class="indicator">S</span>
+                <span id="ind-alpha" class="indicator">A</span>
+                <span id="ind-math" class="indicator active">MATH</span>
+                <span id="ind-deg" class="indicator active">D</span>
+                <span id="ind-rad" class="indicator">R</span>
+            </div>
+            <div class="input-line">
+                <span id="expression-display"></span><span class="cursor"></span>
+            </div>
+            <div class="result-line" id="result-display">0</div>
+        </div>
+    </div>
+
+    <div class="keypad">
+        <!-- ROW 1: Control Keys -->
+        <button class="btn btn-shift" onclick="toggleShift()">SHIFT</button>
+        <button class="btn btn-alpha" onclick="toggleAlpha()">ALPHA</button>
+        
+        <div class="nav-area">
+            <!-- Simplified D-Pad: Just Left/Right/Up(History)/Down -->
+            <!-- Using icons or text -->
+            <button class="btn btn-nav" onclick="nav('L')">◄</button>
+            <button class="btn btn-nav" onclick="nav('R')">►</button>
+        </div>
+
+        <button class="btn btn-dark btn-small-text" onclick="setMode()">MODE<br>SETUP</button>
+        <!-- ON is usually far right, but layout fits 5 cols better this way -->
+        
+
+        <!-- ROW 2: Functions -->
+        <!-- Abs, x^3, x^-1, log, ln -->
+        <button class="btn btn-dark" onclick="inputFunc('abs')">
+            Abs
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('pow3')">
+            x³
+            <span class="btn-label-top">∛■</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('inverse')">
+            x⁻¹
+            <span class="btn-label-top">x!</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('log')">
+            log
+            <span class="btn-label-top">10ⁿ</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('ln')">
+            ln
+            <span class="btn-label-top">eⁿ</span>
+        </button>
+
+
+        <!-- ROW 3: More Functions -->
+        <!-- (-), ., hyp, sin, cos, tan -->
+        <!-- Adapting slightly for grid -->
+        <button class="btn btn-dark" onclick="inputToken('(-)')">
+            (-)
+            <span class="btn-label-top">A</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('sqrt')">
+            √■
+            <span class="btn-label-top">³√</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('pow2')">
+            x²
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('pow')">
+            xⁿ
+            <span class="btn-label-top">ⁿ√■</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputToken('(')">
+            (
+        </button>
+
+        <!-- ROW 4: Trig + More -->
+        <button class="btn btn-dark" onclick="inputToken(')')">
+            )
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('sin')">
+            sin
+            <span class="btn-label-top">sin⁻¹</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('cos')">
+            cos
+            <span class="btn-label-top">cos⁻¹</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputFunc('tan')">
+            tan
+            <span class="btn-label-top">tan⁻¹</span>
+        </button>
+        <button class="btn btn-dark" onclick="inputToken(',')">
+            ,
+        </button>
+        
+
+        <!-- ROW 5: Numbers 7-8-9 DEL AC -->
+        <button class="btn btn-light" onclick="inputNum('7')">7</button>
+        <button class="btn btn-light" onclick="inputNum('8')">8</button>
+        <button class="btn btn-light" onclick="inputNum('9')">9</button>
+        <button class="btn btn-orange" onclick="actionDel()">DEL</button>
+        <button class="btn btn-orange" onclick="actionAC()">AC</button>
+
+        <!-- ROW 6: Numbers 4-5-6 x / -->
+        <button class="btn btn-light" onclick="inputNum('4')">4</button>
+        <button class="btn btn-light" onclick="inputNum('5')">5</button>
+        <button class="btn btn-light" onclick="inputNum('6')">6</button>
+        <button class="btn btn-light" onclick="inputToken('×')">×</button>
+        <button class="btn btn-light" onclick="inputToken('÷')">÷</button>
+
+        <!-- ROW 7: Numbers 1-2-3 + - -->
+        <button class="btn btn-light" onclick="inputNum('1')">1</button>
+        <button class="btn btn-light" onclick="inputNum('2')">2</button>
+        <button class="btn btn-light" onclick="inputNum('3')">3</button>
+        <button class="btn btn-light" onclick="inputToken('+')">+</button>
+        <button class="btn btn-light" onclick="inputToken('-')">-</button>
+
+        <!-- ROW 8: 0 . x10 Ans = -->
+        <button class="btn btn-light" onclick="inputNum('0')">0</button>
+        <button class="btn btn-light" onclick="inputToken('.')">.</button>
+        <button class="btn btn-light btn-small-text" onclick="inputToken('E')">
+            x10ˣ
+            <span class="btn-label-top">π</span>
+        </button>
+        <button class="btn btn-light btn-small-text" onclick="inputToken('Ans')">Ans</button>
+        <button class="btn btn-light" onclick="calculate()">=</button>
+
+    </div>
+</div>
+
+<script>
+    // State
+    let expression = ""; // The visual string
+    let shiftMode = false;
+    let alphaMode = false;
+    let angleMode = 'DEG'; // DEG or RAD
+    let ansValue = 0;
+    
+    // DOM Elements
+    const displayEl = document.getElementById('expression-display');
+    const resultEl = document.getElementById('result-display');
+    const indShift = document.getElementById('ind-shift');
+    const indAlpha = document.getElementById('ind-alpha');
+    const indDeg = document.getElementById('ind-deg');
+    const indRad = document.getElementById('ind-rad');
+
+    // Initialization
+    function init() {
+        const isMobile = document.body.classList.contains('mobile-mode');
+        updateDisplay();
+    }
+
+    // Toggle Modes
+    function toggleShift() {
+        shiftMode = !shiftMode;
+        indShift.classList.toggle('active', shiftMode);
+        // If we implement Shift+Key changes visually, do it here.
+    }
+
+    function toggleAlpha() {
+        alphaMode = !alphaMode;
+        indAlpha.classList.toggle('active', alphaMode);
+    }
+
+    function setMode() {
+        // Simple toggle for MVP: DEG <-> RAD
+        if(angleMode === 'DEG') {
+            angleMode = 'RAD';
+            indDeg.classList.remove('active');
+            indRad.classList.add('active');
+        } else {
+            angleMode = 'DEG';
+            indRad.classList.remove('active');
+            indDeg.classList.add('active');
+        }
+        resetModifiers();
+    }
+
+    function resetModifiers() {
+        shiftMode = false;
+        alphaMode = false;
+        indShift.classList.remove('active');
+        indAlpha.classList.remove('active');
+    }
+
+    // Input Handling
+    function inputNum(num) {
+        expression += num;
+        updateDisplay();
+        resetModifiers();
+    }
+
+    function inputToken(token) {
+        if(shiftMode) {
+            // Handle Shifted Tokens for specific keys
+            if (token === 'E') { // x10^x key -> PI
+                token = 'π';
+            }
+        }
+
+        expression += token;
+        updateDisplay();
+        resetModifiers();
+    }
+
+    function inputFunc(funcName) {
+        let textToAdd = "";
+        
+        // Handle Shift modifiers for functions
+        if (shiftMode) {
+            switch(funcName) {
+                case 'sin': textToAdd = 'sin⁻¹('; break;
+                case 'cos': textToAdd = 'cos⁻¹('; break;
+                case 'tan': textToAdd = 'tan⁻¹('; break;
+                case 'log': textToAdd = '10^('; break;
+                case 'ln': textToAdd = 'e^('; break;
+                case 'pow': textToAdd = '^(1/'; // nth root roughly
+                case 'sqrt': textToAdd = '∛('; break; // Simple cube root
+                case 'pow3': textToAdd = '∛('; break; // Actually mapped above
+            }
+        } else {
+            switch(funcName) {
+                case 'sin': textToAdd = 'sin('; break;
+                case 'cos': textToAdd = 'cos('; break;
+                case 'tan': textToAdd = 'tan('; break;
+                case 'log': textToAdd = 'log('; break;
+                case 'ln': textToAdd = 'ln('; break;
+                case 'sqrt': textToAdd = '√('; break;
+                case 'pow2': textToAdd = '²'; break;
+                case 'pow3': textToAdd = '³'; break;
+                case 'pow': textToAdd = '^('; break;
+                case 'abs': textToAdd = 'abs('; break;
+                case 'inverse': textToAdd = '⁻¹'; break;
+            }
+        }
+
+        // Fallback if shift didn't catch specific logic or simple map
+        if(textToAdd === "") {
+             // Handle complex default shift mapping if not covered
+             if(shiftMode && funcName === 'pow3') textToAdd = '∛(';
+             else if (funcName === 'pow3') textToAdd = '³';
+        }
+
+        expression += textToAdd;
+        updateDisplay();
+        resetModifiers();
+    }
+
+    function actionDel() {
+        if (expression.length > 0) {
+            // Logic to remove last "token" is complex, simple char removal for now
+            // Or remove known keywords
+            if(expression.endsWith('sin(')) expression = expression.slice(0, -4);
+            else if(expression.endsWith('cos(')) expression = expression.slice(0, -4);
+            else if(expression.endsWith('tan(')) expression = expression.slice(0, -4);
+            else if(expression.endsWith('log(')) expression = expression.slice(0, -4);
+            else if(expression.endsWith('ln(')) expression = expression.slice(0, -3);
+            else if(expression.endsWith('Ans')) expression = expression.slice(0, -3);
+            else expression = expression.slice(0, -1);
+        }
+        updateDisplay();
+    }
+
+    function actionAC() {
+        expression = "";
+        resultEl.innerText = "0";
+        updateDisplay();
+        resetModifiers();
+    }
+
+    function nav(dir) {
+        // For this simple version, we won't implement a cursor system inside the string
+        // as that requires a full text editor state machine.
+        // We will just flash the screen to acknowledge input.
+        displayEl.style.opacity = 0.5;
+        setTimeout(() => displayEl.style.opacity = 1, 100);
+    }
+
+    function updateDisplay() {
+        // Auto-scroll to end
+        displayEl.innerText = expression.replace(/\*/g, '×').replace(/\//g, '÷');
+        
+        // Simple scroll to right
+        const container = displayEl.parentElement;
+        container.scrollLeft = container.scrollWidth;
+    }
+
+    // Calculation Logic
+    function calculate() {
+        if (!expression) return;
+
+        let evalString = expression;
+
+        try {
+            // 1. Pre-processing: Replace symbols with JS Math functions
+            
+            // Constants
+            evalString = evalString.replace(/π/g, 'Math.PI');
+            evalString = evalString.replace(/e/g, 'Math.E');
+            evalString = evalString.replace(/Ans/g, ansValue);
+
+            // Operators
+            evalString = evalString.replace(/×/g, '*');
+            evalString = evalString.replace(/÷/g, '/');
+            // Handle implicit multiplication (e.g. 2sin(30) -> 2*sin(30)) - simple regex approach
+            evalString = evalString.replace(/(\d+)\(/g, '$1*(');
+            evalString = evalString.replace(/\)(\d+)/g, ')*$1');
+            evalString = evalString.replace(/(\d+)Math/g, '$1*Math');
+
+            // Powers
+            // JS uses **, but let's handle the specific ^ char
+            // Note: This simple replace doesn't handle order of operations perfectly for multiple powers
+            // ideally we need a parser, but for this constraint we try basic replacement
+            evalString = evalString.replace(/\^/g, '**'); 
+            evalString = evalString.replace(/²/g, '**2');
+            evalString = evalString.replace(/³/g, '**3');
+            evalString = evalString.replace(/⁻¹/g, '**-1');
+
+            // Scientific Notation
+            evalString = evalString.replace(/E/g, '*10**');
+
+            // Functions
+            evalString = evalString.replace(/√\(/g, 'Math.sqrt(');
+            evalString = evalString.replace(/∛\(/g, 'Math.cbrt(');
+            evalString = evalString.replace(/abs\(/g, 'Math.abs(');
+            evalString = evalString.replace(/log\(/g, 'Math.log10('); // Base 10
+            evalString = evalString.replace(/ln\(/g, 'Math.log(');    // Natural
+
+            // Trig Handling (Degrees vs Radians)
+            // We need to wrap arguments of trig functions if in DEG mode
+            // Regex to find sin(...), extract content, wrap in conversion if needed.
+            // This is hard with nested parenthesis using Regex.
+            // SIMPLIFICATION: We define custom functions in local scope.
+
+            // Replace function calls with custom versions
+            evalString = evalString.replace(/sin⁻¹\(/g, 'asin_c(');
+            evalString = evalString.replace(/cos⁻¹\(/g, 'acos_c(');
+            evalString = evalString.replace(/tan⁻¹\(/g, 'atan_c(');
+            evalString = evalString.replace(/sin\(/g, 'sin_c(');
+            evalString = evalString.replace(/cos\(/g, 'cos_c(');
+            evalString = evalString.replace(/tan\(/g, 'tan_c(');
+
+            // Evaluate
+            const result = eval(evalString);
+
+            // Format Result
+            if (!isFinite(result) || isNaN(result)) {
+                throw new Error("Math Error");
+            }
+
+            // Round to avoid floating point garbage (e.g. 0.00000000000004)
+            let finalResult = parseFloat(result.toPrecision(10));
+            // Remove trailing zeros if integer
+            if (Math.abs(finalResult - Math.round(finalResult)) < 1e-9) {
+                finalResult = Math.round(finalResult);
+            }
+
+            resultEl.innerText = finalResult.toString();
+            ansValue = finalResult;
+
+        } catch (e) {
+            resultEl.innerText = "Syntax ERROR";
+            console.error(e);
+        }
+    }
+
+    // Custom Trig Helpers
+    function toRad(x) { return angleMode === 'DEG' ? x * (Math.PI/180) : x; }
+    function toDeg(x) { return angleMode === 'DEG' ? x * (180/Math.PI) : x; }
+
+    function sin_c(x) { return Math.sin(toRad(x)); }
+    function cos_c(x) { 
+        // Handle exact 90 deg cases for cleaner output
+        if(angleMode === 'DEG' && x % 180 === 90) return 0;
+        return Math.cos(toRad(x)); 
+    }
+    function tan_c(x) { 
+        if(angleMode === 'DEG' && x % 180 === 90) throw new Error("Undefined");
+        return Math.tan(toRad(x)); 
+    }
+
+    function asin_c(x) { return toDeg(Math.asin(x)); }
+    function acos_c(x) { return toDeg(Math.acos(x)); }
+    function atan_c(x) { return toDeg(Math.atan(x)); }
+
+
+    // Initial Setup
+    window.onload = init;
+    
+    // Watch for mobile class changes
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === "class") {
+                // Resize logic if needed
+            }
+        });
+    });
+    observer.observe(document.body, { attributes: true });
+
+</script>
+</body>
+</html>
