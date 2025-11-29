@@ -1,7 +1,7 @@
 <!--
 APP_NAME: ApuSzimulátor
 APP_ICON: https://i.ibb.co/RknkGy7H/2603f3135863.png
-APP_CATEGORY: Games
+APP_CATEGORY: Utilities
 WINDOW_WIDTH: 380
 WINDOW_HEIGHT: 650
 STORE_ID: dad-sim-01
@@ -50,7 +50,7 @@ STORE_ID: dad-sim-01
             width: 100%;
             height: 100%;
             display: flex;
-            flex-direction: column; /* Flex column layout ensures footer stays at bottom */
+            flex-direction: column; /* Flex column layout ensures header/game-area/overlays are managed */
             background: var(--card-bg);
             position: relative;
             overflow: hidden;
@@ -147,15 +147,15 @@ STORE_ID: dad-sim-01
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: space-evenly; /* Adjusted to distribute space evenly */
             position: relative;
-            padding: 10px;
+            padding: 10px; /* Reduced padding for tighter fit */
             overflow-y: auto; /* Scrollable if needed */
             overflow-x: hidden;
             background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
             transition: background 1s ease;
             width: 100%;
-            min-height: 0; /* Allows this flex item to shrink below its content's intrinsic height */
+            min-height: 0; 
         }
         
         .game-area.night-mode-bg {
@@ -170,7 +170,7 @@ STORE_ID: dad-sim-01
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 10px 0 15px 0;
+            margin: 5px 0 10px 0; /* Reduced margins */
             background: #eef4f9;
             border-radius: 50%;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
@@ -396,11 +396,12 @@ STORE_ID: dad-sim-01
 
         /* --- Central Sleep Button --- */
         .sleep-btn-container {
-            margin-top: 15px;
-            margin-bottom: 20px;
+            margin-top: 10px; /* Reduced margin */
+            margin-bottom: 5px; /* Reduced margin */
             z-index: 25;
             display: flex;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .sleep-action-btn {
@@ -445,38 +446,40 @@ STORE_ID: dad-sim-01
             box-shadow: 0 0 15px rgba(100, 100, 255, 0.2);
         }
 
-        /* --- FLEX CONTROLS AREA --- */
+        /* --- CONTROLS AREA (MOVED INSIDE GAME-AREA) --- */
         .controls {
-            flex: 0 0 auto; /* Fixed height relative to content */
-            padding: 8px;
-            background: #fff;
-            border-top: 1px solid #eee;
+            width: 100%;
+            max-width: 320px; /* Aligned with stats container */
             display: grid;
             grid-template-columns: repeat(3, 1fr); /* 3 Fixed Columns */
-            gap: 6px;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+            gap: 6px; /* Space between buttons */
+            padding: 0; /* No padding on container, buttons manage their own */
+            margin-top: 10px; /* Space from sleep button */
+            margin-bottom: 0px; /* Adjusted bottom margin */
+            flex-shrink: 0;
             z-index: 50;
-            transition: all 0.3s ease;
-            width: 100%;
+            background: transparent; /* No background when inside game-area */
+            box-shadow: none; /* No shadow when inside game-area */
+            border-top: none; /* No border when inside game-area */
         }
 
         button.action-btn {
             border: none;
             background: #f8f8f8;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            padding: 4px;
+            padding: 4px 6px; /* Reduced padding */
             border-radius: 8px;
-            font-size: 0.85rem;
+            font-size: 0.75rem; /* Smaller font for compact look */
             font-weight: 600;
             color: var(--text-main);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            gap: 4px; /* Reduced gap */
             transition: all 0.2s;
             border: 1px solid transparent;
-            height: 48px; /* Comfortable touch target */
+            height: 38px; /* Compact height */
             position: relative;
             white-space: nowrap;
         }
@@ -517,7 +520,7 @@ STORE_ID: dad-sim-01
         }
 
         .cost-label {
-            font-size: 0.7em;
+            font-size: 0.6em; /* Smaller relative to main text */
             opacity: 0.8;
             font-weight: normal;
             margin-left: 2px;
@@ -632,43 +635,52 @@ STORE_ID: dad-sim-01
         input:focus + .slider { box-shadow: 0 0 1px var(--primary); }
         input:checked + .slider:before { transform: translateX(18px); }
 
-        /* --- COMPACT MODE / RESPONSIVE OVERRIDES --- */
-        body.compact-ui .controls button.action-btn,
-        body.mobile-mode .controls button.action-btn {
+        /* --- COMPACT MODE / MOBILE MODE OVERRIDES --- */
+        /* Adjust controls grid for smaller screens/compact mode */
+        body.compact-ui .controls {
+            grid-template-columns: repeat(2, 1fr); /* Change to 2 columns */
+            gap: 8px; /* Slightly larger gap for touch targets */
+            padding: 0;
+        }
+
+        /* Adjust button styling for mobile/compact */
+        body.compact-ui .controls button.action-btn {
             flex-direction: column;
-            padding: 2px;
-            height: 44px;
+            padding: 4px; /* Adjust padding for column layout */
+            height: 52px; /* Make buttons a bit taller for better touch target */
             justify-content: center;
-            font-size: 0.7rem;
+            font-size: 0.75rem; /* Base font size */
+            position: relative;
         }
         
-        body.compact-ui .controls button.action-btn .btn-text,
-        body.mobile-mode .controls button.action-btn .btn-text {
+        body.compact-ui .controls button.action-btn .btn-text {
             display: none !important;
         }
-        
-        body.compact-ui .controls button.action-btn > span:first-child,
-        body.mobile-mode .controls button.action-btn > span:first-child {
-            font-size: 1.4rem;
+        /* Ensure cost label is visible and styled properly when main text is hidden */
+        body.compact-ui .controls button.action-btn .cost-label {
+            display: block; /* Make it visible */
+            font-size: 0.65em; /* Smaller font for cost in compact */
+            opacity: 0.9;
+            margin-top: 2px; /* Space from icon */
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        body.compact-ui .controls button.action-btn > span:first-child {
+            font-size: 1.5rem; /* Larger icon */
             margin: 0;
             line-height: 1;
         }
 
-        /* Responsive Fixes for Small Screens */
+        /* General responsive fixes for very small widths */
         @media (max-width: 400px) {
             button.action-btn {
-                padding: 2px;
-                font-size: 0.75rem;
-                gap: 4px;
-                height: 42px;
+                padding: 2px 4px; /* Slightly smaller padding */
+                font-size: 0.7rem; /* Smaller font */
+                height: 38px; /* Maintain compact height */
             }
-            .cost-label {
-                font-size: 0.65em;
-            }
-            /* If screen is very narrow, force icon only mode or smaller text layout */
-            .controls {
-                gap: 4px;
-                padding: 4px;
+            .controls { 
+                gap: 4px; /* Smaller gap */
             }
         }
 
@@ -678,18 +690,20 @@ STORE_ID: dad-sim-01
                 padding: 4px 10px;
                 height: 40px;
             }
+            .game-area {
+                padding: 5px; /* Reduce overall game area padding */
+            }
             .controls {
-                padding: 4px;
                 gap: 4px;
             }
             button.action-btn {
-                height: 38px;
-                font-size: 0.8rem;
+                height: 34px; /* Even smaller action buttons */
+                font-size: 0.65rem;
             }
             .avatar-container {
                 width: 90px;
                 height: 90px;
-                margin: 5px 0 10px 0;
+                margin: 5px 0 8px 0; /* Slightly reduced */
             }
             .avatar {
                 font-size: 55px;
@@ -697,6 +711,10 @@ STORE_ID: dad-sim-01
             .stats-container {
                 gap: 4px;
                 padding: 6px;
+            }
+            .sleep-action-btn {
+                padding: 8px 16px;
+                font-size: 0.9rem;
             }
         }
 
@@ -851,6 +869,43 @@ STORE_ID: dad-sim-01
             
              <!-- Toast inside game area to position relatively -->
              <div class="message-toast" id="toast">Helló!</div>
+
+            <!-- ACTION CONTROLS (MOVED HERE) -->
+            <div class="controls">
+                <!-- Row 1 -->
+                <button onclick="game.work()" id="btn-work" class="action-btn primary">
+                    <span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>
+                </button>
+                <button onclick="game.feed()" id="btn-feed" class="action-btn">
+                    <span>🍔</span> <span class="btn-text">Evés <span class="cost-label">-500</span></span>
+                </button>
+                <button onclick="game.drink()" id="btn-drink" class="action-btn">
+                    <span>🍺</span> <span class="btn-text">Ivás <span class="cost-label">-300</span></span>
+                </button>
+                
+                <!-- Row 2 -->
+                <button onclick="game.tv()" id="btn-tv" class="action-btn">
+                    <span>📺</span> <span class="btn-text">Tévé</span>
+                </button>
+                <button onclick="game.sport()" id="btn-sport" class="action-btn">
+                    <span>🏋️</span> <span class="btn-text">Edzés</span>
+                </button>
+                <button onclick="game.meetFriends()" id="btn-friends" class="action-btn social">
+                    <span>🍻</span> <span class="btn-text">Barátok <span class="cost-label">-2k</span></span>
+                </button>
+
+                <!-- Row 3 -->
+                <button onclick="game.diy()" id="btn-diy" class="action-btn">
+                    <span>🛠️</span> <span class="btn-text">Barkács</span>
+                </button>
+                <button onclick="game.car()" id="btn-car" class="action-btn">
+                    <span>🚗</span> <span class="btn-text">Autó <span class="cost-label">-1k</span></span>
+                </button>
+                <button onclick="game.fishing()" id="btn-fishing" class="action-btn">
+                    <span>🎣</span> <span class="btn-text">Peca <span class="cost-label">-200</span></span>
+                </button>
+            </div>
+
         </div>
         
         <!-- Settings Modal -->
@@ -866,42 +921,6 @@ STORE_ID: dad-sim-01
                 </div>
                 <button class="close-settings-btn" onclick="game.toggleSettings()">Bezárás</button>
             </div>
-        </div>
-
-        <!-- FIXED CONTROLS: Flex layout ensures they are never cut off -->
-        <div class="controls">
-            <!-- Row 1 -->
-            <button onclick="game.work()" id="btn-work" class="action-btn primary">
-                <span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>
-            </button>
-            <button onclick="game.feed()" id="btn-feed" class="action-btn">
-                <span>🍔</span> <span class="btn-text">Evés <span class="cost-label">-500</span></span>
-            </button>
-            <button onclick="game.drink()" id="btn-drink" class="action-btn">
-                <span>🍺</span> <span class="btn-text">Ivás <span class="cost-label">-300</span></span>
-            </button>
-            
-            <!-- Row 2 -->
-            <button onclick="game.tv()" id="btn-tv" class="action-btn">
-                <span>📺</span> <span class="btn-text">Tévé</span>
-            </button>
-            <button onclick="game.sport()" id="btn-sport" class="action-btn">
-                <span>🏋️</span> <span class="btn-text">Edzés</span>
-            </button>
-            <button onclick="game.meetFriends()" id="btn-friends" class="action-btn social">
-                <span>🍻</span> <span class="btn-text">Barátok <span class="cost-label">-2k</span></span>
-            </button>
-
-            <!-- Row 3 -->
-            <button onclick="game.diy()" id="btn-diy" class="action-btn">
-                <span>🛠️</span> <span class="btn-text">Barkács</span>
-            </button>
-            <button onclick="game.car()" id="btn-car" class="action-btn">
-                <span>🚗</span> <span class="btn-text">Autó <span class="cost-label">-1k</span></span>
-            </button>
-            <button onclick="game.fishing()" id="btn-fishing" class="action-btn">
-                <span>🎣</span> <span class="btn-text">Peca <span class="cost-label">-200</span></span>
-            </button>
         </div>
 
         <div class="night-overlay" onclick="game.wakeUp()">
@@ -1030,6 +1049,11 @@ STORE_ID: dad-sim-01
                     if (!this.isCompactMode) {
                         this.toggleCompactMode(true);
                         document.getElementById('chk-compact').checked = true;
+                    }
+                } else {
+                     // If not mobile, ensure compact mode is off if it was set by responsiveness
+                    if (this.isCompactMode && !document.getElementById('chk-compact').checked) {
+                         this.toggleCompactMode(false);
                     }
                 }
             }
@@ -1202,7 +1226,7 @@ STORE_ID: dad-sim-01
                 else this.ui.btnSport.classList.remove('locked-btn');
 
                 // DIY Button Logic: Dangerous if drunk or tired
-                const diyRisk = (this.alcoholLevel > 20 || this.stats.energy < 20);
+                const diyRisk = (this.alcoholLevel > 10 || this.stats.energy < 20);
                 if (diyRisk && !globalDisable) {
                     this.ui.btnDiy.style.borderColor = 'var(--warning)';
                 } else {
