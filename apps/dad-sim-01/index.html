@@ -1,7 +1,6 @@
 <!--
 APP_NAME: ApuSzimulátor
-APP_ICON: https://i.ibb.co/hxWpPsYp/59df509d962a.png
-APP_CATEGORY: Games
+APP_ICON: https://i.ibb.co/FkXtH5Sy/7a03b77f6a7e.png
 WINDOW_WIDTH: 380
 WINDOW_HEIGHT: 650
 STORE_ID: dad-sim-01
@@ -163,7 +162,7 @@ STORE_ID: dad-sim-01
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 0 20px 0;
+            margin: 0 0 15px 0;
             background: #eef4f9;
             border-radius: 50%;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
@@ -238,6 +237,13 @@ STORE_ID: dad-sim-01
             75% { transform: rotate(-5deg) scale(1); }
             100% { transform: rotate(0deg) scale(1); }
         }
+        
+        @keyframes hammering {
+            0% { transform: rotate(0deg); }
+            30% { transform: rotate(-20deg) translateX(-5px); }
+            50% { transform: rotate(15deg) translateX(5px); }
+            100% { transform: rotate(0deg); }
+        }
 
         .anim-chewing .avatar { animation: chew 0.3s infinite; }
         .anim-drunk .avatar { animation: wobble 2.5s infinite ease-in-out; }
@@ -245,6 +251,7 @@ STORE_ID: dad-sim-01
         .anim-sport .avatar { animation: workout 0.6s infinite; }
         .anim-dance .avatar { animation: dance 0.5s infinite; }
         .anim-angry .avatar { animation: angry-shake 0.3s infinite; }
+        .anim-diy .avatar { animation: hammering 0.4s infinite; }
 
         /* Bubbles */
         .status-bubble {
@@ -276,17 +283,21 @@ STORE_ID: dad-sim-01
         .thought-cloud {
             position: absolute;
             top: -20px;
-            left: -20px;
+            left: -30px;
             background: white;
             border: 2px solid #e5e5e5;
-            padding: 6px 10px;
+            padding: 8px 12px;
             border-radius: 16px;
-            font-size: 1.4rem;
+            font-size: 1.2rem;
+            line-height: 1.2;
             opacity: 0;
             transform: scale(0) translateY(10px);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 10;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            white-space: nowrap;
+            max-width: 200px;
+            text-align: center;
         }
 
         .thought-cloud.visible {
@@ -298,7 +309,7 @@ STORE_ID: dad-sim-01
             content: '';
             position: absolute;
             bottom: -6px;
-            right: 15px;
+            right: 20px;
             width: 8px;
             height: 8px;
             background: white;
@@ -313,9 +324,9 @@ STORE_ID: dad-sim-01
             max-width: 340px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             background: rgba(255,255,255,0.8);
-            padding: 12px;
+            padding: 10px;
             border-radius: var(--radius);
             backdrop-filter: blur(5px);
             border: 1px solid rgba(0,0,0,0.05);
@@ -333,21 +344,21 @@ STORE_ID: dad-sim-01
         .stat-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             font-size: 0.9rem;
         }
 
         .stat-icon {
-            font-size: 1.1rem;
-            width: 24px;
+            font-size: 1rem;
+            width: 22px;
             text-align: center;
         }
 
         .progress-bar-bg {
             flex: 1;
-            height: 10px;
+            height: 8px;
             background: #efefef;
-            border-radius: 5px;
+            border-radius: 4px;
             overflow: hidden;
             box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
         }
@@ -359,12 +370,12 @@ STORE_ID: dad-sim-01
         .progress-bar-fill {
             height: 100%;
             width: 100%;
-            border-radius: 5px;
+            border-radius: 4px;
             transition: width 1s linear, background-color 0.3s;
         }
         
         .weight-display {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-sub);
             text-align: right;
             font-weight: 500;
@@ -376,15 +387,15 @@ STORE_ID: dad-sim-01
 
         /* --- Controls --- */
         .controls {
-            padding: 16px;
+            padding: 12px;
             background: #fff;
             border-top: 1px solid #eee;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
             box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
             overflow-y: auto;
-            max-height: 40%;
+            max-height: 45%;
             flex-shrink: 0;
             transition: all 0.3s ease;
         }
@@ -393,7 +404,7 @@ STORE_ID: dad-sim-01
             border: none;
             background: #f8f8f8;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            padding: 12px;
+            padding: 10px;
             border-radius: 8px;
             font-size: 0.9rem;
             font-weight: 600;
@@ -402,10 +413,10 @@ STORE_ID: dad-sim-01
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
             transition: all 0.2s;
             border: 1px solid transparent;
-            min-height: 44px;
+            min-height: 42px;
             position: relative;
         }
 
@@ -434,7 +445,6 @@ STORE_ID: dad-sim-01
         button.social {
             background: #605e5c;
             color: white;
-            grid-column: span 2;
         }
         button.social:hover {
             background: #4d4b49;
@@ -559,31 +569,27 @@ STORE_ID: dad-sim-01
 
         /* --- COMPACT MODE (ICONS ONLY) --- */
         body.compact-ui .controls {
-            grid-template-columns: repeat(6, 1fr);
-            gap: 5px !important; /* Tighter gap */
-            padding: 12px 8px !important;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px !important;
+            padding: 8px !important;
         }
         body.compact-ui .controls button.action-btn {
-            grid-column: span 1 !important; /* Force single column */
+            grid-column: span 1 !important;
             flex-direction: column;
             padding: 4px;
-            min-height: 42px; /* Reduced height for compactness */
+            min-height: 42px;
             justify-content: center;
         }
         body.compact-ui .controls button.action-btn .btn-text {
             display: none !important;
         }
         body.compact-ui .controls button.action-btn > span:first-child {
-            font-size: 1.3rem; /* Slightly smaller icon */
+            font-size: 1.3rem;
             margin: 0;
             line-height: 1;
         }
-        /* With 7 items (Work, Friends, Feed, Drink, Sport, Tv, Sleep)
-           Row 1: 6 items
-           Row 2: 1 item (Sleep). Make it span full width.
-        */
         body.compact-ui .controls button#btn-sleep {
-            grid-column: span 6 !important;
+            grid-column: span 4 !important;
         }
 
 
@@ -644,6 +650,9 @@ STORE_ID: dad-sim-01
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 50;
             text-align: center;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .message-toast.show {
             opacity: 1;
@@ -667,74 +676,46 @@ STORE_ID: dad-sim-01
         body.mobile-mode #app-container,
         @media (max-width: 420px), (max-height: 650px) {
             header {
-                padding: 1.5vh 3vw;
-                height: auto;
-                min-height: 48px;
+                padding: 1vh 3vw;
+                height: 48px;
             }
-            header h1 {
-                font-size: clamp(0.9rem, 4vw, 1.1rem);
-            }
-            .money-badge {
-                padding: 0.5vh 2vw;
-                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
-            }
+            h1 { font-size: 1rem; }
+            .money-badge { font-size: 0.8rem; }
 
             .game-area {
-                padding: 1vh 3vw;
+                padding: 10px;
                 justify-content: flex-start;
             }
 
             .avatar-container {
-                width: clamp(70px, 18vh, 130px);
-                height: clamp(70px, 18vh, 130px);
-                margin: 1vh 0 2vh 0;
+                width: 100px;
+                height: 100px;
+                margin-bottom: 10px;
             }
             .avatar {
-                font-size: clamp(40px, 10vh, 75px);
+                font-size: 60px;
             }
             
             .stats-container {
-                width: 100%;
-                padding: 1.5vh 3vw;
-                gap: 0.8vh;
+                padding: 8px;
+                gap: 6px;
             }
             .stat-row {
-                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
-                gap: 2vw;
-            }
-            .stat-icon {
-                font-size: clamp(0.9rem, 4vw, 1.1rem);
-                width: clamp(16px, 5vw, 24px);
+                font-size: 0.8rem;
             }
             .progress-bar-bg {
-                height: clamp(6px, 1.2vh, 10px);
-            }
-            .weight-display {
-                font-size: clamp(0.7rem, 3vw, 0.85rem);
-                margin-top: 0.5vh;
+                height: 6px;
             }
 
             .controls {
-                padding: 1.5vh 3vw;
-                gap: 1vh;
+                padding: 8px;
+                gap: 6px;
             }
             
             button.action-btn {
-                min-height: clamp(36px, 6vh, 48px);
-                padding: 0.5vh 1vw;
-                font-size: clamp(0.75rem, 3.5vw, 0.9rem);
-                gap: 1vw;
-            }
-            
-            .cost-label {
-                font-size: 0.8em;
-            }
-            
-            .thought-cloud {
-                font-size: clamp(1.1rem, 5vw, 1.4rem);
-                padding: 0.5vh 2vw;
-                top: -15%;
-                left: -15%;
+                min-height: 40px;
+                padding: 6px;
+                font-size: 0.85rem;
             }
         }
 
@@ -820,15 +801,12 @@ STORE_ID: dad-sim-01
         </div>
 
         <div class="controls">
-            <!-- Note: Wrapped text in .btn-text for hiding in compact mode -->
+            <!-- Row 1: Work (Full width) -->
             <button onclick="game.work()" id="btn-work" class="action-btn primary">
                 <span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>
             </button>
             
-            <button onclick="game.meetFriends()" id="btn-friends" class="action-btn social">
-                <span>🍻</span> <span class="btn-text">Barátok <span class="cost-label">-2k</span></span>
-            </button>
-            
+            <!-- Row 2 -->
             <button onclick="game.feed()" id="btn-feed" class="action-btn">
                 <span>🍔</span> <span class="btn-text">Evés <span class="cost-label">-500</span></span>
             </button>
@@ -836,13 +814,31 @@ STORE_ID: dad-sim-01
                 <span>🍺</span> <span class="btn-text">Ivás <span class="cost-label">-300</span></span>
             </button>
             
-            <button onclick="game.sport()" id="btn-sport" class="action-btn">
-                <span>🏋️</span> <span class="btn-text">Edzés</span>
-            </button>
+            <!-- Row 3 -->
             <button onclick="game.tv()" id="btn-tv" class="action-btn">
                 <span>📺</span> <span class="btn-text">Tévé</span>
             </button>
+            <button onclick="game.sport()" id="btn-sport" class="action-btn">
+                <span>🏋️</span> <span class="btn-text">Edzés</span>
+            </button>
+
+            <!-- Row 4 -->
+            <button onclick="game.meetFriends()" id="btn-friends" class="action-btn social">
+                <span>🍻</span> <span class="btn-text">Barátok <span class="cost-label">-2k</span></span>
+            </button>
+            <button onclick="game.diy()" id="btn-diy" class="action-btn">
+                <span>🛠️</span> <span class="btn-text">Barkács</span>
+            </button>
+
+            <!-- Row 5 -->
+            <button onclick="game.car()" id="btn-car" class="action-btn">
+                <span>🚗</span> <span class="btn-text">Autó <span class="cost-label">-1k</span></span>
+            </button>
+            <button onclick="game.fishing()" id="btn-fishing" class="action-btn">
+                <span>🎣</span> <span class="btn-text">Peca <span class="cost-label">-200</span></span>
+            </button>
             
+            <!-- Row 6: Sleep (Full width) -->
             <button onclick="game.toggleSleep()" id="btn-sleep" class="action-btn" style="grid-column: span 2;">
                 <span>😴</span> <span class="btn-text">Alvás</span>
             </button>
@@ -865,8 +861,8 @@ STORE_ID: dad-sim-01
                     energy: 70,
                     mood: 80,
                     health: 100,
-                    weight: 82.0, // kg
-                    money: 2000   // Ft
+                    weight: 85.0, // kg (Dad bod)
+                    money: 3000   // Ft
                 };
 
                 // Time system
@@ -884,7 +880,7 @@ STORE_ID: dad-sim-01
                 // Hidden Stats
                 this.alcoholLevel = 0; // 0-100
                 this.boredomCounter = 0; 
-                this.lastAteTotalHours = -10; // Assuming he ate a while ago
+                this.lastAteTotalHours = -10; 
 
                 // Easter Egg Stats
                 this.avatarClickCount = 0;
@@ -892,21 +888,25 @@ STORE_ID: dad-sim-01
 
                 this.timer = null;
 
-                // Message Banks
+                // Message Banks (Authentic Hungarian Dad Quotes)
                 this.msgs = {
-                    eat: ["Hmm, ez finom!", "Végre kaja!", "Nyamm nyamm...", "Ez most jól esett!", "Már korogtam!"],
-                    eatFull: ["Huh, pukkadásig...", "Nem bírom...", "Túl sok kaja...", "Jaj a hasam!"],
-                    drink: ["Csúszik!", "Hideg sör, legjobb sör!", "Egészségedre!", "Még egyet?"],
-                    drinkDrunk: ["Hic... még egyeet!", "Nem vagyok részeg...", "Világ forog...", "Woohoo!"],
-                    work: ["Dől a lé!", "Meló ezerrel...", "Főnök ma ideges...", "Utálom a hétfőket.", "Kell a pénz."],
-                    workTired: ["Majd elalszom...", "Kávé kell...", "Túl sok a túlóra...", "Nem bírom már."],
-                    sport: ["Izomláz!", "No pain no gain!", "Ez fájt...", "Formában vagyok!", "Fogyjon a háj!"],
-                    sportTired: ["Nem bírom...", "Majd leszakad a karom.", "Inkább aludnék.", "Nincs erőm ugrálni."],
-                    tv: ["Jó ez a műsor!", "Csak a foci!", "Híradó... unalmas.", "Reklám, reklám..."],
-                    tvSleep: ["Jaj, bealudtam a tévén...", "Hopp, elbóbiskoltam.", "Miről maradtam le?", "Na, jól bealudtam."],
-                    friends: ["Nagy buli volt!", "Régen találkoztunk!", "Apu kirúg a hámból!", "Jó társaság!"],
-                    angry: ["Ne ütögessél már!", "Hagyjál békén!", "Mi a bajod?!", "Ne ütögessél már vagy valami!", "Au!"],
-                    hurt: ["Ez fájt!", "Jaj!", "Most miért?", "Elég legyen!"]
+                    eat: ["Ez már döfi!", "Nem a zsömle kicsi, a pofátok nagy!", "Akváriumban nincs ilyen kaja!", "Na, ez hiányzott.", "Apu hasa nem kicsi, csak nagy."],
+                    eatFull: ["Huh, pukkadásig...", "Majd szétrepedek.", "Ezt le kell mozogni... vagy aludni rá.", "Jaj a hasam, de jó volt!"],
+                    drink: ["Legjobb sör a hideg sör.", "Ez gyógyszer!", "Csúszik, mint a nyíl!", "Egy sör nem sör.", "Folyékony kenyér."],
+                    drinkDrunk: ["Hic... ki a főnök?!", "Mindenki... szeretlek titeket!", "Ez a padló miért mozog?", "Csak még egyet a bácsinak..."],
+                    work: ["Dől a lé, kell a rezsire!", "A munka nemesít, de én nemes vagyok.", "Főnök megint hülye volt.", "Utálom a hétfőket.", "Melózni kell, nincs mese."],
+                    workTired: ["Majd elalszom a gép előtt...", "Nem bírom már ezt a hajtást.", "Nyugdíj, hol vagy?", "Kávét! Most!"],
+                    sport: ["Ép testben ép lélek!", "Régen jobb kondiban voltam.", "Ez izom, nem zsír!", "Huh, ez fájt...", "Mozogni kell, fiam!"],
+                    sportTired: ["Majd leszakad a derekam.", "Nem vagyok én már 20 éves.", "Elég volt mára a jóból.", "Inkább nézném a tévében."],
+                    tv: ["Kapcsold vissza, néztem!", "Ezek a mai hírek... borzalom.", "Hajrá magyarok!", "Reklám, reklám, reklám...", "Hol a távirányító?!"],
+                    friends: ["Nagy buli volt, fiúk!", "Régen minden jobb volt.", "Apu kirúg a hámból!", "Jó társaság, jó bor.", "Megváltottuk a világot."],
+                    angry: ["Ne piszkálj már!", "Amíg az én házamban laksz...!", "Mi a bajod?!", "Ne húzd az agyamat!", "Mars a szobádba!"],
+                    diy: ["Megjavítom, ne hívj szerelőt!", "Hol a csillagcsavarhúzó?", "Jó pap holtig tanul, jó szakember meg holtig szerel.", "Ez még jó lesz valamire.", "Kész a mű, az alkotó pihen."],
+                    diyHurt: ["A francba! Az ujjam!", "Aaa! Ezt elcsesztem.", "Hol a sebtapasz?!", "Ez a kalapács rossz helyen volt."],
+                    car: ["Szép hangja van a motornak.", "Olajat kéne cserélni.", "Csillog-villog a verda!", "A benzin ára már megint...", "Ez az autó az én váram."],
+                    carDirty: ["Tiszta kosz ez a kocsi.", "Madárürülék... remek.", "Le kéne mosni, de majd esik."],
+                    fishing: ["Csendet, elijesztitek a halakat!", "Kapás van! Vagy csak a hínár?", "A türelem halat terem.", "Jó itt a nyugi.", "Sör, peca, csend. Ez az élet."],
+                    fishingBored: ["Semmi kapás...", "Uncsi.", "Szúnyogok mindenhol!", "Inkább vettem volna halat a Tescóban."]
                 };
 
                 // UI Elements
@@ -928,6 +928,7 @@ STORE_ID: dad-sim-01
                     body: document.body,
                     sickOverlay: document.getElementById('sick-overlay'),
                     
+                    // Buttons
                     btnFeed: document.getElementById('btn-feed'),
                     btnDrink: document.getElementById('btn-drink'),
                     btnTv: document.getElementById('btn-tv'),
@@ -935,6 +936,9 @@ STORE_ID: dad-sim-01
                     btnSport: document.getElementById('btn-sport'),
                     btnFriends: document.getElementById('btn-friends'),
                     btnSleep: document.getElementById('btn-sleep'),
+                    btnDiy: document.getElementById('btn-diy'),
+                    btnCar: document.getElementById('btn-car'),
+                    btnFishing: document.getElementById('btn-fishing'),
                     
                     settingsOverlay: document.getElementById('settings-overlay')
                 };
@@ -972,7 +976,7 @@ STORE_ID: dad-sim-01
                     if (this.gameHour >= 24) {
                         this.gameHour = 0;
                         this.dayCount++;
-                        this.showToast(`${this.dayCount}. nap`);
+                        this.showToast(`${this.dayCount}. nap - Jó reggelt!`);
                     }
                 }
 
@@ -982,7 +986,6 @@ STORE_ID: dad-sim-01
 
             processStats() {
                 // Base decay rates per tick (1 second)
-                // Calibration: 1 Game Hour = 5 Seconds.
                 
                 if (this.isSleeping) {
                     // SLEEP MECHANICS
@@ -992,7 +995,7 @@ STORE_ID: dad-sim-01
                         energyGain *= 1.5; 
                     }
 
-                    this.stats.energy = Math.min(100, this.stats.energy + energyGain); // Regain energy
+                    this.stats.energy = Math.min(100, this.stats.energy + energyGain); 
                     this.stats.health = Math.min(100, this.stats.health + 0.5); 
                     this.alcoholLevel = Math.max(0, this.alcoholLevel - 2); 
                     
@@ -1007,13 +1010,7 @@ STORE_ID: dad-sim-01
                     
                     // Digestion
                     let hoursSinceEat = this.totalGameHours - this.lastAteTotalHours;
-                    let hungerDecay = 0;
-
-                    if (hoursSinceEat < 3) {
-                        hungerDecay = 0.05; 
-                    } else {
-                        hungerDecay = 1.5; 
-                    }
+                    let hungerDecay = (hoursSinceEat < 3) ? 0.05 : 1.5;
                     this.stats.hunger = Math.max(0, this.stats.hunger - hungerDecay);
 
                     this.stats.energy = Math.max(0, this.stats.energy - 0.8);
@@ -1021,7 +1018,7 @@ STORE_ID: dad-sim-01
                     this.alcoholLevel = Math.max(0, this.alcoholLevel - 0.5);
 
                     // Health Logic
-                    if (this.stats.weight > 115 || this.stats.weight < 60) this.stats.health -= 0.1;
+                    if (this.stats.weight > 120 || this.stats.weight < 60) this.stats.health -= 0.1;
                     if (this.stats.hunger < 10) this.stats.health -= 0.5;
                     if (this.stats.energy < 5) this.stats.health -= 0.2;
 
@@ -1069,8 +1066,8 @@ STORE_ID: dad-sim-01
                 let containerClass = '';
                 
                 let scaleX = 1;
-                if (this.stats.weight > 100) scaleX = 1.1;
-                if (this.stats.weight > 120) scaleX = 1.25;
+                if (this.stats.weight > 105) scaleX = 1.1;
+                if (this.stats.weight > 125) scaleX = 1.25;
                 if (this.stats.weight < 65) scaleX = 0.9;
                 this.ui.avatar.style.transform = `scaleX(${scaleX})`;
 
@@ -1092,8 +1089,6 @@ STORE_ID: dad-sim-01
                     face = '☺️'; 
                 } else if (this.stats.mood < 25) {
                     face = '🤬'; 
-                } else if (this.stats.mood < 50) {
-                    face = '😐'; 
                 } else if (this.stats.mood > 90) {
                     face = '🤩'; 
                 } else if (this.stats.mood > 75) {
@@ -1106,7 +1101,6 @@ STORE_ID: dad-sim-01
                 
                 // Allow animations if not locked, unless sick or locked by event
                 if (!this.isActionLocked || this.isSick) {
-                    // Only add class if it's not already added by a temporary animation
                     if(!this.ui.avatarContainer.classList.contains('temp-anim')) {
                         this.ui.avatarContainer.className = 'avatar-container ' + containerClass;
                     }
@@ -1134,23 +1128,43 @@ STORE_ID: dad-sim-01
                 }
 
                 // Sport Button
-                const sportBtn = this.ui.btnSport;
-                if (this.stats.energy < 30) {
-                    sportBtn.classList.add('locked-btn');
+                if (this.stats.energy < 30) this.ui.btnSport.classList.add('locked-btn');
+                else this.ui.btnSport.classList.remove('locked-btn');
+
+                // DIY Button Logic: Dangerous if drunk or tired
+                const diyRisk = (this.alcoholLevel > 20 || this.stats.energy < 20);
+                if (diyRisk && !globalDisable) {
+                    this.ui.btnDiy.style.borderColor = 'var(--warning)';
                 } else {
-                    sportBtn.classList.remove('locked-btn');
+                    this.ui.btnDiy.style.borderColor = 'transparent';
                 }
-                sportBtn.disabled = globalDisable;
+
+                // Car Button Logic: Disabled if drunk
+                if (this.alcoholLevel > 10 && !globalDisable) {
+                    this.ui.btnCar.disabled = true;
+                    this.ui.btnCar.classList.add('locked-btn');
+                    this.ui.btnCar.title = "Nem vezethetsz részegen!";
+                } else if (!globalDisable) {
+                    this.ui.btnCar.disabled = false;
+                    this.ui.btnCar.classList.remove('locked-btn');
+                    this.ui.btnCar.title = "";
+                }
 
                 // Generic Disables
-                const btns = [this.ui.btnFeed, this.ui.btnDrink, this.ui.btnTv, this.ui.btnFriends];
-                btns.forEach(btn => btn.disabled = globalDisable);
+                const actionBtns = [
+                    this.ui.btnFeed, this.ui.btnDrink, this.ui.btnTv, 
+                    this.ui.btnFriends, this.ui.btnSport, this.ui.btnDiy, 
+                    this.ui.btnFishing
+                ];
+                actionBtns.forEach(btn => btn.disabled = globalDisable);
 
                 // Cost checks
                 if (!globalDisable) {
                     if (this.stats.money < 2000) this.ui.btnFriends.disabled = true;
+                    if (this.stats.money < 1000) this.ui.btnCar.disabled = true;
                     if (this.stats.money < 500) this.ui.btnFeed.disabled = true;
                     if (this.stats.money < 300) this.ui.btnDrink.disabled = true;
+                    if (this.stats.money < 200) this.ui.btnFishing.disabled = true;
                 }
             }
 
@@ -1204,16 +1218,17 @@ STORE_ID: dad-sim-01
                 if (this.avatarClickCount >= 5) {
                     this.avatarClickCount = 0; // Reset
                     
-                    // The angry effect
                     this.stats.mood = Math.max(0, this.stats.mood - 10);
-                    // Also decrease health when hit too much
-                    this.stats.health = Math.max(0, this.stats.health - 5);
+                    this.stats.health = Math.max(0, this.stats.health - 2);
                     
                     this.showThought("🤬");
                     this.showToast(this.getRandomMsg('angry'));
                     this.animateAction('anim-angry');
                     
                     this.updateUI();
+                } else {
+                    // Feedback for single click
+                    this.showThought("?");
                 }
             }
 
@@ -1280,6 +1295,68 @@ STORE_ID: dad-sim-01
                 this.showThought("💪");
             }
 
+            diy() {
+                if (this.isActionLocked) return;
+                this.resetInteraction();
+                this.animateAction('anim-diy');
+
+                // Risk calculation
+                const accidentChance = (this.alcoholLevel > 10 ? 0.4 : 0) + (this.stats.energy < 20 ? 0.3 : 0.05);
+                
+                this.stats.energy = Math.max(0, this.stats.energy - 20);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 10);
+
+                if (Math.random() < accidentChance) {
+                    // Accident
+                    this.stats.health = Math.max(0, this.stats.health - 15);
+                    this.stats.mood = Math.max(0, this.stats.mood - 20);
+                    this.showToast(this.getRandomMsg('diyHurt'));
+                    this.showThought("🤕");
+                } else {
+                    // Success
+                    this.stats.mood = Math.min(100, this.stats.mood + 20);
+                    this.showToast(this.getRandomMsg('diy'));
+                    this.showThought("🛠️");
+                }
+            }
+
+            car() {
+                if (this.isActionLocked) return;
+                this.stats.money -= 1000;
+                this.resetInteraction();
+                this.animateAction('anim-chewing'); // Using standard anim for driving/fixing
+
+                this.stats.mood = Math.min(100, this.stats.mood + 30);
+                this.stats.energy = Math.max(0, this.stats.energy - 10);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 5);
+                
+                this.showToast(this.getRandomMsg('car'));
+                this.showThought("🚗");
+            }
+
+            fishing() {
+                if (this.isActionLocked) return;
+                this.stats.money -= 200;
+                this.resetInteraction();
+                this.animateAction('anim-chewing'); // Simple idle anim
+
+                // Fishing passes extra time (1 hour = 5 ticks, so we simulate extra decay)
+                this.gameHour++; 
+                this.totalGameHours++;
+                
+                this.stats.mood = Math.min(100, this.stats.mood + 25);
+                this.stats.energy = Math.max(0, this.stats.energy - 5);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 15);
+                
+                if (Math.random() > 0.6) {
+                    this.showToast(this.getRandomMsg('fishing'));
+                    this.showThought("🐟");
+                } else {
+                    this.showToast(this.getRandomMsg('fishingBored'));
+                    this.showThought("🦟");
+                }
+            }
+
             feed() {
                 if (this.isActionLocked) return;
                 
@@ -1328,8 +1405,10 @@ STORE_ID: dad-sim-01
 
                 if (this.alcoholLevel > 50) {
                     this.showToast(this.getRandomMsg('drinkDrunk'));
+                    this.showThought("🥴");
                 } else {
                     this.showToast(this.getRandomMsg('drink'));
+                    this.showThought("🍺");
                 }
             }
 
@@ -1405,7 +1484,7 @@ STORE_ID: dad-sim-01
             animateAction(className) {
                 if (this.alcoholLevel > 70) return; 
                 this.ui.avatarContainer.classList.add(className);
-                this.ui.avatarContainer.classList.add('temp-anim'); // Mark as temporary
+                this.ui.avatarContainer.classList.add('temp-anim'); 
                 
                 setTimeout(() => {
                     this.ui.avatarContainer.classList.remove(className);
@@ -1421,14 +1500,14 @@ STORE_ID: dad-sim-01
                 this.ui.toast.classList.add('show');
                 this.toastTimer = setTimeout(() => {
                     this.ui.toast.classList.remove('show');
-                }, 2000);
+                }, 3000);
             }
 
             showThought(emoji) {
                 if(emoji) {
                      this.ui.thought.innerText = emoji;
                 } else {
-                    const randoms = ["🚗", "🔧", "🎸", "🍺", "⚽", "🏖️"];
+                    const randoms = ["🚗", "🔧", "🎸", "🍺", "⚽", "🏖️", "💸"];
                     this.ui.thought.innerText = randoms[Math.floor(Math.random() * randoms.length)];
                 }
                 
