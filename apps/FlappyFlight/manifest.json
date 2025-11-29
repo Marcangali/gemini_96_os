@@ -3,7 +3,8 @@
   "name": "Flappy Flight",
   "description": "Created with Gemini Studio",
   "category": "Custom",
-  "icon": "icon.png",
+  "icon": "https://i.ibb.co/Ld5Srr7v/0c110b40c456.png",
   "width": 400,
-  "height": 600
+  "height": 600,
+  "version": "v3"
 }
