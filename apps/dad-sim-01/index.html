@@ -217,6 +217,14 @@ STORE_ID: dad-sim-01
             100% { transform: translate(1px, -2px) rotate(-1deg); }
         }
         
+        @keyframes angry-shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-8px) rotate(-5deg); }
+            50% { transform: translateX(8px) rotate(5deg); }
+            75% { transform: translateX(-8px) rotate(-5deg); }
+            100% { transform: translateX(0); }
+        }
+        
         @keyframes workout {
             0% { transform: translateY(0) scale(1,1); }
             50% { transform: translateY(5px) scale(1.1, 0.9); }
@@ -236,6 +244,7 @@ STORE_ID: dad-sim-01
         .anim-sick .avatar { animation: sick-shake 0.8s infinite; filter: hue-rotate(90deg); }
         .anim-sport .avatar { animation: workout 0.6s infinite; }
         .anim-dance .avatar { animation: dance 0.5s infinite; }
+        .anim-angry .avatar { animation: angry-shake 0.3s infinite; }
 
         /* Bubbles */
         .status-bubble {
@@ -550,27 +559,31 @@ STORE_ID: dad-sim-01
 
         /* --- COMPACT MODE (ICONS ONLY) --- */
         body.compact-ui .controls {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(6, 1fr);
+            gap: 5px !important; /* Tighter gap */
+            padding: 12px 8px !important;
         }
         body.compact-ui .controls button.action-btn {
             grid-column: span 1 !important; /* Force single column */
             flex-direction: column;
-            padding: 8px 4px;
-            min-height: 52px;
+            padding: 4px;
+            min-height: 42px; /* Reduced height for compactness */
             justify-content: center;
         }
         body.compact-ui .controls button.action-btn .btn-text {
             display: none !important;
         }
         body.compact-ui .controls button.action-btn > span:first-child {
-            font-size: 1.6rem;
+            font-size: 1.3rem; /* Slightly smaller icon */
             margin: 0;
             line-height: 1;
         }
-        /* Sleep needs to span 2 to complete the 4-column grid row nicely (4+3 items = 7 items) */
-        /* Row 1: 4 items. Row 2: 2 items + sleep(2) = 4 items. Total 7. */
+        /* With 7 items (Work, Friends, Feed, Drink, Sport, Tv, Sleep)
+           Row 1: 6 items
+           Row 2: 1 item (Sleep). Make it span full width.
+        */
         body.compact-ui .controls button#btn-sleep {
-            grid-column: span 2 !important;
+            grid-column: span 6 !important;
         }
 
 
@@ -873,6 +886,10 @@ STORE_ID: dad-sim-01
                 this.boredomCounter = 0; 
                 this.lastAteTotalHours = -10; // Assuming he ate a while ago
 
+                // Easter Egg Stats
+                this.avatarClickCount = 0;
+                this.lastAvatarClickTime = 0;
+
                 this.timer = null;
 
                 // Message Banks
@@ -887,7 +904,8 @@ STORE_ID: dad-sim-01
                     sportTired: ["Nem bírom...", "Majd leszakad a karom.", "Inkább aludnék.", "Nincs erőm ugrálni."],
                     tv: ["Jó ez a műsor!", "Csak a foci!", "Híradó... unalmas.", "Reklám, reklám..."],
                     tvSleep: ["Jaj, bealudtam a tévén...", "Hopp, elbóbiskoltam.", "Miről maradtam le?", "Na, jól bealudtam."],
-                    friends: ["Nagy buli volt!", "Régen találkoztunk!", "Apu kirúg a hámból!", "Jó társaság!"]
+                    friends: ["Nagy buli volt!", "Régen találkoztunk!", "Apu kirúg a hámból!", "Jó társaság!"],
+                    angry: ["Ne ütögessél már!", "Hagyjál békén!", "Mi a bajod?!", "Ne ütögessél már vagy valami!", "Au!"]
                 };
 
                 // UI Elements
@@ -927,6 +945,10 @@ STORE_ID: dad-sim-01
                 // Main Loop: Runs every 1 second (Real time)
                 // Logic: 5 ticks = 1 game hour.
                 this.timer = setInterval(() => this.tick(), 1000);
+                
+                // Avatar Click Listener for Easter Egg
+                this.ui.avatar.addEventListener('click', () => this.handleAvatarClick());
+
                 this.updateUI();
                 this.showToast("Szia! Vigyázz apura!");
                 
@@ -1081,8 +1103,12 @@ STORE_ID: dad-sim-01
 
                 this.ui.avatar.innerText = face;
                 
+                // Allow animations if not locked, unless sick or locked by event
                 if (!this.isActionLocked || this.isSick) {
-                     this.ui.avatarContainer.className = 'avatar-container ' + containerClass;
+                    // Only add class if it's not already added by a temporary animation
+                    if(!this.ui.avatarContainer.classList.contains('temp-anim')) {
+                        this.ui.avatarContainer.className = 'avatar-container ' + containerClass;
+                    }
                 }
 
                 this.ui.sickOverlay.classList.toggle('visible', this.isSick);
@@ -1158,6 +1184,30 @@ STORE_ID: dad-sim-01
                     this.ui.body.classList.add('compact-ui');
                 } else {
                     this.ui.body.classList.remove('compact-ui');
+                }
+            }
+
+            // --- Click Easter Egg ---
+            handleAvatarClick() {
+                if (this.isSleeping || this.isSick) return;
+
+                const now = Date.now();
+                // If it's been more than 1 second since last click, reset counter
+                if (now - this.lastAvatarClickTime > 1000) {
+                    this.avatarClickCount = 0;
+                }
+                this.lastAvatarClickTime = now;
+                this.avatarClickCount++;
+
+                // Trigger angry outburst if clicked too many times (e.g., 5 rapid clicks)
+                if (this.avatarClickCount >= 5) {
+                    this.avatarClickCount = 0; // Reset
+                    
+                    // The angry effect
+                    this.stats.mood = Math.max(0, this.stats.mood - 10);
+                    this.showThought("🤬");
+                    this.showToast(this.getRandomMsg('angry'));
+                    this.animateAction('anim-angry');
                 }
             }
 
@@ -1349,8 +1399,11 @@ STORE_ID: dad-sim-01
             animateAction(className) {
                 if (this.alcoholLevel > 70) return; 
                 this.ui.avatarContainer.classList.add(className);
+                this.ui.avatarContainer.classList.add('temp-anim'); // Mark as temporary
+                
                 setTimeout(() => {
                     this.ui.avatarContainer.classList.remove(className);
+                    this.ui.avatarContainer.classList.remove('temp-anim');
                     this.updateUI(); 
                 }, 800);
             }
