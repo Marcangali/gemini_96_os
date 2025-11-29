@@ -1,0 +1,1628 @@
+<!--
+APP_NAME: ApuSzimulátor
+APP_ICON: https://i.ibb.co/RknkGy7H/2603f3135863.png
+APP_CATEGORY: Utilities
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 650
+STORE_ID: dad-sim-01
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ApuSzimulátor</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --card-bg: #ffffff;
+            --primary: #0078d4;
+            --primary-hover: #006cc1;
+            --text-main: #202020;
+            --text-sub: #606060;
+            --success: #107c10;
+            --warning: #d83b01;
+            --danger: #e81123;
+            --radius: 12px;
+            --shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            user-select: none;
+            color: var(--text-main);
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column; /* Flex column layout ensures header/game-area/overlays are managed */
+            background: var(--card-bg);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        @media (min-width: 400px) and (min-height: 600px) {
+            #app-container {
+                border-radius: var(--radius); 
+            }
+        }
+
+        /* --- Header --- */
+        header {
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+            background: #fff;
+            z-index: 10;
+            flex: 0 0 auto; /* Don't shrink */
+            height: 50px;
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .clock-display {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            font-variant-numeric: tabular-nums;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .money-badge {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+        
+        .icon-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            transition: background 0.2s;
+            box-shadow: none !important;
+        }
+        .icon-btn:hover {
+            background: #f0f0f0;
+        }
+
+        /* --- Game Area --- */
+        .game-area {
+            flex: 1; /* Takes up all remaining space */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-evenly; /* Adjusted to distribute space evenly */
+            position: relative;
+            padding: 10px; /* Reduced padding for tighter fit */
+            overflow-y: auto; /* Scrollable if needed */
+            overflow-x: hidden;
+            background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
+            transition: background 1s ease;
+            width: 100%;
+            min-height: 0; 
+        }
+        
+        .game-area.night-mode-bg {
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        /* --- Avatar --- */
+        .avatar-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 5px 0 10px 0; /* Reduced margins */
+            background: #eef4f9;
+            border-radius: 50%;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            flex-shrink: 0;
+            z-index: 20;
+        }
+
+        .game-area.night-mode-bg .avatar-container {
+            background: #2a2a40;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+        }
+
+        .avatar {
+            font-size: 70px;
+            line-height: 1;
+            cursor: pointer;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1));
+            transition: transform 0.2s;
+            user-select: none;
+        }
+        
+        .avatar:active {
+            transform: scale(0.9) !important;
+        }
+
+        /* Animations */
+        @keyframes chew {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes wobble {
+            0%, 100% { transform: rotate(0deg) translateX(0); }
+            25% { transform: rotate(5deg) translateX(5px); }
+            75% { transform: rotate(-5deg) translateX(-5px); }
+        }
+
+        @keyframes sick-shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        
+        @keyframes angry-shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-8px) rotate(-5deg); }
+            50% { transform: translateX(8px) rotate(5deg); }
+            75% { transform: translateX(-8px) rotate(-5deg); }
+            100% { transform: translateX(0); }
+        }
+        
+        @keyframes workout {
+            0% { transform: translateY(0) scale(1,1); }
+            50% { transform: translateY(5px) scale(1.1, 0.9); }
+            100% { transform: translateY(0) scale(1,1); }
+        }
+
+        @keyframes dance {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-10deg) scale(1.1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+            75% { transform: rotate(-5deg) scale(1); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+        
+        @keyframes hammering {
+            0% { transform: rotate(0deg); }
+            30% { transform: rotate(-20deg) translateX(-5px); }
+            50% { transform: rotate(15deg) translateX(5px); }
+            100% { transform: rotate(0deg); }
+        }
+
+        .anim-chewing .avatar { animation: chew 0.3s infinite; }
+        .anim-drunk .avatar { animation: wobble 2.5s infinite ease-in-out; }
+        .anim-sick .avatar { animation: sick-shake 0.8s infinite; filter: hue-rotate(90deg); }
+        .anim-sport .avatar { animation: workout 0.6s infinite; }
+        .anim-dance .avatar { animation: dance 0.5s infinite; }
+        .anim-angry .avatar { animation: angry-shake 0.3s infinite; }
+        .anim-diy .avatar { animation: hammering 0.4s infinite; }
+
+        /* Bubbles */
+        .status-bubble {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--danger);
+            color: white;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
+
+        .status-bubble.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .thought-cloud {
+            position: absolute;
+            top: -70px;
+            left: -30px;
+            background: white;
+            border: 2px solid #e5e5e5;
+            padding: 8px 12px;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            line-height: 1.2;
+            opacity: 0;
+            transform: scale(0) translateY(10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            white-space: nowrap;
+            max-width: 200px;
+            text-align: center;
+        }
+
+        .thought-cloud.visible {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        .thought-cloud::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            right: 20px;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-bottom: 2px solid #e5e5e5;
+            border-right: 2px solid #e5e5e5;
+            transform: rotate(45deg);
+        }
+
+        /* --- Stats --- */
+        .stats-container {
+            width: 100%;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(255,255,255,0.7);
+            padding: 10px;
+            border-radius: var(--radius);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.05);
+            margin-bottom: 5px;
+            flex-shrink: 0;
+            transition: background 0.5s;
+        }
+
+        .game-area.night-mode-bg .stats-container {
+            background: rgba(30,30,45,0.8);
+            border-color: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .stat-icon {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        .progress-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: #efefef;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+        
+        .game-area.night-mode-bg .progress-bar-bg {
+            background: #333;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 100%;
+            border-radius: 4px;
+            transition: width 1s linear, background-color 0.3s;
+        }
+        
+        .weight-display {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            text-align: right;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .game-area.night-mode-bg .weight-display {
+            color: #aaa;
+        }
+
+        /* --- Central Sleep Button --- */
+        .sleep-btn-container {
+            margin-top: 10px; /* Reduced margin */
+            margin-bottom: 5px; /* Reduced margin */
+            z-index: 25;
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .sleep-action-btn {
+            background: #2b3a42;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid transparent;
+        }
+
+        .sleep-action-btn:hover {
+            background: #374a54;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        .sleep-action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .sleep-action-btn.wake-mode {
+            background: #ffdb8e;
+            color: #4a3b00;
+            border-color: #f7c948;
+        }
+
+        .sleep-action-btn.wake-mode:hover {
+            background: #ffe3a8;
+        }
+
+        .game-area.night-mode-bg .sleep-action-btn:not(.wake-mode) {
+            background: #4a4a6a;
+            box-shadow: 0 0 15px rgba(100, 100, 255, 0.2);
+        }
+
+        /* --- CONTROLS AREA (MOVED INSIDE GAME-AREA) --- */
+        .controls {
+            width: 100%;
+            max-width: 320px; /* Aligned with stats container */
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 Fixed Columns */
+            gap: 6px; /* Space between buttons */
+            padding: 0; /* No padding on container, buttons manage their own */
+            margin-top: 10px; /* Space from sleep button */
+            margin-bottom: 0px; /* Adjusted bottom margin */
+            flex-shrink: 0;
+            z-index: 50;
+            background: transparent; /* No background when inside game-area */
+            box-shadow: none; /* No shadow when inside game-area */
+            border-top: none; /* No border when inside game-area */
+        }
+
+        button.action-btn {
+            border: none;
+            background: #f8f8f8;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 4px 6px; /* Reduced padding */
+            border-radius: 8px;
+            font-size: 0.75rem; /* Smaller font for compact look */
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px; /* Reduced gap */
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            height: 38px; /* Compact height */
+            position: relative;
+            white-space: nowrap;
+        }
+        
+        button.action-btn .btn-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        button.action-btn:hover {
+            background: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+            border-color: #eee;
+        }
+
+        button.action-btn:active {
+            transform: translateY(0);
+            background: #f0f0f0;
+        }
+
+        button.primary {
+            background: var(--primary);
+            color: white;
+        }
+        button.primary:hover {
+            background: var(--primary-hover);
+            color: white;
+        }
+        
+        button.social {
+            background: #605e5c;
+            color: white;
+        }
+        button.social:hover {
+            background: #4d4b49;
+            color: white;
+        }
+
+        .cost-label {
+            font-size: 0.6em; /* Smaller relative to main text */
+            opacity: 0.8;
+            font-weight: normal;
+            margin-left: 2px;
+        }
+        
+        button.action-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            background: #f0f0f0 !important;
+            color: #a0a0a0 !important;
+            box-shadow: none !important;
+            border-color: transparent !important;
+        }
+        
+        button.locked-btn {
+            background-color: #e6e6e6 !important;
+            color: #888 !important;
+            border: 1px dashed #ccc !important;
+        }
+
+        /* --- Settings Modal --- */
+        .settings-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .settings-overlay.open {
+            display: flex;
+            opacity: 1;
+        }
+        .settings-content {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: var(--radius);
+            width: 85%;
+            max-width: 300px;
+            box-shadow: var(--shadow);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .settings-overlay.open .settings-content {
+            transform: scale(1);
+        }
+        .settings-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+        }
+        .close-settings-btn {
+            width: 100%;
+            padding: 10px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .close-settings-btn:hover {
+            background: #e0e0e0;
+        }
+
+        /* Checkbox styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:focus + .slider { box-shadow: 0 0 1px var(--primary); }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        /* --- COMPACT MODE / MOBILE MODE OVERRIDES --- */
+        /* Adjust controls grid for smaller screens/compact mode */
+        body.compact-ui .controls {
+            grid-template-columns: repeat(2, 1fr); /* Change to 2 columns */
+            gap: 8px; /* Slightly larger gap for touch targets */
+            padding: 0;
+        }
+
+        /* Adjust button styling for mobile/compact */
+        body.compact-ui .controls button.action-btn {
+            flex-direction: column;
+            padding: 4px; /* Adjust padding for column layout */
+            height: 52px; /* Make buttons a bit taller for better touch target */
+            justify-content: center;
+            font-size: 0.75rem; /* Base font size */
+            position: relative;
+        }
+        
+        body.compact-ui .controls button.action-btn .btn-text {
+            display: none !important;
+        }
+        /* Ensure cost label is visible and styled properly when main text is hidden */
+        body.compact-ui .controls button.action-btn .cost-label {
+            display: block; /* Make it visible */
+            font-size: 0.65em; /* Smaller font for cost in compact */
+            opacity: 0.9;
+            margin-top: 2px; /* Space from icon */
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        body.compact-ui .controls button.action-btn > span:first-child {
+            font-size: 1.5rem; /* Larger icon */
+            margin: 0;
+            line-height: 1;
+        }
+
+        /* General responsive fixes for very small widths */
+        @media (max-width: 400px) {
+            button.action-btn {
+                padding: 2px 4px; /* Slightly smaller padding */
+                font-size: 0.7rem; /* Smaller font */
+                height: 38px; /* Maintain compact height */
+            }
+            .controls { 
+                gap: 4px; /* Smaller gap */
+            }
+        }
+
+        /* Super Short Screens (Landscape Mobile) */
+        @media (max-height: 550px) {
+            header {
+                padding: 4px 10px;
+                height: 40px;
+            }
+            .game-area {
+                padding: 5px; /* Reduce overall game area padding */
+            }
+            .controls {
+                gap: 4px;
+            }
+            button.action-btn {
+                height: 34px; /* Even smaller action buttons */
+                font-size: 0.65rem;
+            }
+            .avatar-container {
+                width: 90px;
+                height: 90px;
+                margin: 5px 0 8px 0; /* Slightly reduced */
+            }
+            .avatar {
+                font-size: 55px;
+            }
+            .stats-container {
+                gap: 4px;
+                padding: 6px;
+            }
+            .sleep-action-btn {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* --- Overlays --- */
+        .night-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 28, 0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s;
+            backdrop-filter: blur(2px);
+        }
+
+        body.sleeping .night-overlay {
+            opacity: 1;
+            pointer-events: auto;
+            background: rgba(10, 10, 28, 0.85);
+        }
+
+        .zzz {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #8c9eff;
+            animation: floatZ 2.5s infinite ease-in-out;
+            position: absolute;
+        }
+
+        @keyframes floatZ {
+            0% { transform: translate(0, 0) scale(1) rotate(-10deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translate(30px, -60px) scale(1.5) rotate(10deg); opacity: 0; }
+        }
+
+        .message-toast {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(50px);
+            background: rgba(30, 30, 30, 0.95);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 200;
+            text-align: center;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .message-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .sick-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, transparent 50%, rgba(100, 255, 0, 0.2));
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 40;
+        }
+        .sick-overlay.visible {
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body class="">
+
+    <div id="app-container">
+        <header>
+            <div class="header-left">
+                <h1>ApuSzimulátor</h1>
+                <div class="clock-display" id="clock-display">⏰ 08:00</div>
+            </div>
+            <div class="header-right">
+                <div class="money-badge">
+                    <span>💰</span>
+                    <span id="money-display">2000 Ft</span>
+                </div>
+                <button class="icon-btn" onclick="game.toggleSettings()" title="Beállítások">⚙️</button>
+            </div>
+        </header>
+
+        <div class="game-area" id="game-area">
+            <div class="sick-overlay" id="sick-overlay"></div>
+            
+            <div class="avatar-container" id="avatar-container">
+                <div class="thought-cloud" id="thought">🍕</div>
+                <div class="status-bubble" id="alert-bubble">!</div>
+                <div class="avatar" id="avatar">👨</div>
+            </div>
+
+            <div class="stats-container">
+                <!-- Health -->
+                <div class="stat-row">
+                    <span class="stat-icon" title="Egészség">❤️</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="fill-health" style="width: 100%; background: #d92b2b;"></div>
+                    </div>
+                </div>
+                <!-- Hunger -->
+                <div class="stat-row">
+                    <span class="stat-icon" title="Jóllakottság">🍗</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="fill-hunger" style="width: 80%; background: #107c10;"></div>
+                    </div>
+                </div>
+                <!-- Energy -->
+                <div class="stat-row">
+                    <span class="stat-icon" title="Energia">⚡</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="fill-energy" style="width: 60%; background: #ffb900;"></div>
+                    </div>
+                </div>
+                <!-- Mood -->
+                <div class="stat-row">
+                    <span class="stat-icon" title="Jókedv">😊</span>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="fill-mood" style="width: 90%; background: #0078d4;"></div>
+                    </div>
+                </div>
+                
+                <div class="weight-display">
+                    Testsúly: <span id="weight-display">80.0</span> kg ⚖️
+                </div>
+            </div>
+
+            <div class="sleep-btn-container">
+                <button id="btn-sleep-main" class="sleep-action-btn" onclick="game.toggleSleep()">
+                    <span>😴</span>
+                    <span id="btn-sleep-text">Alvás</span>
+                </button>
+            </div>
+            
+             <!-- Toast inside game area to position relatively -->
+             <div class="message-toast" id="toast">Helló!</div>
+
+            <!-- ACTION CONTROLS (MOVED HERE) -->
+            <div class="controls">
+                <!-- Row 1 -->
+                <button onclick="game.work()" id="btn-work" class="action-btn primary">
+                    <span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>
+                </button>
+                <button onclick="game.feed()" id="btn-feed" class="action-btn">
+                    <span>🍔</span> <span class="btn-text">Evés <span class="cost-label">-500</span></span>
+                </button>
+                <button onclick="game.drink()" id="btn-drink" class="action-btn">
+                    <span>🍺</span> <span class="btn-text">Ivás <span class="cost-label">-300</span></span>
+                </button>
+                
+                <!-- Row 2 -->
+                <button onclick="game.tv()" id="btn-tv" class="action-btn">
+                    <span>📺</span> <span class="btn-text">Tévé</span>
+                </button>
+                <button onclick="game.sport()" id="btn-sport" class="action-btn">
+                    <span>🏋️</span> <span class="btn-text">Edzés</span>
+                </button>
+                <button onclick="game.meetFriends()" id="btn-friends" class="action-btn social">
+                    <span>🍻</span> <span class="btn-text">Barátok <span class="cost-label">-2k</span></span>
+                </button>
+
+                <!-- Row 3 -->
+                <button onclick="game.diy()" id="btn-diy" class="action-btn">
+                    <span>🛠️</span> <span class="btn-text">Barkács</span>
+                </button>
+                <button onclick="game.car()" id="btn-car" class="action-btn">
+                    <span>🚗</span> <span class="btn-text">Autó <span class="cost-label">-1k</span></span>
+                </button>
+                <button onclick="game.fishing()" id="btn-fishing" class="action-btn">
+                    <span>🎣</span> <span class="btn-text">Peca <span class="cost-label">-200</span></span>
+                </button>
+            </div>
+
+        </div>
+        
+        <!-- Settings Modal -->
+        <div class="settings-overlay" id="settings-overlay">
+            <div class="settings-content">
+                <div class="settings-header">Beállítások</div>
+                <div class="settings-row">
+                    <span>Csak ikonok (Kompakt)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="chk-compact" onchange="game.toggleCompactMode(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button class="close-settings-btn" onclick="game.toggleSettings()">Bezárás</button>
+            </div>
+        </div>
+
+        <div class="night-overlay" onclick="game.wakeUp()">
+            <div class="zzz" style="left: 45%; top: 50%; animation-delay: 0s">Z</div>
+            <div class="zzz" style="left: 55%; top: 45%; animation-delay: 0.8s; font-size: 1.8rem">z</div>
+            <div class="zzz" style="left: 50%; top: 40%; animation-delay: 1.6s; font-size: 1.2rem">z</div>
+            <p style="margin-top: 140px; font-size: 0.9rem; color: #8c9eff; opacity: 0.8;">(Kattints az ébresztéshez)</p>
+        </div>
+    </div>
+
+    <script>
+        class DadGame {
+            constructor() {
+                // Initial Stats
+                this.stats = {
+                    hunger: 60,
+                    energy: 70,
+                    mood: 80,
+                    health: 100,
+                    weight: 85.0, // kg (Dad bod)
+                    money: 3000   // Ft
+                };
+
+                // Time system
+                this.gameHour = 8;
+                this.dayCount = 1;
+                this.totalGameHours = 8; // Absolute time tracker
+                this.tickCounter = 0;    // Tracks seconds for the 5s = 1h rule
+
+                // State Flags
+                this.isSleeping = false;
+                this.isActionLocked = false;
+                this.isSick = false;
+                this.isCompactMode = false;
+
+                // Hidden Stats
+                this.alcoholLevel = 0; // 0-100
+                this.boredomCounter = 0; 
+                this.lastAteTotalHours = -10; 
+
+                // Easter Egg Stats
+                this.avatarClickCount = 0;
+                this.lastAvatarClickTime = 0;
+
+                this.timer = null;
+
+                // Message Banks (Authentic Hungarian Dad Quotes)
+                this.msgs = {
+                    eat: ["Ez már döfi!", "Nem a zsömle kicsi, a pofátok nagy!", "Akváriumban nincs ilyen kaja!", "Na, ez hiányzott.", "Apu hasa nem kicsi, csak nagy."],
+                    eatFull: ["Huh, pukkadásig...", "Majd szétrepedek.", "Ezt le kell mozogni... vagy aludni rá.", "Jaj a hasam, de jó volt!"],
+                    drink: ["Legjobb sör a hideg sör.", "Ez gyógyszer!", "Csúszik, mint a nyíl!", "Egy sör nem sör.", "Folyékony kenyér."],
+                    drinkDrunk: ["Hic... ki a főnök?!", "Mindenki... szeretlek titeket!", "Ez a padló miért mozog?", "Csak még egyet a bácsinak..."],
+                    work: ["Dől a lé, kell a rezsire!", "A munka nemesít, de én nemes vagyok.", "Főnök megint hülye volt.", "Utálom a hétfőket.", "Melózni kell, nincs mese."],
+                    workTired: ["Majd elalszom a gép előtt...", "Nem bírom már ezt a hajtást.", "Nyugdíj, hol vagy?", "Kávét! Most!"],
+                    sport: ["Ép testben ép lélek!", "Régen jobb kondiban voltam.", "Ez izom, nem zsír!", "Huh, ez fájt...", "Mozogni kell, fiam!"],
+                    sportTired: ["Majd leszakad a derekam.", "Nem vagyok én már 20 éves.", "Elég volt mára a jóból.", "Inkább nézném a tévében."],
+                    tv: ["Kapcsold vissza, néztem!", "Ezek a mai hírek... borzalom.", "Hajrá magyarok!", "Reklám, reklám, reklám...", "Hol a távirányító?!"],
+                    friends: ["Nagy buli volt, fiúk!", "Régen minden jobb volt.", "Apu kirúg a hámból!", "Jó társaság, jó bor.", "Megváltottuk a világot."],
+                    angry: ["Ne piszkálj már!", "Amíg az én házamban laksz...!", "Mi a bajod?!", "Ne húzd az agyamat!", "Mars a szobádba!"],
+                    diy: ["Megjavítom, ne hívj szerelőt!", "Hol a csillagcsavarhúzó?", "Jó pap holtig tanul, jó szakember meg holtig szerel.", "Ez még jó lesz valamire.", "Kész a mű, az alkotó pihen."],
+                    diyHurt: ["A francba! Az ujjam!", "Aaa! Ezt elcsesztem.", "Hol a sebtapasz?!", "Ez a kalapács rossz helyen volt."],
+                    car: ["Szép hangja van a motornak.", "Olajat kéne cserélni.", "Csillog-villog a verda!", "A benzin ára már megint...", "Ez az autó az én váram."],
+                    carDirty: ["Tiszta kosz ez a kocsi.", "Madárürülék... remek.", "Le kéne mosni, de majd esik."],
+                    fishing: ["Csendet, elijesztitek a halakat!", "Kapás van! Vagy csak a hínár?", "A türelem halat terem.", "Jó itt a nyugi.", "Sör, peca, csend. Ez az élet."],
+                    fishingBored: ["Semmi kapás...", "Uncsi.", "Szúnyogok mindenhol!", "Inkább vettem volna halat a Tescóban."]
+                };
+
+                // UI Elements
+                this.ui = {
+                    hunger: document.getElementById('fill-hunger'),
+                    energy: document.getElementById('fill-energy'),
+                    mood: document.getElementById('fill-mood'),
+                    health: document.getElementById('fill-health'),
+                    weight: document.getElementById('weight-display'),
+                    money: document.getElementById('money-display'),
+                    clock: document.getElementById('clock-display'),
+                    gameArea: document.getElementById('game-area'),
+                    
+                    avatar: document.getElementById('avatar'),
+                    avatarContainer: document.getElementById('avatar-container'),
+                    alert: document.getElementById('alert-bubble'),
+                    thought: document.getElementById('thought'),
+                    toast: document.getElementById('toast'),
+                    body: document.body,
+                    sickOverlay: document.getElementById('sick-overlay'),
+                    
+                    // Buttons
+                    btnFeed: document.getElementById('btn-feed'),
+                    btnDrink: document.getElementById('btn-drink'),
+                    btnTv: document.getElementById('btn-tv'),
+                    btnWork: document.getElementById('btn-work'),
+                    btnSport: document.getElementById('btn-sport'),
+                    btnFriends: document.getElementById('btn-friends'),
+                    btnSleep: document.getElementById('btn-sleep-main'),
+                    btnDiy: document.getElementById('btn-diy'),
+                    btnCar: document.getElementById('btn-car'),
+                    btnFishing: document.getElementById('btn-fishing'),
+                    
+                    settingsOverlay: document.getElementById('settings-overlay')
+                };
+
+                this.init();
+            }
+
+            init() {
+                // Main Loop: Runs every 1 second (Real time)
+                // Logic: 5 ticks = 1 game hour.
+                this.timer = setInterval(() => this.tick(), 1000);
+                
+                // Avatar Click Listener for Easter Egg
+                this.ui.avatar.addEventListener('click', () => this.handleAvatarClick());
+
+                this.updateUI();
+                this.showToast("Szia! Vigyázz apura!");
+                
+                // Check initial size and set listener
+                this.checkResponsiveness();
+                window.addEventListener('resize', () => this.checkResponsiveness());
+            }
+            
+            checkResponsiveness() {
+                // Check for 'mobile-mode' class on body or if window width is small
+                const isMobile = document.body.classList.contains('mobile-mode') || window.innerWidth < 360;
+                
+                if (isMobile) {
+                    if (!this.isCompactMode) {
+                        this.toggleCompactMode(true);
+                        document.getElementById('chk-compact').checked = true;
+                    }
+                } else {
+                     // If not mobile, ensure compact mode is off if it was set by responsiveness
+                    if (this.isCompactMode && !document.getElementById('chk-compact').checked) {
+                         this.toggleCompactMode(false);
+                    }
+                }
+            }
+
+            tick() {
+                this.tickCounter++;
+
+                // --- Hour Change Logic (Every 5 seconds) ---
+                if (this.tickCounter >= 5) {
+                    this.tickCounter = 0;
+                    this.gameHour++;
+                    this.totalGameHours++;
+                    
+                    if (this.gameHour >= 24) {
+                        this.gameHour = 0;
+                        this.dayCount++;
+                        this.showToast(`${this.dayCount}. nap - Jó reggelt!`);
+                    }
+                }
+
+                this.processStats();
+                this.updateUI();
+            }
+
+            processStats() {
+                // Base decay rates per tick (1 second)
+                
+                if (this.isSleeping) {
+                    // SLEEP MECHANICS
+                    let energyGain = 5.5;
+
+                    if (this.gameHour >= 21 || this.gameHour < 6) {
+                        energyGain *= 1.5; 
+                    }
+
+                    this.stats.energy = Math.min(100, this.stats.energy + energyGain); 
+                    this.stats.health = Math.min(100, this.stats.health + 0.5); 
+                    this.alcoholLevel = Math.max(0, this.alcoholLevel - 2); 
+                    
+                    this.stats.hunger = Math.max(0, this.stats.hunger - 0.2);
+
+                    if (this.stats.energy >= 100) {
+                        this.wakeUp();
+                        this.showToast("Teljesen kipihentem magam!");
+                    }
+                } else {
+                    // AWAKE MECHANICS
+                    
+                    // Digestion
+                    let hoursSinceEat = this.totalGameHours - this.lastAteTotalHours;
+                    let hungerDecay = (hoursSinceEat < 3) ? 0.05 : 1.5;
+                    this.stats.hunger = Math.max(0, this.stats.hunger - hungerDecay);
+
+                    this.stats.energy = Math.max(0, this.stats.energy - 0.8);
+                    this.stats.mood = Math.max(0, this.stats.mood - 0.3);
+                    this.alcoholLevel = Math.max(0, this.alcoholLevel - 0.5);
+
+                    // Health Logic
+                    if (this.stats.weight > 120 || this.stats.weight < 60) this.stats.health -= 0.1;
+                    if (this.stats.hunger < 10) this.stats.health -= 0.5;
+                    if (this.stats.energy < 5) this.stats.health -= 0.2;
+
+                    // Boredom
+                    this.boredomCounter++;
+                    if (this.boredomCounter > 20) this.stats.mood -= 0.5;
+
+                    // Random events
+                    if (Math.random() < 0.05) {
+                         if (this.stats.hunger < 30) this.showThought("🍔");
+                         else if (this.stats.energy < 30) this.showThought("💤");
+                    }
+                }
+                
+                // Critical health check
+                if (this.stats.health < 20 && !this.isSick) {
+                    this.showThought("🏥");
+                }
+            }
+
+            updateUI() {
+                // Clock & Environment
+                const displayHour = this.gameHour < 10 ? `0${this.gameHour}` : this.gameHour;
+                const displayMin = (this.tickCounter * 12).toString().padStart(2, '0');
+                
+                this.ui.clock.innerText = `⏰ ${displayHour}:${displayMin}`;
+                
+                // Night mode visual
+                const isNight = (this.gameHour >= 21 || this.gameHour < 6);
+                if (isNight) this.ui.gameArea.classList.add('night-mode-bg');
+                else this.ui.gameArea.classList.remove('night-mode-bg');
+
+                // Bars
+                this.setBar(this.ui.hunger, this.stats.hunger, '#107c10', '#d83b01');
+                this.setBar(this.ui.energy, this.stats.energy, '#ffb900', '#d83b01');
+                this.setBar(this.ui.mood, this.stats.mood, '#0078d4', '#e81123');
+                this.setBar(this.ui.health, this.stats.health, '#d92b2b', '#757575');
+
+                // Text Stats
+                this.ui.weight.innerText = this.stats.weight.toFixed(1);
+                this.ui.money.innerText = `${this.stats.money} Ft`;
+
+                // Avatar State Logic
+                let face = '👨'; 
+                let containerClass = '';
+                
+                let scaleX = 1;
+                if (this.stats.weight > 105) scaleX = 1.1;
+                if (this.stats.weight > 125) scaleX = 1.25;
+                if (this.stats.weight < 65) scaleX = 0.9;
+                this.ui.avatar.style.transform = `scaleX(${scaleX})`;
+
+                if (this.isSleeping) {
+                    face = '😴';
+                } else if (this.isSick) {
+                    face = '🤢';
+                    containerClass = 'anim-sick';
+                } else if (this.alcoholLevel > 75) {
+                    face = '🥴'; 
+                    containerClass = 'anim-drunk';
+                } else if (this.stats.health < 30) {
+                    face = '🤒'; 
+                } else if (this.stats.hunger < 15) {
+                    face = '😫'; 
+                } else if (this.stats.energy < 15) {
+                    face = '💤'; 
+                } else if (this.alcoholLevel > 30) {
+                    face = '☺️'; 
+                } else if (this.stats.mood < 25) {
+                    face = '🤬'; 
+                } else if (this.stats.mood > 90) {
+                    face = '🤩'; 
+                } else if (this.stats.mood > 75) {
+                    face = '😎'; 
+                } else {
+                    face = '🙂'; 
+                }
+
+                this.ui.avatar.innerText = face;
+                
+                // Allow animations if not locked, unless sick or locked by event
+                if (!this.isActionLocked || this.isSick) {
+                    if(!this.ui.avatarContainer.classList.contains('temp-anim')) {
+                        this.ui.avatarContainer.className = 'avatar-container ' + containerClass;
+                    }
+                }
+
+                this.ui.sickOverlay.classList.toggle('visible', this.isSick);
+
+                // Alert Bubble
+                const needsAttention = this.stats.hunger < 20 || this.stats.energy < 20 || this.stats.mood < 20 || this.stats.health < 40;
+                this.ui.alert.classList.toggle('visible', needsAttention && !this.isSleeping);
+
+                // --- Button States ---
+                const globalDisable = this.isSleeping || this.isSick || this.isActionLocked;
+                
+                // Work Button
+                const workBtn = this.ui.btnWork;
+                if (this.stats.energy < 15) {
+                    workBtn.disabled = true;
+                    workBtn.classList.add('locked-btn');
+                    workBtn.innerHTML = `<span>🔒</span> <span class="btn-text">Túl fáradt!</span>`;
+                } else {
+                    workBtn.disabled = globalDisable;
+                    workBtn.classList.remove('locked-btn');
+                    workBtn.innerHTML = `<span>💼</span> <span class="btn-text">Munka <span class="cost-label">+1500</span></span>`;
+                }
+
+                // Sport Button
+                if (this.stats.energy < 30) this.ui.btnSport.classList.add('locked-btn');
+                else this.ui.btnSport.classList.remove('locked-btn');
+
+                // DIY Button Logic: Dangerous if drunk or tired
+                const diyRisk = (this.alcoholLevel > 10 || this.stats.energy < 20);
+                if (diyRisk && !globalDisable) {
+                    this.ui.btnDiy.style.borderColor = 'var(--warning)';
+                } else {
+                    this.ui.btnDiy.style.borderColor = 'transparent';
+                }
+
+                // Car Button Logic: Disabled if drunk
+                if (this.alcoholLevel > 10 && !globalDisable) {
+                    this.ui.btnCar.disabled = true;
+                    this.ui.btnCar.classList.add('locked-btn');
+                    this.ui.btnCar.title = "Nem vezethetsz részegen!";
+                } else if (!globalDisable) {
+                    this.ui.btnCar.disabled = false;
+                    this.ui.btnCar.classList.remove('locked-btn');
+                    this.ui.btnCar.title = "";
+                }
+
+                // Generic Disables
+                const actionBtns = [
+                    this.ui.btnFeed, this.ui.btnDrink, this.ui.btnTv, 
+                    this.ui.btnFriends, this.ui.btnSport, this.ui.btnDiy, 
+                    this.ui.btnFishing
+                ];
+                actionBtns.forEach(btn => btn.disabled = globalDisable);
+
+                // Cost checks
+                if (!globalDisable) {
+                    if (this.stats.money < 2000) this.ui.btnFriends.disabled = true;
+                    if (this.stats.money < 1000) this.ui.btnCar.disabled = true;
+                    if (this.stats.money < 500) this.ui.btnFeed.disabled = true;
+                    if (this.stats.money < 300) this.ui.btnDrink.disabled = true;
+                    if (this.stats.money < 200) this.ui.btnFishing.disabled = true;
+                }
+            }
+
+            setBar(element, value, goodColor, badColor) {
+                element.style.width = `${Math.max(0, Math.min(100, value))}%`;
+                element.style.backgroundColor = value < 30 ? badColor : goodColor;
+            }
+
+            getRandomMsg(key) {
+                const arr = this.msgs[key];
+                if (!arr) return "";
+                return arr[Math.floor(Math.random() * arr.length)];
+            }
+
+            resetInteraction() {
+                this.boredomCounter = 0;
+            }
+
+            // --- Settings ---
+            toggleSettings() {
+                const isOpen = this.ui.settingsOverlay.classList.contains('open');
+                if (isOpen) {
+                    this.ui.settingsOverlay.classList.remove('open');
+                } else {
+                    this.ui.settingsOverlay.classList.add('open');
+                }
+            }
+
+            toggleCompactMode(enabled) {
+                this.isCompactMode = enabled;
+                if (enabled) {
+                    this.ui.body.classList.add('compact-ui');
+                } else {
+                    this.ui.body.classList.remove('compact-ui');
+                }
+            }
+
+            // --- Click Easter Egg ---
+            handleAvatarClick() {
+                if (this.isSleeping || this.isSick) return;
+
+                const now = Date.now();
+                // If it's been more than 1 second since last click, reset counter
+                if (now - this.lastAvatarClickTime > 1000) {
+                    this.avatarClickCount = 0;
+                }
+                this.lastAvatarClickTime = now;
+                this.avatarClickCount++;
+
+                // Trigger angry outburst if clicked too many times (e.g., 5 rapid clicks)
+                if (this.avatarClickCount >= 5) {
+                    this.avatarClickCount = 0; // Reset
+                    
+                    this.stats.mood = Math.max(0, this.stats.mood - 10);
+                    this.stats.health = Math.max(0, this.stats.health - 2);
+                    
+                    this.showThought("🤬");
+                    this.showToast(this.getRandomMsg('angry'));
+                    this.animateAction('anim-angry');
+                    
+                    this.updateUI();
+                } else {
+                    // Feedback for single click
+                    this.showThought("?");
+                }
+            }
+
+            // --- Actions ---
+            work() {
+                if (this.isActionLocked) return;
+                
+                this.resetInteraction();
+                this.animateAction('anim-chewing'); 
+                
+                this.stats.money += 1500;
+                this.stats.energy = Math.max(0, this.stats.energy - 30);
+                this.stats.mood = Math.max(0, this.stats.mood - 15);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 15);
+                
+                if (this.stats.energy < 20) {
+                    this.showToast(this.getRandomMsg('workTired'));
+                    this.showThought("😫");
+                } else {
+                    this.showToast(this.getRandomMsg('work'));
+                    this.showThought("💸");
+                }
+            }
+
+            meetFriends() {
+                if (this.isActionLocked) return;
+                
+                this.stats.money -= 2000;
+                this.resetInteraction();
+                this.animateAction('anim-dance');
+
+                this.stats.mood = Math.min(100, this.stats.mood + 60);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 10);
+                this.stats.energy = Math.max(0, this.stats.energy - 30);
+                this.alcoholLevel += 50;
+
+                if (this.alcoholLevel >= 100) {
+                    setTimeout(() => this.vomit(), 1000);
+                } else {
+                    this.showToast(this.getRandomMsg('friends'));
+                    this.showThought("🍻");
+                }
+            }
+
+            sport() {
+                if (this.isActionLocked) return;
+                
+                if (this.stats.energy < 30) {
+                    this.showToast(this.getRandomMsg('sportTired'));
+                    this.showThought("😫");
+                    return;
+                }
+
+                this.resetInteraction();
+                this.animateAction('anim-sport');
+
+                this.stats.weight = Math.max(55, this.stats.weight - 0.6);
+                this.stats.health = Math.min(100, this.stats.health + 5);
+                this.stats.energy = Math.max(0, this.stats.energy - 25);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 20);
+                this.stats.mood = Math.min(100, this.stats.mood + 10);
+
+                this.showToast(this.getRandomMsg('sport'));
+                this.showThought("💪");
+            }
+
+            diy() {
+                if (this.isActionLocked) return;
+                this.resetInteraction();
+                this.animateAction('anim-diy');
+
+                // Risk calculation
+                const accidentChance = (this.alcoholLevel > 10 ? 0.4 : 0) + (this.stats.energy < 20 ? 0.3 : 0.05);
+                
+                this.stats.energy = Math.max(0, this.stats.energy - 20);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 10);
+
+                if (Math.random() < accidentChance) {
+                    // Accident
+                    this.stats.health = Math.max(0, this.stats.health - 15);
+                    this.stats.mood = Math.max(0, this.stats.mood - 20);
+                    this.showToast(this.getRandomMsg('diyHurt'));
+                    this.showThought("🤕");
+                } else {
+                    // Success
+                    this.stats.mood = Math.min(100, this.stats.mood + 20);
+                    this.showToast(this.getRandomMsg('diy'));
+                    this.showThought("🛠️");
+                }
+            }
+
+            car() {
+                if (this.isActionLocked) return;
+                this.stats.money -= 1000;
+                this.resetInteraction();
+                this.animateAction('anim-chewing'); // Using standard anim for driving/fixing
+
+                this.stats.mood = Math.min(100, this.stats.mood + 30);
+                this.stats.energy = Math.max(0, this.stats.energy - 10);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 5);
+                
+                this.showToast(this.getRandomMsg('car'));
+                this.showThought("🚗");
+            }
+
+            fishing() {
+                if (this.isActionLocked) return;
+                this.stats.money -= 200;
+                this.resetInteraction();
+                this.animateAction('anim-chewing'); // Simple idle anim
+
+                // Fishing passes extra time (1 hour = 5 ticks, so we simulate extra decay)
+                this.gameHour++; 
+                this.totalGameHours++;
+                
+                this.stats.mood = Math.min(100, this.stats.mood + 25);
+                this.stats.energy = Math.max(0, this.stats.energy - 5);
+                this.stats.hunger = Math.max(0, this.stats.hunger - 15);
+                
+                if (Math.random() > 0.6) {
+                    this.showToast(this.getRandomMsg('fishing'));
+                    this.showThought("🐟");
+                } else {
+                    this.showToast(this.getRandomMsg('fishingBored'));
+                    this.showThought("🦟");
+                }
+            }
+
+            feed() {
+                if (this.isActionLocked) return;
+                
+                this.stats.money -= 500;
+                this.resetInteraction();
+                this.animateAction('anim-chewing');
+                
+                this.alcoholLevel = Math.max(0, this.alcoholLevel - 15);
+                this.stats.weight += 0.5;
+                
+                this.lastAteTotalHours = this.totalGameHours;
+
+                if (this.stats.hunger > 90) {
+                    this.showToast(this.getRandomMsg('eatFull'));
+                    this.stats.health -= 2; 
+                    this.stats.energy -= 10; 
+                } else {
+                    this.showToast(this.getRandomMsg('eat'));
+                    this.stats.energy = Math.min(100, this.stats.energy + 5);
+                }
+
+                this.stats.hunger = Math.min(100, this.stats.hunger + 40);
+                this.stats.mood = Math.min(100, this.stats.mood + 8);
+                this.showThought("🍗");
+            }
+
+            drink() {
+                if (this.isActionLocked) return;
+
+                this.stats.money -= 300;
+                this.resetInteraction();
+                this.alcoholLevel += 30; 
+                this.stats.weight += 0.2;
+                
+                if (this.alcoholLevel >= 100) {
+                    this.vomit();
+                    return;
+                }
+
+                this.animateAction('anim-chewing');
+                
+                this.stats.hunger = Math.min(100, this.stats.hunger + 5);
+                this.stats.mood = Math.min(100, this.stats.mood + 15);
+                this.stats.energy -= 5;
+                this.stats.health -= 2;
+
+                if (this.alcoholLevel > 50) {
+                    this.showToast(this.getRandomMsg('drinkDrunk'));
+                    this.showThought("🥴");
+                } else {
+                    this.showToast(this.getRandomMsg('drink'));
+                    this.showThought("🍺");
+                }
+            }
+
+            vomit() {
+                this.isSick = true;
+                this.isActionLocked = true;
+                
+                this.stats.hunger = 10;
+                this.stats.energy = Math.max(0, this.stats.energy - 40);
+                this.stats.mood = Math.max(0, this.stats.mood - 50);
+                this.stats.health = Math.max(0, this.stats.health - 15);
+                this.alcoholLevel = 0;
+                
+                this.showToast("Jaj ne! Túl sok volt!");
+                this.showThought("🤮");
+                this.updateUI();
+
+                setTimeout(() => {
+                    this.isSick = false;
+                    this.isActionLocked = false;
+                    this.showToast("Uh... soha többet...");
+                    this.updateUI();
+                }, 4000);
+            }
+
+            tv() {
+                if (this.isActionLocked) return;
+                this.resetInteraction();
+
+                if (this.stats.energy < 30) {
+                    this.showToast("Jaj, bealudtam a tévén...");
+                    this.showThought("💤");
+                    
+                    let recovery = Math.floor(Math.random() * 10) + 10; 
+                    this.stats.energy = Math.min(30, this.stats.energy + recovery);
+                    
+                    this.updateUI();
+                    return;
+                }
+
+                this.stats.mood = Math.min(100, this.stats.mood + 15);
+                this.stats.energy -= 5;
+                this.showToast(this.getRandomMsg('tv'));
+                this.showThought("📺");
+            }
+
+            toggleSleep() {
+                if (this.isSick) return;
+                if (this.isSleeping) this.wakeUp();
+                else this.sleep();
+            }
+
+            sleep() {
+                this.resetInteraction();
+                this.isSleeping = true;
+                this.ui.body.classList.add('sleeping');
+                
+                // Button styling update
+                this.ui.btnSleep.classList.add('wake-mode');
+                this.ui.btnSleep.innerHTML = "<span>☀️</span><span>Ébresztés</span>";
+                
+                if (!this.stats.energy < 30) {
+                   this.showToast("Jó éjszakát!");
+                }
+                this.updateUI();
+            }
+
+            wakeUp() {
+                this.isSleeping = false;
+                this.ui.body.classList.remove('sleeping');
+                
+                // Button styling update
+                this.ui.btnSleep.classList.remove('wake-mode');
+                this.ui.btnSleep.innerHTML = "<span>😴</span><span>Alvás</span>";
+                
+                this.showToast("Jó reggelt!");
+                this.updateUI();
+            }
+
+            // --- Helpers ---
+            animateAction(className) {
+                if (this.alcoholLevel > 70) return; 
+                this.ui.avatarContainer.classList.add(className);
+                this.ui.avatarContainer.classList.add('temp-anim'); 
+                
+                setTimeout(() => {
+                    this.ui.avatarContainer.classList.remove(className);
+                    this.ui.avatarContainer.classList.remove('temp-anim');
+                    this.updateUI(); 
+                }, 800);
+            }
+
+            showToast(msg) {
+                if (this.toastTimer) clearTimeout(this.toastTimer);
+                
+                this.ui.toast.innerText = msg;
+                this.ui.toast.classList.add('show');
+                this.toastTimer = setTimeout(() => {
+                    this.ui.toast.classList.remove('show');
+                }, 3000);
+            }
+
+            showThought(emoji) {
+                if(emoji) {
+                     this.ui.thought.innerText = emoji;
+                } else {
+                    const randoms = ["🚗", "🔧", "🎸", "🍺", "⚽", "🏖️", "💸"];
+                    this.ui.thought.innerText = randoms[Math.floor(Math.random() * randoms.length)];
+                }
+                
+                this.ui.thought.classList.add('visible');
+                setTimeout(() => {
+                    this.ui.thought.classList.remove('visible');
+                }, 2000);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            window.game = new DadGame();
+        });
+    </script>
+</body>
+</html>
