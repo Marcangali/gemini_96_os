@@ -1,0 +1,47 @@
+{
+  "session": {
+    "userId": "6d76070f-ec11-4a77-b651-035bbd160783",
+    "sessionId": "efedc9c7-8149-4761-8799-9ee5aae0a151",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "screenResolution": "1536x864",
+    "startTime": "2025-12-01T21:18:48.023Z"
+  },
+  "logs": [
+    {
+      "timestamp": "2025-12-01T21:18:48.026Z",
+      "action": "SYSTEM_BOOT",
+      "details": {
+        "referrer": "",
+        "language": "en-US"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:18:56.217Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "appStore"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:18:58.126Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "gemini"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:18:59.972Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "gemini"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:19:02.642Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "paint"
+      }
+    }
+  ]
+}
