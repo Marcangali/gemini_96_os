@@ -1,0 +1,119 @@
+{
+  "session": {
+    "userId": "dcc29f77-4ae2-4529-a71a-9f1bf021ea7d",
+    "sessionId": "9324566c-1d81-4903-8601-bd30a81d1507",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "screenResolution": "1536x864",
+    "startTime": "2025-12-01T21:22:48.645Z"
+  },
+  "last_updated": "2025-12-01T21:23:19.749Z",
+  "logs": [
+    {
+      "timestamp": "2025-12-01T21:22:49.748Z",
+      "action": "SYSTEM_BOOT",
+      "details": {
+        "referrer": "",
+        "language": "en-US",
+        "recovered": false
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:00.925Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "settings"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:03.072Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "paint"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:11.228Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "geminiStudio"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:11.880Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "gemCraft"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:12.119Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "gemCraft"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:12.350Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "quizMania"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:12.541Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "quizMania"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:13.027Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "paint"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:13.258Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "myComputer"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:13.463Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "myComputer"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:13.684Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "settings"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:13.893Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "settings"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:16.658Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "chrome"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:23:16.660Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "chrome"
+      }
+    }
+  ]
+}
