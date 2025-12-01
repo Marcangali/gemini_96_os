@@ -42,6 +42,41 @@
       "details": {
         "appId": "paint"
       }
+    },
+    {
+      "timestamp": "2025-12-01T21:19:21.024Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "minesweeper"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:19:25.704Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "myComputer"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:19:30.474Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "twentyQuestions"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:19:30.478Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "twentyQuestions"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:19:35.164Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "appStore"
+      }
     }
   ]
 }
