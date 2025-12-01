@@ -1,0 +1,40 @@
+{
+  "session": {
+    "userId": "e3ef3ff1-1c36-4488-a8b9-060dc09bf32b",
+    "sessionId": "7a7aa5d2-cadf-48a0-bb33-e8e21b11519d",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "screenResolution": "1536x864",
+    "startTime": "2025-12-01T21:14:22.824Z"
+  },
+  "logs": [
+    {
+      "timestamp": "2025-12-01T21:14:22.827Z",
+      "action": "SYSTEM_BOOT",
+      "details": {
+        "referrer": "",
+        "language": "en-US"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:14:52.491Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "settings"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:14:55.158Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "minesweeper"
+      }
+    },
+    {
+      "timestamp": "2025-12-01T21:15:01.070Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "appStore"
+      }
+    }
+  ]
+}
