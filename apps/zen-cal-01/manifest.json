@@ -1,0 +1,10 @@
+{
+  "id": "zen-cal-01",
+  "name": "Zen Calendar",
+  "description": "A modern, sleek calendar to track dates and simple daily notes.",
+  "category": "Productivity",
+  "icon": "https://i.ibb.co/DD66fVgt/413773c33938.png",
+  "width": 380,
+  "height": 540,
+  "version": "v1"
+}
