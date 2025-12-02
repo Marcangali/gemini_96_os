@@ -1,0 +1,21 @@
+{
+  "summary": "Session from Senica, Slovakia on Windows, Chrome",
+  "user_id": "cd28f051-9f9a-4cf3-a5a3-4eba2ce2afd3",
+  "session_start": "02/12/2025, 14:38:50",
+  "last_active": "02/12/2025, 14:38:57",
+  "network_ip": "195.168.244.47",
+  "location": "Senica, Slovakia",
+  "device_info": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+  "activity_count": 1,
+  "activity_log": [
+    {
+      "time": "14:38:56",
+      "event_type": "SYSTEM_BOOT",
+      "description": "System started. Language: hu-HU.",
+      "technical_details": {
+        "language": "hu-HU",
+        "referrer": ""
+      }
+    }
+  ]
+}
