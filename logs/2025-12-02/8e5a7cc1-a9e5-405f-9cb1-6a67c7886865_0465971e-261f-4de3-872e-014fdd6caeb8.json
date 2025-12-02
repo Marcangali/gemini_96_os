@@ -1,0 +1,43 @@
+{
+  "session": {
+    "userId": "8e5a7cc1-a9e5-405f-9cb1-6a67c7886865",
+    "sessionId": "0465971e-261f-4de3-872e-014fdd6caeb8",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "screenResolution": "1280x800",
+    "startTime": "2025-12-02T10:27:13.976Z"
+  },
+  "last_updated": "2025-12-02T10:27:45.237Z",
+  "logs": [
+    {
+      "timestamp": "2025-12-02T10:27:15.229Z",
+      "action": "SYSTEM_BOOT",
+      "details": {
+        "referrer": "",
+        "language": "en-US",
+        "recovered": false
+      }
+    },
+    {
+      "timestamp": "2025-12-02T10:27:20.515Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "appStore"
+      }
+    },
+    {
+      "timestamp": "2025-12-02T10:27:30.114Z",
+      "action": "EXTERNAL_APP_OPEN",
+      "details": {
+        "appName": "Flappy Flight",
+        "appId": "FlappyFlight"
+      }
+    },
+    {
+      "timestamp": "2025-12-02T10:27:30.358Z",
+      "action": "APP_OPEN",
+      "details": {
+        "appId": "ext-FlappyFlight"
+      }
+    }
+  ]
+}
