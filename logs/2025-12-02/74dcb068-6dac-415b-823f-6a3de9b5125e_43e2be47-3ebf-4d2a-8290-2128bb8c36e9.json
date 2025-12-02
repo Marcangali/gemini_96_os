@@ -1,0 +1,21 @@
+{
+  "session": {
+    "userId": "74dcb068-6dac-415b-823f-6a3de9b5125e",
+    "sessionId": "43e2be47-3ebf-4d2a-8290-2128bb8c36e9",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "screenResolution": "1280x800",
+    "startTime": "2025-12-02T13:32:46.716Z"
+  },
+  "last_updated": "2025-12-02T13:34:04.382Z",
+  "logs": [
+    {
+      "timestamp": "2025-12-02T13:33:34.376Z",
+      "action": "SYSTEM_BOOT",
+      "details": {
+        "referrer": "",
+        "language": "hu-HU",
+        "recovered": false
+      }
+    }
+  ]
+}
