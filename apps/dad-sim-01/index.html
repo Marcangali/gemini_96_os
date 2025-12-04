@@ -1,6 +1,7 @@
 <!--
 APP_NAME: ApuSzimulátor
-APP_ICON: https://i.ibb.co/RknkGy7H/2603f3135863.png
+APP_DESCRIPTION: Gondoskodj Apuról ebben a vicces tamagotchi játékban! Etess, itass, szerelj!
+APP_ICON: https://i.ibb.co/sdLjm6y6/b9caf628ad74.png
 APP_CATEGORY: Utilities
 WINDOW_WIDTH: 380
 WINDOW_HEIGHT: 650
@@ -191,10 +192,44 @@ STORE_ID: dad-sim-01
             filter: drop-shadow(0 4px 4px rgba(0,0,0,0.1));
             transition: transform 0.2s;
             user-select: none;
+            position: relative;
+            z-index: 2;
         }
         
         .avatar:active {
             transform: scale(0.9) !important;
+        }
+
+        /* Resurrection Effects */
+        .revival-angel {
+            position: absolute;
+            font-size: 80px;
+            z-index: 5;
+            animation: angel-float 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px gold);
+        }
+        
+        .magic-wand {
+            position: absolute;
+            font-size: 40px;
+            right: -20px;
+            top: 0;
+            z-index: 6;
+            animation: wand-wave 1s ease-in-out infinite;
+        }
+
+        .flash-overlay {
+            position: absolute;
+            inset: 0;
+            background: white;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-out;
+        }
+        .flash-overlay.active {
+            opacity: 1;
+            transition: none;
         }
 
         /* Animations */
@@ -259,6 +294,23 @@ STORE_ID: dad-sim-01
             100% { transform: scale(1); opacity: 1; }
         }
 
+        @keyframes angel-float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.05); }
+        }
+        
+        @keyframes wand-wave {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(-30deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes magic-glow {
+            0% { box-shadow: 0 0 20px rgba(255, 215, 0, 0); }
+            50% { box-shadow: 0 0 50px rgba(255, 215, 0, 0.8); }
+            100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0); }
+        }
+
         .anim-chewing .avatar { animation: chew 0.3s infinite; }
         .anim-drunk .avatar { animation: wobble 2.5s infinite ease-in-out; }
         .anim-sick .avatar { animation: sick-shake 0.8s infinite; filter: hue-rotate(90deg); }
@@ -267,6 +319,8 @@ STORE_ID: dad-sim-01
         .anim-angry .avatar { animation: angry-shake 0.3s infinite; }
         .anim-diy .avatar { animation: hammering 0.4s infinite; }
         
+        .anim-revive { animation: magic-glow 2s infinite; border-color: gold; background: #fffbe6; }
+
         .pop-anim { animation: pop-text 0.2s ease-out; }
 
         /* Bubbles */
@@ -796,6 +850,9 @@ STORE_ID: dad-sim-01
 <body class="">
 
     <div id="app-container">
+        <!-- White flash for resurrection -->
+        <div class="flash-overlay" id="flash-overlay"></div>
+
         <header>
             <div class="header-left">
                 <h1>ApuSzimulátor</h1>
@@ -1006,6 +1063,14 @@ STORE_ID: dad-sim-01
                     case 'die':
                         this.slide(300, 50, 2.0, 'sawtooth', t);
                         break;
+                    case 'magic':
+                        // Arpeggio
+                        const now = t;
+                        [440, 554, 659, 880, 1108, 1318].forEach((f, i) => {
+                            this.tone(f, 'sine', 0.4, 0.15, now + i*0.08);
+                        });
+                        this.slide(800, 1500, 1.0, 'sine', now);
+                        break;
                 }
             }
 
@@ -1086,6 +1151,7 @@ STORE_ID: dad-sim-01
                 this.alcoholLevel = 0; // 0-100
                 this.boredomCounter = 0; 
                 this.lastAteTotalHours = -10; 
+                this.resurrectionClicks = 0;
 
                 // Easter Egg Stats
                 this.avatarClickCount = 0;
@@ -1131,6 +1197,7 @@ STORE_ID: dad-sim-01
                     thought: document.getElementById('thought'),
                     
                     messageBox: document.getElementById('message-box'),
+                    flashOverlay: document.getElementById('flash-overlay'),
                     
                     body: document.body,
                     sickOverlay: document.getElementById('sick-overlay'),
@@ -1477,7 +1544,14 @@ STORE_ID: dad-sim-01
 
             // --- Click Easter Egg ---
             handleAvatarClick() {
-                if (this.isSleeping || this.isSick || this.isDead) return;
+                // Modified to allow clicking when dead for resurrection
+                if (this.isSleeping || this.isSick) return;
+
+                if (this.isDead) {
+                    this.handleResurrectionClick();
+                    return;
+                }
+
                 this.sfx.play('squeak');
 
                 const now = Date.now();
@@ -1505,6 +1579,61 @@ STORE_ID: dad-sim-01
                     // Feedback for single click
                     this.showThought("?");
                 }
+            }
+
+            handleResurrectionClick() {
+                this.resurrectionClicks++;
+                this.sfx.play('click');
+                
+                // Visual feedback for click
+                this.ui.avatar.style.transform = `scale(${1 + (this.resurrectionClicks * 0.05)})`;
+                this.showThought(`${12 - this.resurrectionClicks}...`);
+
+                if (this.resurrectionClicks >= 12) {
+                    this.resurrect();
+                }
+            }
+
+            resurrect() {
+                this.resurrectionClicks = 0;
+                this.sfx.play('magic');
+                
+                // 1. Show Angel and Wand
+                const angel = document.createElement('div');
+                angel.className = 'revival-angel';
+                angel.innerText = "👼";
+                
+                const wand = document.createElement('div');
+                wand.className = 'magic-wand';
+                wand.innerText = "🪄";
+                
+                this.ui.avatarContainer.appendChild(angel);
+                this.ui.avatarContainer.appendChild(wand);
+                this.ui.avatarContainer.classList.add('anim-revive');
+
+                // 2. Flash Screen
+                this.ui.flashOverlay.classList.add('active');
+                setTimeout(() => this.ui.flashOverlay.classList.remove('active'), 500);
+
+                // 3. Restore Stats after delay
+                setTimeout(() => {
+                    this.isDead = false;
+                    this.isActionLocked = false;
+                    
+                    this.stats.health = 100;
+                    this.stats.hunger = 80;
+                    this.stats.energy = 80;
+                    this.stats.mood = 80;
+                    this.stats.money = 1000; // Reset money partially
+                    
+                    this.ui.gameArea.style.filter = "none";
+                    angel.remove();
+                    wand.remove();
+                    this.ui.avatarContainer.classList.remove('anim-revive');
+                    
+                    this.displayMessage("CSODA TÖRTÉNT! Apu feltámadt!");
+                    this.updateUI();
+                }, 2000);
             }
 
             // --- Actions ---
