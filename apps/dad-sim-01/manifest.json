@@ -1,10 +1,10 @@
 {
   "id": "dad-sim-01",
   "name": "ApuSzimulátor",
-  "description": "Created with Gemini Studio",
+  "description": "Feed, fix, and care for your virtual dad! A hilarious Tamagotchi adventure.",
   "category": "Custom",
-  "icon": "https://i.ibb.co/RknkGy7H/2603f3135863.png",
+  "icon": "https://i.ibb.co/sdLjm6y6/b9caf628ad74.png",
   "width": 380,
   "height": 650,
-  "version": "v36"
+  "version": "v37"
 }
