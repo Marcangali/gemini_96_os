@@ -1,10 +1,10 @@
 {
   "id": "FlappyFlight",
   "name": "Flappy Flight",
-  "description": "Created with Gemini Studio",
+  "description": "Flap through pipes, beat your high score! Discover hidden secrets and party mode!",
   "category": "Custom",
-  "icon": "https://i.ibb.co/Ld5Srr7v/0c110b40c456.png",
+  "icon": "https://i.ibb.co/20pwJsnq/e8bc3b6154c8.png",
   "width": 400,
   "height": 600,
-  "version": "v3"
+  "version": "v4"
 }
