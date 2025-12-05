@@ -1,6 +1,7 @@
 <!--
 APP_NAME: Flappy Flight
-APP_ICON: https://i.ibb.co/Ld5Srr7v/0c110b40c456.png
+APP_DESCRIPTION: Avoid the pipes. Beat your high score. Now with hidden secrets!
+APP_ICON: https://i.ibb.co/20pwJsnq/e8bc3b6154c8.png
 WINDOW_WIDTH: 400
 WINDOW_HEIGHT: 600
 STORE_ID: FlappyFlight
@@ -189,6 +190,38 @@ STORE_ID: FlappyFlight
             100% { opacity: 0.6; }
         }
 
+        /* Easter Egg Elements */
+        #secret-message {
+            position: absolute;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 800;
+            color: #FF00FF;
+            text-shadow: 2px 2px 0px #00FFFF;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #secret-message.show {
+            opacity: 1;
+            transform: scale(1.2) rotate(-5deg);
+        }
+
+        .emoji-icon {
+            font-size: 64px; 
+            margin-bottom: 10px; 
+            cursor: pointer; 
+            transition: transform 0.1s;
+        }
+        .emoji-icon:active {
+            transform: scale(0.9);
+        }
+
     </style>
 </head>
 <body>
@@ -197,11 +230,13 @@ STORE_ID: FlappyFlight
         <canvas id="gameCanvas"></canvas>
         
         <div id="score-hud">0</div>
+        <div id="secret-message">PARTY MODE ACTIVATED!</div>
 
         <!-- Start Screen -->
         <div id="start-screen" class="ui-layer active">
             <div class="card">
-                <div style="font-size: 64px; margin-bottom: 10px;">🐦</div>
+                <!-- Added ID and click handler logic in JS for Easter Egg -->
+                <div id="bird-logo" class="emoji-icon">🐦</div>
                 <h1>Flappy Flight</h1>
                 <p>Avoid the pipes. Beat your high score.</p>
                 <button id="start-btn">Start Game</button>
@@ -234,6 +269,9 @@ STORE_ID: FlappyFlight
          * A self-contained HTML5 game.
          */
 
+        // --- Configuration ---
+        let partyMode = false;
+
         // --- Audio System (Synthesized) ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
@@ -248,16 +286,25 @@ STORE_ID: FlappyFlight
             gainNode.connect(audioCtx.destination);
 
             if (type === 'jump') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
-                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                if (partyMode) {
+                    // Squeaky synth jump
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                } else {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                }
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.1);
             } else if (type === 'score') {
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(partyMode ? 1200 : 800, audioCtx.currentTime);
                 gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
                 osc.start();
@@ -270,6 +317,16 @@ STORE_ID: FlappyFlight
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                 osc.start();
                 osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'party') {
+                // Success sound for toggle
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
             }
         };
 
@@ -283,6 +340,8 @@ STORE_ID: FlappyFlight
         const bestScoreEl = document.getElementById('best-score');
         const startBtn = document.getElementById('start-btn');
         const restartBtn = document.getElementById('restart-btn');
+        const birdLogo = document.getElementById('bird-logo');
+        const secretMessage = document.getElementById('secret-message');
 
         // Game Constants
         let GAME_SPEED = 3;
@@ -299,6 +358,12 @@ STORE_ID: FlappyFlight
         let highScore = localStorage.getItem('flappyHighScore') || 0;
         let lastTime = 0;
 
+        // Easter Egg State
+        let clickCount = 0;
+        let clickTimer = null;
+        const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+        let keySequence = [];
+
         // Resize Handling
         function resize() {
             canvas.width = canvas.parentElement.clientWidth;
@@ -306,6 +371,43 @@ STORE_ID: FlappyFlight
         }
         window.addEventListener('resize', resize);
         resize();
+
+        // Particles System (For Party Mode)
+        let particles = [];
+        
+        function createParticle(x, y) {
+            particles.push({
+                x: x,
+                y: y,
+                size: Math.random() * 6 + 2,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                life: 30,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`
+            });
+        }
+
+        function updateParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                p.x += p.vx - (GAME_SPEED * 0.5); // Move with world relative
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 30;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            });
+            ctx.globalAlpha = 1.0;
+        }
 
         // Game Objects
         const bird = {
@@ -319,17 +421,22 @@ STORE_ID: FlappyFlight
             draw() {
                 ctx.save();
                 ctx.translate(this.x, this.y);
+                
                 // Rotation based on velocity
                 let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.1)));
                 ctx.rotate(rotation);
 
+                // Colors
+                let bodyColor = partyMode ? `hsl(${frames * 10 % 360}, 100%, 50%)` : '#FFD700';
+                let strokeColor = partyMode ? '#fff' : '#DAA520';
+
                 // Body
-                ctx.fillStyle = '#FFD700'; // Gold
+                ctx.fillStyle = bodyColor;
                 ctx.beginPath();
                 ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
                 ctx.fill();
                 // Stroke
-                ctx.strokeStyle = '#DAA520';
+                ctx.strokeStyle = strokeColor;
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
@@ -358,6 +465,13 @@ STORE_ID: FlappyFlight
                 ctx.fill();
                 ctx.stroke();
 
+                // Party Mode Glasses
+                if(partyMode) {
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(2, -8, 10, 4); // Lenses
+                    ctx.fillRect(0, -7, 14, 1); // Frame
+                }
+
                 ctx.restore();
             },
 
@@ -376,11 +490,20 @@ STORE_ID: FlappyFlight
                     this.y = this.radius;
                     this.velocity = 0;
                 }
+
+                // Spawn particles in Party Mode
+                if (partyMode && frames % 2 === 0) {
+                    createParticle(this.x - 10, this.y);
+                }
             },
 
             jump() {
                 this.velocity = JUMP;
                 playSound('jump');
+                if (partyMode) {
+                    // Extra particles on jump
+                    for(let i=0; i<5; i++) createParticle(this.x, this.y + 10);
+                }
             },
 
             reset() {
@@ -459,8 +582,13 @@ STORE_ID: FlappyFlight
                     let p = this.items[i];
                     
                     // Pipe Body Color
-                    const pipeColor = '#75c05d';
-                    const pipeBorder = '#548c41';
+                    let pipeColor = '#75c05d';
+                    let pipeBorder = '#548c41';
+                    
+                    if (partyMode) {
+                        pipeColor = `hsl(${(frames + i * 20) % 360}, 60%, 60%)`;
+                        pipeBorder = '#fff';
+                    }
 
                     // Draw Top Pipe
                     ctx.fillStyle = pipeColor;
@@ -470,7 +598,7 @@ STORE_ID: FlappyFlight
                     ctx.strokeRect(p.x, -2, PIPE_WIDTH, p.y + 2); // -2 to hide top border
                     
                     // Top Pipe Cap
-                    ctx.fillStyle = '#89d472';
+                    ctx.fillStyle = partyMode ? '#fff' : '#89d472';
                     ctx.fillRect(p.x - 2, p.y - 20, PIPE_WIDTH + 4, 20);
                     ctx.strokeRect(p.x - 2, p.y - 20, PIPE_WIDTH + 4, 20);
 
@@ -483,7 +611,7 @@ STORE_ID: FlappyFlight
                     ctx.strokeRect(p.x, bottomPipeY, PIPE_WIDTH, bottomPipeHeight + 2);
 
                     // Bottom Pipe Cap
-                    ctx.fillStyle = '#89d472';
+                    ctx.fillStyle = partyMode ? '#fff' : '#89d472';
                     ctx.fillRect(p.x - 2, bottomPipeY, PIPE_WIDTH + 4, 20);
                     ctx.strokeRect(p.x - 2, bottomPipeY, PIPE_WIDTH + 4, 20);
                 }
@@ -523,7 +651,7 @@ STORE_ID: FlappyFlight
 
             draw() {
                 // Clouds
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.fillStyle = partyMode ? 'rgba(255, 200, 200, 0.5)' : 'rgba(255, 255, 255, 0.7)';
                 this.clouds.forEach(c => {
                     ctx.beginPath();
                     ctx.arc(c.x, c.y, 30 * c.scale, 0, Math.PI * 2);
@@ -533,15 +661,15 @@ STORE_ID: FlappyFlight
                 });
 
                 // Ground
-                ctx.fillStyle = '#ded895'; // Sand/Dirt
+                ctx.fillStyle = partyMode ? '#FF69B4' : '#ded895'; // Sand/Dirt or Pink
                 ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
                 
                 // Grass Top
-                ctx.fillStyle = '#73bf2e';
+                ctx.fillStyle = partyMode ? '#00FFFF' : '#73bf2e';
                 ctx.fillRect(0, canvas.height - 22, canvas.width, 4);
 
                 // Moving pattern on ground
-                ctx.fillStyle = '#d0c874';
+                ctx.fillStyle = partyMode ? '#FF1493' : '#d0c874';
                 for(let i = -this.groundOffset; i < canvas.width; i+=20) {
                     ctx.beginPath();
                     ctx.moveTo(i, canvas.height - 20);
@@ -565,6 +693,7 @@ STORE_ID: FlappyFlight
             score = 0;
             frames = 0;
             GAME_SPEED = 3;
+            particles = []; // Reset particles
             scoreHud.innerText = score;
             startScreen.classList.remove('active');
             startScreen.classList.add('hidden');
@@ -592,6 +721,19 @@ STORE_ID: FlappyFlight
             gameOverScreen.classList.add('active');
         }
 
+        function togglePartyMode() {
+            partyMode = !partyMode;
+            playSound('party');
+            
+            // Visual feedback
+            secretMessage.classList.add('show');
+            secretMessage.innerText = partyMode ? "PARTY MODE ACTIVATED!" : "Party Over...";
+            
+            setTimeout(() => {
+                secretMessage.classList.remove('show');
+            }, 2000);
+        }
+
         function loop(timestamp) {
             // Calculate Delta Time (not used extensively here for simplicity, 
             // but good practice for ensuring consistent speed)
@@ -600,19 +742,31 @@ STORE_ID: FlappyFlight
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Party Mode Background
+            if (partyMode) {
+                ctx.fillStyle = '#222';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
             // Update
             background.update();
             if (gameState === 'PLAYING') {
                 bird.update();
                 pipes.update();
+                updateParticles();
                 frames++;
             } else if (gameState === 'MENU') {
                 // Bobbing animation for bird in menu
                 bird.y = canvas.height / 2 + Math.sin(Date.now() / 300) * 10;
+                // Add particles in menu if party mode is on
+                if(partyMode && frames % 5 === 0) createParticle(bird.x, bird.y);
+                updateParticles();
+                frames++;
             }
 
             // Draw
             background.draw();
+            drawParticles(); // Draw particles before pipes/bird
             pipes.draw();
             bird.draw();
 
@@ -623,15 +777,14 @@ STORE_ID: FlappyFlight
 
         function handleInput(e) {
             // Prevent default scrolling for Space/Arrows
-            if(e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) {
+            if(e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
                 e.preventDefault();
             }
 
             if (gameState === 'MENU') {
                 if (e.type === 'click' || e.code === 'Space' || e.type === 'touchstart') {
-                    // Check if clicking buttons logic handled by DOM, 
-                    // else treat as start if clicking background
-                    if(e.target.tagName !== 'BUTTON') {
+                    // Check if clicking buttons or Easter Egg logic handled by DOM
+                    if(e.target.tagName !== 'BUTTON' && e.target.id !== 'bird-logo') {
                         startGame();
                     }
                 }
@@ -646,8 +799,52 @@ STORE_ID: FlappyFlight
             }
         }
 
-        // Event Listeners
-        window.addEventListener('keydown', handleInput);
+        // Easter Egg Logic: Konami Code
+        window.addEventListener('keydown', (e) => {
+            keySequence.push(e.key);
+            if (keySequence.length > konamiCode.length) {
+                keySequence.shift();
+            }
+
+            // Check match
+            let match = true;
+            for(let i=0; i<konamiCode.length; i++) {
+                if(keySequence[i] !== konamiCode[i]) {
+                    match = false;
+                    break;
+                }
+            }
+
+            if(match) {
+                togglePartyMode();
+                keySequence = []; // Reset
+            }
+
+            handleInput(e);
+        });
+
+        // Easter Egg Logic: Mobile/Mouse (Tap bird 5 times)
+        birdLogo.addEventListener('click', (e) => {
+            e.stopPropagation(); // Don't start game
+            
+            clickCount++;
+            if(clickTimer) clearTimeout(clickTimer);
+            
+            // Visual feedback on logo
+            birdLogo.style.transform = `scale(${1 + clickCount * 0.1})`;
+            
+            if(clickCount >= 5) {
+                togglePartyMode();
+                clickCount = 0;
+                birdLogo.style.transform = 'scale(1)';
+            } else {
+                clickTimer = setTimeout(() => {
+                    clickCount = 0;
+                    birdLogo.style.transform = 'scale(1)';
+                }, 800);
+            }
+        });
+
         canvas.addEventListener('click', handleInput);
         canvas.addEventListener('touchstart', (e) => {
             // Prevent ghost clicks
