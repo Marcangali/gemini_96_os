@@ -1,0 +1,730 @@
+<!--
+APP_NAME: Kút és Torony
+APP_DESCRIPTION: Építs az égig vagy áss a Föld középpontjáig ebben az addiktív klikkelős játékban.
+APP_ICON: https://i.ibb.co/jPYPGfkZ/623fc0701dc5.png
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+STORE_ID: well-tower-game
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kút és Torony</title>
+    <style>
+        :root {
+            --bg-color: #f3f9ff;
+            --sky-color: #dbeafe;
+            --ground-color: #3f2e24;
+            --earth-light: #5d4037;
+            --earth-dark: #3e2723;
+            --primary: #0078d4;
+            --primary-hover: #106ebe;
+            --text-color: #202020;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --border-radius: 12px;
+            --accent-tower: #60a5fa;
+            --accent-well: #8d6e63;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        header {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .currency-display {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #d8a004;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .currency-icon {
+            width: 18px;
+            height: 18px;
+            background: gold;
+            border-radius: 50%;
+            border: 2px solid #b8860b;
+            box-shadow: inset -2px -2px 0 rgba(0,0,0,0.1);
+        }
+
+        main {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Visualization Area */
+        .world-container {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #5D4037 50%, #281c18 100%);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .horizon-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(0,0,0,0.1);
+            z-index: 5;
+        }
+
+        .structure-container {
+            width: 120px;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s ease;
+        }
+
+        .tower {
+            background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+            border: 2px solid #94a3b8;
+            border-bottom: none;
+            width: 60px;
+            height: 0px; /* Dynamic */
+            min-height: 0px;
+            transition: height 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: absolute;
+            bottom: 50%;
+            border-radius: 4px 4px 0 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .tower::after {
+            content: '';
+            width: 40%;
+            height: 100%;
+            background: rgba(255,255,255,0.3);
+            position: absolute;
+            left: 10%;
+        }
+
+        .tower-window {
+            width: 12px;
+            height: 16px;
+            background: #93c5fd;
+            margin: 4px 0;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .well {
+            background: linear-gradient(90deg, #3e2723, #4e342e);
+            border-left: 3px solid #281c18;
+            border-right: 3px solid #281c18;
+            width: 60px;
+            height: 0px; /* Dynamic */
+            min-height: 0px;
+            transition: height 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: absolute;
+            top: 50%;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .well::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 10px,
+                rgba(0,0,0,0.2) 10px,
+                rgba(0,0,0,0.2) 11px
+            );
+        }
+
+        .stat-overlay {
+            position: absolute;
+            right: 10px;
+            background: rgba(255,255,255,0.85);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-height {
+            top: 20px;
+            color: #2563eb;
+        }
+
+        .stat-depth {
+            bottom: 20px;
+            color: #5d4037;
+        }
+
+        /* Controls Area */
+        .controls {
+            padding: 20px;
+            background: #fff;
+            border-top: 1px solid #eee;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            z-index: 10;
+        }
+
+        button.action-btn {
+            border: none;
+            padding: 16px;
+            border-radius: var(--border-radius);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.1s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button.action-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        .btn-build {
+            background-color: var(--sky-color);
+            color: #1e3a8a;
+            border: 1px solid #bfdbfe;
+        }
+        
+        .btn-build .icon { font-size: 1.5rem; }
+
+        .btn-dig {
+            background-color: #d7ccc8;
+            color: #3e2723;
+            border: 1px solid #bcaaa4;
+        }
+        
+        .btn-dig .icon { font-size: 1.5rem; }
+
+        .ripple {
+            position: absolute;
+            background: rgba(255,255,255,0.4);
+            border-radius: 50%;
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to { transform: scale(4); opacity: 0; }
+        }
+
+        /* Upgrade Tabs */
+        .tabs {
+            display: flex;
+            background: #f1f5f9;
+            padding: 4px;
+            margin: 0 16px 8px 16px;
+            border-radius: 8px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+        }
+        
+        .tab-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .upgrades-panel {
+            height: 160px;
+            overflow-y: auto;
+            background: #f8fafc;
+            padding: 0 16px 16px 16px;
+        }
+
+        .upgrade-item {
+            background: white;
+            margin-bottom: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+            transition: background 0.2s;
+        }
+
+        .upgrade-item.disabled {
+            opacity: 0.6;
+            filter: grayscale(1);
+        }
+
+        .upgrade-info h4 {
+            margin: 0 0 4px 0;
+            font-size: 0.9rem;
+        }
+        
+        .upgrade-info p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .upgrade-cost {
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #d97706;
+            min-width: 60px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid #cbd5e1;
+        }
+
+        .upgrade-cost:hover {
+            background: #e2e8f0;
+        }
+
+        /* Mobile Adjustments */
+        .mobile-mode .controls {
+            padding: 12px;
+            gap: 12px;
+        }
+        
+        .mobile-mode .action-btn {
+            padding: 20px;
+        }
+
+        .mobile-mode .upgrades-panel {
+            height: 180px;
+        }
+
+        /* Particles */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: fly 1s ease-out forwards;
+            font-weight: bold;
+            font-size: 1rem;
+            z-index: 100;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        @keyframes fly {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-40px) scale(1.2); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="font-weight: 700; font-size: 1.2rem;">Kút és Torony</div>
+        <div class="currency-display">
+            <div class="currency-icon"></div>
+            <span id="money-display">0</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="world-container">
+            <div class="horizon-line"></div>
+            
+            <div class="stat-overlay stat-height">
+                ▲ <span id="height-display">0</span> m
+            </div>
+            
+            <div class="structure-container">
+                <div class="tower" id="tower-visual"></div>
+                <div class="well" id="well-visual"></div>
+            </div>
+
+            <div class="stat-overlay stat-depth">
+                ▼ <span id="depth-display">0</span> m
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('manual')">Műveletek</button>
+            <button class="tab-btn" onclick="switchTab('upgrades')">Fejlesztés</button>
+        </div>
+
+        <div id="panel-manual" class="controls">
+            <button class="action-btn btn-build" id="btn-build">
+                <span class="icon">🏗️</span>
+                <span>Torony Építés</span>
+            </button>
+            <button class="action-btn btn-dig" id="btn-dig">
+                <span class="icon">⛏️</span>
+                <span>Kút Ásás</span>
+            </button>
+        </div>
+
+        <div id="panel-upgrades" class="upgrades-panel" style="display: none;">
+            <!-- Upgrades injected via JS -->
+            <div style="text-align:center; padding: 20px; color: #888;">Tölts be fejlesztéseket...</div>
+        </div>
+    </main>
+
+    <script>
+        // Check for mobile mode
+        if (document.body.classList.contains('mobile-mode') || window.innerWidth < 400) {
+            document.body.classList.add('mobile-mode');
+        }
+
+        // --- AUDIO ENGINE ---
+        class AudioController {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.enabled = true;
+            }
+
+            playTone(freq, type, duration, vol = 0.1) {
+                if (!this.enabled) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playDig() {
+                // Low thud
+                this.playTone(80, 'triangle', 0.15, 0.3);
+                setTimeout(() => this.playTone(60, 'sawtooth', 0.1, 0.2), 50);
+            }
+
+            playBuild() {
+                // High clink
+                this.playTone(600, 'sine', 0.1, 0.2);
+                setTimeout(() => this.playTone(1200, 'square', 0.05, 0.05), 10);
+            }
+
+            playBuy() {
+                // Chime
+                this.playTone(440, 'sine', 0.3, 0.1);
+                setTimeout(() => this.playTone(554, 'sine', 0.3, 0.1), 100);
+            }
+
+            playError() {
+                this.playTone(150, 'sawtooth', 0.2, 0.1);
+            }
+        }
+
+        const audio = new AudioController();
+
+        // --- GAME STATE ---
+        const Game = {
+            height: 0,
+            depth: 0,
+            money: 0,
+            clickPower: 1,
+            autoHeight: 0,
+            autoDepth: 0,
+            
+            upgrades: [
+                {
+                    id: 'better_shovel',
+                    name: 'Acél Ásó',
+                    desc: '+1 méter / kattintás',
+                    cost: 50,
+                    type: 'click',
+                    power: 1,
+                    owned: 0,
+                    max: 10
+                },
+                {
+                    id: 'worker',
+                    name: 'Bányász',
+                    desc: '+1 méter mélység / mp',
+                    cost: 100,
+                    type: 'auto_depth',
+                    power: 1,
+                    owned: 0
+                },
+                {
+                    id: 'crane',
+                    name: 'Daru',
+                    desc: '+2 méter magasság / mp',
+                    cost: 250,
+                    type: 'auto_height',
+                    power: 2,
+                    owned: 0
+                },
+                {
+                    id: 'drill',
+                    name: 'Fúrótorony',
+                    desc: '+5 méter mélység / mp',
+                    cost: 800,
+                    type: 'auto_depth',
+                    power: 5,
+                    owned: 0
+                },
+                {
+                    id: 'architect',
+                    name: 'Építész',
+                    desc: '+5 méter magasság / mp',
+                    cost: 1000,
+                    type: 'auto_height',
+                    power: 5,
+                    owned: 0
+                }
+            ]
+        };
+
+        // --- DOM ELEMENTS ---
+        const els = {
+            money: document.getElementById('money-display'),
+            height: document.getElementById('height-display'),
+            depth: document.getElementById('depth-display'),
+            tower: document.getElementById('tower-visual'),
+            well: document.getElementById('well-visual'),
+            upgradesList: document.getElementById('panel-upgrades'),
+            btnBuild: document.getElementById('btn-build'),
+            btnDig: document.getElementById('btn-dig')
+        };
+
+        // --- LOGIC ---
+        function updateDisplay() {
+            els.money.textContent = Math.floor(Game.money).toLocaleString();
+            els.height.textContent = Math.floor(Game.height).toLocaleString();
+            els.depth.textContent = Math.floor(Game.depth).toLocaleString();
+
+            // Visual scaling (logarithmic-ish so it doesn't grow forever)
+            // Max height in px is around 200px
+            const hPx = Math.min(250, Math.log1p(Game.height) * 30);
+            const dPx = Math.min(250, Math.log1p(Game.depth) * 30);
+
+            els.tower.style.height = `${hPx}px`;
+            els.well.style.height = `${dPx}px`;
+
+            // Add windows to tower visually
+            if (hPx > 20 && els.tower.children.length < Math.floor(hPx / 20)) {
+                 const win = document.createElement('div');
+                 win.className = 'tower-window';
+                 els.tower.appendChild(win);
+            }
+            
+            renderUpgrades();
+        }
+
+        function createParticle(x, y, text, color) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.textContent = text;
+            p.style.color = color;
+            p.style.left = x + 'px';
+            p.style.top = y + 'px';
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 1000);
+        }
+
+        function createRipple(e) {
+            const btn = e.currentTarget;
+            const circle = document.createElement('span');
+            const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+            const radius = diameter / 2;
+            const rect = btn.getBoundingClientRect();
+
+            circle.style.width = circle.style.height = `${diameter}px`;
+            circle.style.left = `${e.clientX - rect.left - radius}px`;
+            circle.style.top = `${e.clientY - rect.top - radius}px`;
+            circle.className = 'ripple';
+
+            const ripple = btn.getElementsByClassName('ripple')[0];
+            if (ripple) { ripple.remove(); }
+
+            btn.appendChild(circle);
+        }
+
+        function clickAction(type, e) {
+            createRipple(e);
+            
+            const amount = Game.clickPower;
+            const reward = Math.ceil(amount * 1.5); // Money per click
+
+            if (type === 'build') {
+                Game.height += amount;
+                audio.playBuild();
+                createParticle(e.clientX, e.clientY - 50, `+${amount}m`, '#2563eb');
+            } else {
+                Game.depth += amount;
+                audio.playDig();
+                createParticle(e.clientX, e.clientY + 20, `+${amount}m`, '#5d4037');
+            }
+
+            Game.money += reward;
+            createParticle(e.clientX + 20, e.clientY, `+${reward} Ft`, '#d97706');
+            
+            updateDisplay();
+        }
+
+        function renderUpgrades() {
+            els.upgradesList.innerHTML = '';
+            
+            Game.upgrades.forEach(upg => {
+                const item = document.createElement('div');
+                item.className = 'upgrade-item';
+                if (Game.money < upg.cost) item.classList.add('disabled');
+                
+                // Check max limit for click upgrades
+                if (upg.max && upg.owned >= upg.max) {
+                    item.style.opacity = '0.5';
+                    item.innerHTML = `
+                        <div class="upgrade-info">
+                            <h4>${upg.name} (Max)</h4>
+                            <p>${upg.desc}</p>
+                        </div>
+                        <div class="upgrade-cost">✓</div>
+                    `;
+                } else {
+                    item.innerHTML = `
+                        <div class="upgrade-info">
+                            <h4>${upg.name} <small>(${upg.owned})</small></h4>
+                            <p>${upg.desc}</p>
+                        </div>
+                        <div class="upgrade-cost" onclick="buyUpgrade('${upg.id}')">${upg.cost} Ft</div>
+                    `;
+                }
+                els.upgradesList.appendChild(item);
+            });
+        }
+
+        // Expose to window for onclick
+        window.buyUpgrade = function(id) {
+            const upg = Game.upgrades.find(u => u.id === id);
+            if (!upg) return;
+
+            if (Game.money >= upg.cost && (!upg.max || upg.owned < upg.max)) {
+                Game.money -= upg.cost;
+                upg.owned++;
+                upg.cost = Math.floor(upg.cost * 1.4); // Cost scaling
+
+                // Apply effect
+                if (upg.type === 'click') {
+                    Game.clickPower += upg.power;
+                } else if (upg.type === 'auto_height') {
+                    Game.autoHeight += upg.power;
+                } else if (upg.type === 'auto_depth') {
+                    Game.autoDepth += upg.power;
+                }
+
+                audio.playBuy();
+                updateDisplay();
+            } else {
+                audio.playError();
+            }
+        };
+
+        window.switchTab = function(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (tab === 'manual') {
+                document.getElementById('panel-manual').style.display = 'grid';
+                document.getElementById('panel-upgrades').style.display = 'none';
+                document.querySelector('button[onclick="switchTab(\'manual\')"]').classList.add('active');
+            } else {
+                document.getElementById('panel-manual').style.display = 'none';
+                document.getElementById('panel-upgrades').style.display = 'block';
+                document.querySelector('button[onclick="switchTab(\'upgrades\')"]').classList.add('active');
+            }
+        };
+
+        // Listeners
+        els.btnBuild.addEventListener('mousedown', (e) => clickAction('build', e));
+        els.btnDig.addEventListener('mousedown', (e) => clickAction('dig', e));
+
+        // Touch support
+        els.btnBuild.addEventListener('touchstart', (e) => { e.preventDefault(); clickAction('build', e.touches[0]); });
+        els.btnDig.addEventListener('touchstart', (e) => { e.preventDefault(); clickAction('dig', e.touches[0]); });
+
+        // Auto Loop
+        setInterval(() => {
+            if (Game.autoHeight > 0 || Game.autoDepth > 0) {
+                Game.height += Game.autoHeight;
+                Game.depth += Game.autoDepth;
+                Game.money += (Game.autoHeight + Game.autoDepth); // Passive income
+                updateDisplay();
+            }
+        }, 1000);
+
+        // Init
+        updateDisplay();
+
+    </script>
+</body>
+</html>
