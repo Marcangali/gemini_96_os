@@ -1,0 +1,988 @@
+<!--
+APP_NAME: Miner 96
+APP_DESCRIPTION: Procedural ZX-style platformer. Logic updated for jump physics and solvability.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 580
+STORE_ID: manic-miner-96
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Miner 96</title>
+<style>
+    :root {
+        --bg-color: #f3f3f3;
+        --surface-color: #ffffff;
+        --accent-color: #0078d4;
+        --text-color: #202020;
+        --border-radius: 8px;
+        --spectrum-black: #000000;
+        --spectrum-cyan: #00D7D7;
+        --spectrum-magenta: #D700D7;
+        --spectrum-yellow: #D7D700;
+        --spectrum-white: #FFFFFF;
+        --spectrum-green: #00D700;
+        --spectrum-red: #D70000;
+        --spectrum-blue: #0000D7;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg-color);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text-color);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    /* Window Container */
+    #app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    /* Header / HUD */
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        background: var(--surface-color);
+        padding: 8px 12px;
+        border-radius: var(--border-radius);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .score-box {
+        color: var(--accent-color);
+    }
+    
+    .level-box {
+        color: #666;
+    }
+
+    /* Game Viewport */
+    .viewport-wrapper {
+        position: relative;
+        width: 100%;
+        flex-grow: 1; /* Take remaining height */
+        background: #000;
+        border-radius: var(--border-radius);
+        border: 4px solid #333;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    canvas {
+        image-rendering: pixelated;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background-color: var(--spectrum-black);
+    }
+
+    /* Scanline effect */
+    .viewport-wrapper::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+        background-size: 100% 4px, 6px 100%;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    /* Air Bar */
+    .air-container {
+        margin-top: 8px;
+        background: var(--surface-color);
+        padding: 4px 8px;
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .air-label { font-size: 12px; font-weight: bold; color: var(--spectrum-red); }
+    .air-bar-bg {
+        flex: 1;
+        height: 12px;
+        background: #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .air-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--spectrum-green), var(--spectrum-yellow), var(--spectrum-red));
+        width: 100%;
+        transition: width 0.1s linear;
+    }
+
+    /* Controls */
+    .controls-area {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        height: 120px;
+        touch-action: none;
+    }
+
+    .d-pad {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface-color);
+        border-radius: var(--border-radius);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .action-pad {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface-color);
+        border-radius: var(--border-radius);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .btn {
+        background: #e0e0e0;
+        border: none;
+        border-radius: 8px;
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+        color: #555;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.1s, transform 0.1s;
+        box-shadow: 0 4px 0 #bbb;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active, .btn.pressed {
+        background: #ccc;
+        transform: translateY(4px);
+        box-shadow: 0 0 0 #bbb;
+    }
+
+    .btn-jump {
+        width: 100px;
+        background: var(--spectrum-magenta);
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        box-shadow: 0 4px 0 #a000a0;
+    }
+    .btn-jump:active, .btn-jump.pressed {
+        background: #b000b0;
+        box-shadow: 0 0 0 #a000a0;
+    }
+
+    /* Start Screen Overlay */
+    #start-screen {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.85);
+        color: var(--spectrum-cyan);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 20;
+        text-align: center;
+        font-family: monospace;
+        font-size: 16px;
+        text-shadow: 2px 2px 0 var(--spectrum-magenta);
+    }
+    .blink { animation: blinker 1s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0; } }
+
+    /* Mobile adjustments */
+    body.mobile-mode .controls-area {
+        height: 140px;
+    }
+    body.mobile-mode .btn {
+        width: 70px;
+        height: 70px;
+    }
+</style>
+</head>
+<body>
+
+<div id="app-container">
+    <header>
+        <div class="score-box">SCORE: <span id="score-val">000000</span></div>
+        <div class="level-box">CAVERN <span id="level-val">1</span></div>
+    </header>
+
+    <div class="viewport-wrapper">
+        <canvas id="gameCanvas" width="320" height="240"></canvas>
+        <div id="start-screen">
+            <h1 style="font-size: 32px; margin-bottom: 10px;">MINER 96</h1>
+            <p style="color: var(--spectrum-yellow);">PROCEDURAL EDITION</p>
+            <br>
+            <p class="blink">PRESS JUMP TO START</p>
+            <br>
+            <div style="font-size: 12px; color: white; margin-top: 20px;">
+                ARROWS to Move<br>SPACE to Jump
+            </div>
+        </div>
+    </div>
+
+    <div class="air-container">
+        <span class="air-label">AIR</span>
+        <div class="air-bar-bg">
+            <div id="air-fill" class="air-bar-fill"></div>
+        </div>
+    </div>
+
+    <div class="controls-area">
+        <div class="d-pad">
+            <button class="btn" id="btn-left">←</button>
+            <button class="btn" id="btn-right">→</button>
+        </div>
+        <div class="action-pad">
+            <button class="btn btn-jump" id="btn-jump">JUMP</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * AUDIO SYSTEM (Web Audio API)
+ */
+const AudioSys = (() => {
+    let ctx = null;
+    let enabled = false;
+
+    function init() {
+        if (!ctx) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            enabled = true;
+        } else if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+    }
+
+    function playTone(freq, type, duration, vol = 0.1) {
+        if (!enabled) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+    }
+
+    return {
+        init,
+        jump: () => {
+            if(!enabled) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.frequency.setValueAtTime(150, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(300, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+        },
+        collect: () => {
+            playTone(1200, 'square', 0.1, 0.05);
+            setTimeout(() => playTone(1800, 'square', 0.1, 0.05), 50);
+        },
+        walk: () => {
+            if(!enabled) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(60, ctx.currentTime);
+            gain.gain.setValueAtTime(0.05, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.03);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.03);
+        },
+        crash: () => {
+            if(!enabled) return;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, ctx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        },
+        win: () => {
+            playTone(523.25, 'square', 0.1, 0.1);
+            setTimeout(() => playTone(659.25, 'square', 0.1, 0.1), 100);
+            setTimeout(() => playTone(783.99, 'square', 0.2, 0.1), 200);
+            setTimeout(() => playTone(1046.50, 'square', 0.4, 0.1), 300);
+        }
+    };
+})();
+
+/**
+ * GAME ENGINE & CONFIG
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+ctx.imageSmoothingEnabled = false;
+
+const TILE_SIZE = 16;
+const COLS = 20;
+const ROWS = 15;
+const GRAVITY = 0.5;
+const JUMP_FORCE = -7.8;
+const SPEED = 1.6;
+
+const C = {
+    BLACK: '#000000', CYAN: '#00D7D7', MAGENTA: '#D700D7',
+    YELLOW: '#D7D700', WHITE: '#FFFFFF', GREEN: '#00D700',
+    RED: '#D70000', BLUE: '#0000D7'
+};
+
+/**
+ * PROCEDURAL GENERATION MODULE
+ */
+const LevelGenerator = (() => {
+    // Jump constraints for validation (in tiles)
+    // Player can jump ~4 tiles high and ~4-5 tiles far depending on height diff
+    const MAX_JUMP_UP = 3.5; 
+    const MAX_JUMP_ACROSS = 4;
+    const MAX_JUMP_DOWN = 8; // generous for falling
+
+    function generate(levelNum) {
+        let attempts = 0;
+        // Try to generate a valid map up to 50 times
+        while(attempts < 50) {
+            const grid = createRandomLayout(levelNum);
+            if(validateMap(grid)) {
+                return grid.map(row => row.join(''));
+            }
+            attempts++;
+        }
+        // Fallback to a safe default if RNG fails
+        return createDefaultMap();
+    }
+
+    function createRandomLayout(difficulty) {
+        // Initialize Empty
+        let grid = Array(ROWS).fill().map(() => Array(COLS).fill('.'));
+        
+        // Borders
+        for(let c=0; c<COLS; c++) { grid[0][c]='#'; grid[ROWS-1][c]='#'; }
+        for(let r=0; r<ROWS; r++) { grid[r][0]='#'; grid[r][COLS-1]='#'; }
+
+        // Platforms
+        // Density slightly increases with difficulty?
+        let numPlatforms = 14 + Math.floor(Math.random() * 8);
+        for(let i=0; i<numPlatforms; i++) {
+            let r = 2 + Math.floor(Math.random() * (ROWS - 4));
+            let c = 1 + Math.floor(Math.random() * (COLS - 4));
+            let w = 2 + Math.floor(Math.random() * 5);
+            if (c+w >= COLS-1) w = (COLS-1) - c;
+            for(let k=0; k<w; k++) grid[r][c+k] = '#';
+        }
+
+        // Place Player (Bottom Left quadrant)
+        let pr = ROWS - 2;
+        let pc = 1 + Math.floor(Math.random() * 4);
+        // Ensure ground
+        if(grid[pr][pc] === '#') grid[pr][pc] = '.'; // Clear head
+        grid[ROWS-1][pc] = '#'; // Ensure feet
+        grid[ROWS-1][pc+1] = '#';
+        grid[pr][pc] = 'P';
+
+        // Place Exit (Top Right quadrant)
+        let er = 1 + Math.floor(Math.random() * 5);
+        let ec = COLS - 2 - Math.floor(Math.random() * 4);
+        if(grid[er][ec] === '#') grid[er][ec] = '.';
+        if(grid[er+1][ec] !== '#') grid[er+1][ec] = '#'; // Platform for exit
+        grid[er][ec] = 'E';
+
+        // Place Keys (3-5)
+        let keysNeeded = 3 + Math.floor(Math.random() * 3);
+        let keysPlaced = 0;
+        let safety = 0;
+        while(keysPlaced < keysNeeded && safety < 100) {
+            safety++;
+            let kr = 2 + Math.floor(Math.random() * (ROWS - 3));
+            let kc = 1 + Math.floor(Math.random() * (COLS - 2));
+            // Must sit on a platform
+            if(grid[kr][kc] === '.' && grid[kr+1][kc] === '#' && 
+               grid[kr][kc] !== 'P' && grid[kr][kc] !== 'E') {
+                grid[kr][kc] = 'K';
+                keysPlaced++;
+            }
+        }
+
+        // Place Spikes (avoid start/end/keys)
+        for(let r=2; r<ROWS-2; r++) {
+            for(let c=1; c<COLS-1; c++) {
+                if(grid[r][c] === '.' && grid[r+1][c] === '#' && Math.random() < 0.08) {
+                    let tile = grid[r][c];
+                    if(tile !== 'P' && tile !== 'E' && tile !== 'K') {
+                        grid[r][c] = '^';
+                    }
+                }
+            }
+        }
+
+        // Place Enemies (Horizontal)
+        for(let r=2; r<ROWS-2; r++) {
+            for(let c=1; c<COLS-1; c++) {
+                if(Math.random() < 0.02) {
+                    if(grid[r][c] === '.' && grid[r+1][c] === '#' && 
+                       grid[r][c] !== 'P' && grid[r][c] !== 'K' && grid[r][c] !== 'E') {
+                        grid[r][c] = 'H';
+                    }
+                }
+            }
+        }
+
+        return grid;
+    }
+
+    // Validation: Build a graph of platforms and check connectivity
+    function validateMap(grid) {
+        // 1. Identify Platforms (contiguous # segments)
+        let platforms = [];
+        let pMap = Array(ROWS).fill().map(() => Array(COLS).fill(-1));
+        
+        for(let r=0; r<ROWS; r++) {
+            for(let c=0; c<COLS; c++) {
+                if(grid[r][c] === '#') {
+                    // Check if part of existing platform (left neighbor)
+                    if(c > 0 && grid[r][c-1] === '#') {
+                        let pIdx = pMap[r][c-1];
+                        pMap[r][c] = pIdx;
+                        platforms[pIdx].w++;
+                        platforms[pIdx].cells.push({c,r});
+                    } else {
+                        // New platform
+                        let pIdx = platforms.length;
+                        platforms.push({
+                            id: pIdx, r: r, c: c, w: 1, cells: [{c,r}]
+                        });
+                        pMap[r][c] = pIdx;
+                    }
+                }
+            }
+        }
+
+        // 2. Identify Important Locations
+        let startP = null;
+        let keyPs = new Set();
+        let exitP = null;
+        let totalKeys = 0;
+
+        for(let r=0; r<ROWS; r++) {
+            for(let c=0; c<COLS; c++) {
+                let cell = grid[r][c];
+                if(['P','K','E'].includes(cell)) {
+                    // Item must be directly above a platform
+                    if(r+1 < ROWS && grid[r+1][c] === '#') {
+                        let pid = pMap[r+1][c];
+                        if(cell === 'P') startP = pid;
+                        if(cell === 'K') { keyPs.add(pid); totalKeys++; }
+                        if(cell === 'E') exitP = pid;
+                    } else {
+                        return false; // Floating item = invalid
+                    }
+                }
+            }
+        }
+        if(startP === null || exitP === null || totalKeys === 0) return false;
+
+        // 3. Build Graph (Adjacency List)
+        let adj = Array(platforms.length).fill().map(() => []);
+
+        for(let i=0; i<platforms.length; i++) {
+            for(let j=0; j<platforms.length; j++) {
+                if(i === j) continue;
+                if(canJump(platforms[i], platforms[j], grid)) {
+                    adj[i].push(j);
+                }
+            }
+        }
+
+        // 4. BFS from Start
+        let visited = new Set();
+        let q = [startP];
+        visited.add(startP);
+
+        while(q.length > 0) {
+            let u = q.shift();
+            for(let v of adj[u]) {
+                if(!visited.has(v)) {
+                    visited.add(v);
+                    q.push(v);
+                }
+            }
+        }
+
+        // 5. Verify Reachability
+        if(!visited.has(exitP)) return false;
+        for(let k of keyPs) {
+            if(!visited.has(k)) return false;
+        }
+
+        return true;
+    }
+
+    function canJump(p1, p2, grid) {
+        // Platform p1 to p2
+        let dy = p1.r - p2.r; // +ve means jumping UP
+        
+        // Too high to jump?
+        if(dy > MAX_JUMP_UP) return false; 
+
+        // Horizontal distance between segments
+        let dist = 0;
+        if (p1.c + p1.w <= p2.c) dist = p2.c - (p1.c + p1.w); // p2 is right
+        else if (p2.c + p2.w <= p1.c) dist = p1.c - (p2.c + p2.w); // p2 is left
+        // else overlap, dist=0
+
+        // Check reach based on height diff
+        if(dy > 0) { // Jumping up
+            if(dist > MAX_JUMP_ACROSS - (dy*0.5)) return false; 
+        } else { // Jumping down
+             // Falling allows greater horizontal reach
+             if(dist > MAX_JUMP_ACROSS + Math.abs(dy)) return false;
+        }
+
+        // Basic Line of Sight / Headroom Check
+        // If jumping up, need headroom above start and target
+        // This is a rough check to avoid jumping through solid walls
+        if(dy > 0 && dist > 0) {
+            // Check midway roughly
+            let midR = p1.r - 2;
+            let midC = Math.floor((p1.c + p2.c)/2);
+            if(midR > 0 && midC > 0 && midC < COLS && grid[midR][midC] === '#') return false;
+        }
+
+        return true;
+    }
+
+    function createDefaultMap() {
+        return [
+            "####################",
+            "#P.................#",
+            "#####.####.###.#####",
+            "#.....#..#...#.....#",
+            "#.###.#..#.K.#.###.#",
+            "#.#...#..#####...#.#",
+            "#.#.K............#.#",
+            "#.#.###......###.#.#",
+            "#.#...#..##..#...#.#",
+            "#.###.#..##..#.###.#",
+            "#.....#..##..#.....#",
+            "#######..##..#######",
+            "#K.......##.......E#",
+            "####################",
+            "####################"
+        ].map(row => row.split(''));
+    }
+
+    return { generate };
+})();
+
+// Game State
+let gameState = 'MENU';
+let score = 0;
+let air = 1000;
+let currentLevelIdx = 0;
+let keysCollected = 0;
+let totalKeys = 0;
+let frameCount = 0;
+let tiles = [];
+let entities = [];
+let player = { x: 0, y: 0, dx: 0, dy: 0, w: 12, h: 16, grounded: false, dead: false, facingRight: true, anim: 0 };
+let exitOpen = false;
+
+// Inputs
+const keys = { left: false, right: false, jump: false, jumpPressed: false };
+
+// Entity Class
+class Enemy {
+    constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.dir = 1;
+        this.speed = 1;
+        this.range = 80;
+        this.startX = x;
+        this.startY = y;
+    }
+
+    update() {
+        if (this.type === 'H') {
+            this.x += this.speed * this.dir;
+            if (Math.abs(this.x - this.startX) > this.range || this.checkWall(this.x, this.y)) {
+                this.dir *= -1;
+            }
+        }
+    }
+
+    checkWall(nx, ny) {
+        let checkX = (this.dir > 0) ? nx + 14 : nx;
+        let c = Math.floor(checkX / TILE_SIZE);
+        let r = Math.floor((ny + 8) / TILE_SIZE);
+        if(r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+        return tiles[r][c] === '#';
+    }
+
+    draw(ctx) {
+        ctx.fillStyle = C.RED;
+        if (frameCount % 20 < 10) {
+            ctx.fillRect(Math.round(this.x + 2), Math.round(this.y + 2), 12, 12);
+            ctx.fillStyle = C.YELLOW;
+            ctx.fillRect(Math.round(this.x + 4), Math.round(this.y + 4), 4, 4);
+        } else {
+            ctx.fillRect(Math.round(this.x + 2), Math.round(this.y + 1), 12, 14);
+            ctx.fillStyle = C.YELLOW;
+            ctx.fillRect(Math.round(this.x + 8), Math.round(this.y + 8), 4, 4);
+        }
+    }
+}
+
+function initLevel(idx) {
+    currentLevelIdx = idx;
+    
+    // Use Generator
+    const mapData = LevelGenerator.generate(idx);
+    
+    tiles = [];
+    entities = [];
+    totalKeys = 0;
+    keysCollected = 0;
+    exitOpen = false;
+    air = 1000;
+    
+    for(let r=0; r<ROWS; r++) {
+        let rowData = [];
+        let str = mapData[r] || "####################"; 
+        for(let c=0; c<COLS; c++) {
+            let char = str[c] || '#';
+            if(char === 'P') {
+                player.x = c * TILE_SIZE + 2;
+                player.y = r * TILE_SIZE;
+                player.dx = 0;
+                player.dy = 0;
+                player.dead = false;
+                char = '.';
+            } else if (char === 'H') {
+                entities.push(new Enemy(c*TILE_SIZE, r*TILE_SIZE, 'H'));
+                char = '.';
+            } else if (char === 'K') {
+                totalKeys++;
+            }
+            rowData.push(char);
+        }
+        tiles.push(rowData);
+    }
+    
+    document.getElementById('level-val').innerText = (idx + 1);
+}
+
+function checkCollision(playerRect, enemyRect) {
+    let pInner = { x: playerRect.x + 2, y: playerRect.y + 2, w: playerRect.w - 4, h: playerRect.h - 2 };
+    let eInner = { x: enemyRect.x + 3, y: enemyRect.y + 3, w: enemyRect.w - 6, h: enemyRect.h - 6 };
+    return (pInner.x < eInner.x + eInner.w && pInner.x + pInner.w > eInner.x &&
+            pInner.y < eInner.y + eInner.h && pInner.y + pInner.h > eInner.y);
+}
+
+function update() {
+    if (gameState !== 'PLAY') return;
+
+    air -= 0.3333;
+    if (air <= 0) die();
+    
+    // Player Input
+    if (keys.left) {
+        player.dx = -SPEED;
+        player.facingRight = false;
+        if(player.grounded && frameCount % 10 === 0) AudioSys.walk();
+        player.anim += 0.2;
+    } else if (keys.right) {
+        player.dx = SPEED;
+        player.facingRight = true;
+        if(player.grounded && frameCount % 10 === 0) AudioSys.walk();
+        player.anim += 0.2;
+    } else {
+        player.dx = 0;
+        player.anim = 0;
+    }
+
+    if (keys.jump && player.grounded && !keys.jumpPressed) {
+        player.dy = JUMP_FORCE;
+        player.grounded = false;
+        AudioSys.jump();
+        keys.jumpPressed = true;
+    }
+    if (!keys.jump) keys.jumpPressed = false;
+
+    // Physics X
+    player.x += player.dx;
+    handleCollisions('x');
+
+    // Physics Y
+    player.dy += GRAVITY;
+    player.y += player.dy;
+    player.grounded = false;
+    handleCollisions('y');
+
+    if(player.y > canvas.height) die();
+
+    entities.forEach(e => {
+        e.update();
+        if (checkCollision({x: player.x, y: player.y, w: player.w, h: player.h}, 
+                           {x: e.x, y: e.y, w: 16, h: 16})) {
+            die();
+        }
+    });
+
+    // Tile Interactions
+    let cx = Math.floor((player.x + player.w/2) / TILE_SIZE);
+    let cy = Math.floor((player.y + player.h/2) / TILE_SIZE);
+    
+    if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) {
+        let tile = tiles[cy][cx];
+        if (tile === 'K') {
+            tiles[cy][cx] = '.';
+            keysCollected++;
+            score += 100;
+            AudioSys.collect();
+            if(keysCollected === totalKeys) {
+                exitOpen = true;
+            }
+        } else if (tile === '^') {
+            die();
+        } else if (tile === 'E' && exitOpen) {
+            AudioSys.win();
+            score += Math.floor(air/10) * 10;
+            setTimeout(() => initLevel(currentLevelIdx + 1), 1000);
+        }
+    }
+}
+
+function handleCollisions(axis) {
+    let tl = getTileAt(player.x, player.y);
+    let tr = getTileAt(player.x + player.w - 0.1, player.y);
+    let bl = getTileAt(player.x, player.y + player.h - 0.1);
+    let br = getTileAt(player.x + player.w - 0.1, player.y + player.h - 0.1);
+
+    if (axis === 'x') {
+        if (isSolid(tl) || isSolid(bl)) {
+            player.x = (Math.floor(player.x / TILE_SIZE) + 1) * TILE_SIZE;
+            player.dx = 0;
+        } else if (isSolid(tr) || isSolid(br)) {
+            player.x = (Math.floor((player.x + player.w) / TILE_SIZE)) * TILE_SIZE - player.w;
+            player.dx = 0;
+        }
+    } else {
+        if (player.dy < 0) {
+            if (isSolid(tl) || isSolid(tr)) {
+                player.y = (Math.floor(player.y / TILE_SIZE) + 1) * TILE_SIZE;
+                player.dy = 0;
+            }
+        } else if (player.dy > 0) {
+            if (isSolid(bl) || isSolid(br)) {
+                player.y = (Math.floor((player.y + player.h) / TILE_SIZE)) * TILE_SIZE - player.h;
+                player.dy = 0;
+                player.grounded = true;
+                player.y = Math.round(player.y);
+            }
+        }
+    }
+}
+
+function isSolid(tile) { return tile === '#'; }
+function getTileAt(x, y) {
+    let c = Math.floor(x / TILE_SIZE);
+    let r = Math.floor(y / TILE_SIZE);
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return '.';
+    return tiles[r][c];
+}
+
+function die() {
+    if(player.dead) return;
+    player.dead = true;
+    AudioSys.crash();
+    gameState = 'DEAD';
+    setTimeout(() => {
+        initLevel(currentLevelIdx);
+        gameState = 'PLAY';
+    }, 1500);
+}
+
+function draw() {
+    ctx.fillStyle = C.BLACK;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    for(let r=0; r<ROWS; r++) {
+        for(let c=0; c<COLS; c++) {
+            let t = tiles[r][c];
+            let x = c*TILE_SIZE;
+            let y = r*TILE_SIZE;
+
+            if (t === '#') {
+                ctx.fillStyle = C.CYAN;
+                ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = C.BLUE;
+                ctx.fillRect(x+2, y+2, TILE_SIZE-4, TILE_SIZE-4);
+            } else if (t === 'K') {
+                ctx.fillStyle = (frameCount % 10 < 5) ? C.YELLOW : C.MAGENTA;
+                ctx.fillRect(x+4, y+2, 8, 12);
+                ctx.fillStyle = C.BLACK;
+                ctx.fillRect(x+6, y+4, 4, 2);
+            } else if (t === '^') {
+                ctx.fillStyle = C.WHITE;
+                ctx.beginPath();
+                ctx.moveTo(x, y+TILE_SIZE);
+                ctx.lineTo(x+TILE_SIZE/2, y);
+                ctx.lineTo(x+TILE_SIZE, y+TILE_SIZE);
+                ctx.fill();
+            } else if (t === 'E') {
+                if (exitOpen) {
+                    ctx.fillStyle = (frameCount % 8 < 4) ? C.GREEN : C.WHITE;
+                    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                    ctx.fillStyle = C.BLACK;
+                    ctx.fillRect(x+4, y+4, 8, 12);
+                } else {
+                    ctx.strokeStyle = C.GREEN;
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x+2, y+2, 12, 12);
+                }
+            }
+        }
+    }
+
+    entities.forEach(e => e.draw(ctx));
+
+    if (!player.dead || frameCount % 10 < 5) {
+        drawPlayer();
+    }
+
+    document.getElementById('score-val').innerText = score.toString().padStart(6, '0');
+    document.getElementById('air-fill').style.width = Math.max(0, (air/1000)*100) + '%';
+}
+
+function drawPlayer() {
+    let px = Math.round(player.x);
+    let py = Math.round(player.y);
+    
+    ctx.fillStyle = C.GREEN;
+    if (player.dead) ctx.fillStyle = C.RED;
+
+    ctx.fillRect(px + 3, py, 6, 4);
+    ctx.fillStyle = C.BLUE;
+    ctx.fillRect(px + 2, py - 2, 8, 2);
+    
+    ctx.fillStyle = C.CYAN;
+    ctx.fillRect(px + 2, py + 4, 8, 6);
+    
+    ctx.fillStyle = C.YELLOW;
+    let legFrame = Math.floor(player.anim) % 2;
+    if (!player.grounded) legFrame = 1;
+
+    if (legFrame === 0) {
+        ctx.fillRect(px + 2, py + 10, 3, 6);
+        ctx.fillRect(px + 7, py + 10, 3, 6);
+    } else {
+        ctx.fillRect(px + 1, py + 9, 3, 5);
+        ctx.fillRect(px + 8, py + 9, 3, 5);
+    }
+}
+
+function loop() {
+    frameCount++;
+    if (gameState === 'PLAY') {
+        update();
+    }
+    draw();
+    requestAnimationFrame(loop);
+}
+
+window.addEventListener('keydown', e => {
+    if(e.code === 'ArrowLeft') keys.left = true;
+    if(e.code === 'ArrowRight') keys.right = true;
+    if(e.code === 'Space' || e.code === 'ArrowUp') {
+        if(gameState === 'MENU') startGame();
+        else keys.jump = true;
+    }
+});
+window.addEventListener('keyup', e => {
+    if(e.code === 'ArrowLeft') keys.left = false;
+    if(e.code === 'ArrowRight') keys.right = false;
+    if(e.code === 'Space' || e.code === 'ArrowUp') keys.jump = false;
+});
+
+const btnLeft = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+const btnJump = document.getElementById('btn-jump');
+
+const addTouch = (elem, code) => {
+    elem.addEventListener('mousedown', (e) => { e.preventDefault(); keys[code] = true; elem.classList.add('pressed'); });
+    elem.addEventListener('mouseup', (e) => { e.preventDefault(); keys[code] = false; elem.classList.remove('pressed'); });
+    elem.addEventListener('mouseleave', (e) => { e.preventDefault(); keys[code] = false; elem.classList.remove('pressed'); });
+    elem.addEventListener('touchstart', (e) => { e.preventDefault(); keys[code] = true; elem.classList.add('pressed'); if(gameState === 'MENU' && code==='jump') startGame(); }, {passive: false});
+    elem.addEventListener('touchend', (e) => { e.preventDefault(); keys[code] = false; elem.classList.remove('pressed'); }, {passive: false});
+};
+
+addTouch(btnLeft, 'left');
+addTouch(btnRight, 'right');
+addTouch(btnJump, 'jump');
+
+function startGame() {
+    AudioSys.init();
+    document.getElementById('start-screen').style.display = 'none';
+    gameState = 'PLAY';
+    initLevel(0);
+}
+
+// Auto-detect mobile mode
+if(document.body.classList.contains('mobile-mode')) {
+    // Already handled by CSS
+}
+
+initLevel(0);
+loop();
+
+</script>
+</body>
+</html>
