@@ -1,0 +1,792 @@
+<!--
+APP_NAME: Sweeper 3D
+APP_DESCRIPTION: Modern 3D minesweeper with polished visuals and sound effects.
+APP_ICON: https://i.ibb.co/HLsz6gsQ/2601ceac0582.png
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 560
+STORE_ID: sweeper-3d
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sweeper 3D</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --board-bg: #e4e6eb;
+            --cell-gap: 4px;
+            --primary: #0078d4;
+            --accent: #ff4757;
+            --text: #2c3e50;
+            --shadow: rgba(0, 0, 0, 0.15);
+            --shadow-depth: #b0b3b8;
+            --cell-hidden: #ffffff;
+            --cell-revealed: #e4e6eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            justify-content: space-between;
+        }
+
+        /* HUD */
+        .hud {
+            width: 100%;
+            max-width: 360px;
+            background: #fff;
+            padding: 10px 16px;
+            border-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px var(--shadow);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text);
+            min-width: 40px;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        /* HUD Center Group (Flag + Face) */
+        .hud-center {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .face-btn, .flag-btn {
+            width: 44px; /* Increased touch target */
+            height: 44px;
+            border: none;
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            border-radius: 50%;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 3px 3px 8px #d1d1d1, -3px -3px 8px #ffffff;
+            transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+
+        .face-btn:active, .flag-btn:active {
+            transform: scale(0.95);
+            box-shadow: inset 3px 3px 6px #d1d1d1, inset -3px -3px 6px #ffffff;
+        }
+
+        /* Flag Button Specifics */
+        .flag-btn {
+            display: flex;
+            font-size: 18px;
+        }
+
+        .flag-btn.active {
+            background: var(--text);
+            color: white;
+            box-shadow: inset 3px 3px 6px rgba(0,0,0,0.4);
+        }
+
+        /* Board */
+        .board-wrapper {
+            perspective: 800px;
+            padding: 10px;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-height: 100%;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            grid-gap: var(--cell-gap);
+            background: #d1d5db;
+            padding: 8px;
+            border-radius: 12px;
+            transform: rotateX(15deg);
+            transform-style: preserve-3d;
+            transition: transform 0.4s ease;
+            box-shadow: 0 20px 30px -10px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 340px; 
+            aspect-ratio: 1/1; 
+        }
+
+        .board.shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .cell {
+            width: 100%; 
+            aspect-ratio: 1/1;
+            background-color: var(--cell-hidden);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s, background-color 0.15s;
+            box-shadow: 0 3px 0 var(--shadow-depth), 0 4px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: clamp(14px, 4.5vw, 22px); /* Larger font for readability */
+        }
+
+        /* Hover states only for pointer devices to avoid sticky hover on touch */
+        @media (hover: hover) {
+            .cell:hover:not(.revealed) { transform: translateY(-2px); }
+        }
+        
+        .cell:active:not(.revealed) { transform: translateY(2px); box-shadow: 0 1px 0 var(--shadow-depth); }
+        .cell.pressed { transform: translateY(2px); box-shadow: 0 1px 0 var(--shadow-depth); }
+
+        .cell.revealed {
+            background-color: var(--cell-revealed);
+            box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
+            transform: translateY(3px);
+            cursor: default;
+        }
+
+        .cell[data-num="1"] { color: #3b82f6; }
+        .cell[data-num="2"] { color: #10b981; }
+        .cell[data-num="3"] { color: #ef4444; }
+        .cell[data-num="4"] { color: #8b5cf6; }
+        .cell[data-num="5"] { color: #f59e0b; }
+        .cell[data-num="6"] { color: #06b6d4; }
+        .cell[data-num="7"] { color: #111827; }
+        .cell[data-num="8"] { color: #6b7280; }
+
+        .cell.mine { background-color: #fee2e2; }
+
+        .cell.flagged::after {
+            content: '🚩';
+            font-size: clamp(10px, 4vw, 20px);
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Footer */
+        .footer-area {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            margin-bottom: 5px;
+        }
+
+        .controls {
+            width: 100%;
+            max-width: 340px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-toggle {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: white;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .btn-toggle.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,120,212,0.3);
+        }
+
+        /* Media Queries */
+        @media (max-width: 340px) {
+            .hud { padding: 8px 12px; }
+            .stat-label { font-size: 0.6rem; }
+            .stat { font-size: 1rem; }
+            .face-btn, .flag-btn { width: 40px; height: 40px; font-size: 18px; }
+            .board { padding: 4px; grid-gap: 2px; border-radius: 8px; }
+            .cell { border-radius: 3px; box-shadow: 0 2px 0 var(--shadow-depth); }
+            .cell.revealed { transform: translateY(2px); }
+            .controls { gap: 6px; }
+            .btn-toggle { padding: 10px; font-size: 0.85rem; }
+        }
+
+        @media (max-height: 500px) {
+            .app-container { padding: 5px; }
+            .hud { margin-bottom: 5px; padding: 6px 12px; }
+            .board-wrapper { padding: 5px; }
+            .board { width: auto; height: 100%; aspect-ratio: 1/1; }
+            .footer-area { gap: 6px; margin-bottom: 2px; }
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: rotateX(15deg) translate3d(-1px, 0, 0); }
+            20%, 80% { transform: rotateX(15deg) translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: rotateX(15deg) translate3d(-4px, 0, 0); }
+            40%, 60% { transform: rotateX(15deg) translate3d(4px, 0, 0); }
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes explode {
+            0% { transform: scale(1); background-color: #ef4444; }
+            50% { transform: scale(1.4); background-color: #fca5a5; }
+            100% { transform: scale(1); background-color: #ef4444; }
+        }
+
+        .cell.detonated {
+            animation: explode 0.4s ease-out forwards;
+            z-index: 5;
+        }
+
+        /* Mobile Optimization Mode */
+        body.mobile-mode .board {
+            /* Ensure board fits nicely */
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- HUD -->
+        <div class="hud">
+            <div class="stat">
+                <span class="stat-label">Mines</span>
+                <span id="mine-count">10</span>
+            </div>
+            
+            <div class="hud-center">
+                <!-- Flag Toggle -->
+                <button class="flag-btn" id="flag-toggle" aria-label="Toggle Flag Mode">🚩</button>
+                <button class="face-btn" id="reset-btn" aria-label="Reset Game">🙂</button>
+            </div>
+            
+            <div class="stat">
+                <span class="stat-label">Time</span>
+                <span id="timer">000</span>
+            </div>
+        </div>
+
+        <!-- Board -->
+        <div class="board-wrapper">
+            <div class="board" id="game-board">
+                <!-- Cells generated by JS -->
+            </div>
+        </div>
+
+        <!-- Footer Area -->
+        <div class="footer-area">
+            <!-- Difficulty Controls -->
+            <div class="controls">
+                <button class="btn-toggle active" id="mode-normal" onclick="setDifficulty('normal')">Normal</button>
+                <button class="btn-toggle" id="mode-hard" onclick="setDifficulty('hard')">Hard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Sound Engine using Web Audio API
+         */
+        const AudioEngine = (() => {
+            let ctx = null;
+            let enabled = true;
+
+            const init = () => {
+                if (!ctx) {
+                    try {
+                        const AudioContext = window.AudioContext || window.webkitAudioContext;
+                        ctx = new AudioContext();
+                    } catch (e) {
+                        console.warn('Web Audio API not supported');
+                        enabled = false;
+                    }
+                }
+                if (ctx && ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+            };
+
+            const playTone = (freq, type, duration, vol = 0.1) => {
+                if (!enabled || !ctx) return;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                
+                gain.gain.setValueAtTime(vol, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            };
+
+            const playNoise = (duration) => {
+                if (!enabled || !ctx) return;
+                const bufferSize = ctx.sampleRate * duration;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+                
+                noise.connect(gain);
+                gain.connect(ctx.destination);
+                noise.start();
+            };
+
+            return {
+                init,
+                click: () => playTone(800, 'sine', 0.1),
+                flag: () => playTone(300, 'triangle', 0.1),
+                unflag: () => playTone(250, 'triangle', 0.1),
+                reveal: () => playTone(500, 'sine', 0.08),
+                chord: () => playTone(600, 'sine', 0.15),
+                win: () => {
+                    setTimeout(() => playTone(523.25, 'sine', 0.2), 0);
+                    setTimeout(() => playTone(659.25, 'sine', 0.2), 200);
+                    setTimeout(() => playTone(783.99, 'sine', 0.4), 400);
+                    setTimeout(() => playTone(1046.50, 'sine', 0.6), 600);
+                },
+                explode: () => playNoise(0.5)
+            };
+        })();
+
+        /**
+         * Game Logic
+         */
+        const BOARD_SIZE = 9;
+        let MINES = 10;
+        
+        let grid = []; 
+        let gameState = 'idle'; 
+        let flags = 0;
+        let revealedCount = 0;
+        let timerInterval;
+        let time = 0;
+        let isFlagMode = false;
+
+        // DOM Elements
+        const boardEl = document.getElementById('game-board');
+        const mineCountEl = document.getElementById('mine-count');
+        const timerEl = document.getElementById('timer');
+        const resetBtn = document.getElementById('reset-btn');
+        const flagToggleBtn = document.getElementById('flag-toggle');
+
+        function initGame() {
+            // Reset State
+            clearInterval(timerInterval);
+            time = 0;
+            timerEl.textContent = '000';
+            flags = 0;
+            revealedCount = 0;
+            gameState = 'idle';
+            updateMineCount();
+            resetBtn.textContent = '🙂';
+            boardEl.classList.remove('shake');
+            
+            // Build Grid
+            boardEl.innerHTML = '';
+            grid = new Array(BOARD_SIZE * BOARD_SIZE).fill(null).map((_, i) => ({
+                index: i,
+                isMine: false,
+                isRevealed: false,
+                isFlagged: false,
+                neighborCount: 0,
+                el: null
+            }));
+
+            // Create DOM
+            grid.forEach(cell => {
+                const el = document.createElement('div');
+                el.className = 'cell';
+                el.dataset.index = cell.index;
+                
+                // --- Enhanced Touch/Mouse Input Handling ---
+                let touchStartX = 0;
+                let touchStartY = 0;
+                let isTouching = false;
+
+                // TOUCH START
+                el.addEventListener('touchstart', (e) => {
+                    if (gameState === 'lost' || gameState === 'won') return;
+                    isTouching = true;
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    el.classList.add('pressed');
+                    handleInputDown(); // Face reaction
+                }, { passive: false });
+
+                // TOUCH END
+                el.addEventListener('touchend', (e) => {
+                    if (!isTouching) return;
+                    el.classList.remove('pressed');
+                    resetBtn.textContent = '🙂'; // Restore face
+
+                    if (gameState === 'lost' || gameState === 'won') return;
+
+                    // Calculate movement distance
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const touchEndY = e.changedTouches[0].clientY;
+                    const dist = Math.hypot(touchEndX - touchStartX, touchEndY - touchStartY);
+
+                    // If simple tap (moved less than 15px), trigger action
+                    if (dist < 15) {
+                        e.preventDefault(); // Stop mouse emulation
+                        handleCellAction(cell, false); // false = not right click
+                    }
+                    isTouching = false;
+                });
+
+                // TOUCH CANCEL
+                el.addEventListener('touchcancel', () => {
+                    isTouching = false;
+                    el.classList.remove('pressed');
+                    resetBtn.textContent = '🙂';
+                });
+
+                // MOUSE DOWN
+                el.addEventListener('mousedown', (e) => {
+                    // Only react if not already handled by touch
+                    if(e.button === 0) {
+                        handleInputDown();
+                    }
+                });
+
+                // MOUSE UP
+                el.addEventListener('mouseup', (e) => {
+                    resetBtn.textContent = '🙂';
+                    if (gameState === 'lost' || gameState === 'won') return;
+                    
+                    // Left Click
+                    if (e.button === 0) {
+                        handleCellAction(cell, false);
+                    }
+                });
+                
+                // RIGHT CLICK (Context Menu)
+                el.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    if(gameState === 'lost' || gameState === 'won') return;
+                    handleCellAction(cell, true);
+                });
+                
+                cell.el = el;
+                boardEl.appendChild(el);
+            });
+            
+            // Re-check layout
+            resizeBoard();
+        }
+
+        function generateMines(safeIndex) {
+            let minesPlaced = 0;
+            while (minesPlaced < MINES) {
+                const idx = Math.floor(Math.random() * (BOARD_SIZE * BOARD_SIZE));
+                if (!grid[idx].isMine && idx !== safeIndex) {
+                    grid[idx].isMine = true;
+                    minesPlaced++;
+                }
+            }
+            calculateNeighbors();
+        }
+
+        function calculateNeighbors() {
+            grid.forEach(cell => {
+                if (cell.isMine) return;
+                const neighbors = getNeighbors(cell.index);
+                cell.neighborCount = neighbors.filter(n => n.isMine).length;
+            });
+        }
+
+        function getNeighbors(index) {
+            const x = index % BOARD_SIZE;
+            const y = Math.floor(index / BOARD_SIZE);
+            const neighbors = [];
+
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    if (dx === 0 && dy === 0) continue;
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
+                        neighbors.push(grid[ny * BOARD_SIZE + nx]);
+                    }
+                }
+            }
+            return neighbors;
+        }
+
+        // Input Logic Handlers
+        function handleInputDown() {
+            if (gameState !== 'lost' && gameState !== 'won') {
+                resetBtn.textContent = '😮';
+            }
+        }
+
+        function handleCellAction(cell, isRightClick) {
+            AudioEngine.init(); // Ensure audio is ready on first interaction
+
+            if (isRightClick) {
+                toggleFlag(cell);
+                return;
+            }
+
+            // Flag Mode (Mobile Toggle)
+            if (isFlagMode) {
+                toggleFlag(cell);
+                return;
+            }
+
+            // First Move
+            if (gameState === 'idle') {
+                startGame(cell.index);
+            }
+
+            if (!cell.isFlagged) {
+                if (cell.isRevealed) {
+                    attemptChord(cell);
+                } else {
+                    revealCell(cell);
+                }
+            }
+        }
+
+        function startGame(firstIndex) {
+            gameState = 'playing';
+            generateMines(firstIndex);
+            startTimer();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                time++;
+                timerEl.textContent = time.toString().padStart(3, '0');
+                if (time > 999) clearInterval(timerInterval);
+            }, 1000);
+        }
+
+        function revealCell(cell) {
+            if (cell.isRevealed || cell.isFlagged) return;
+
+            cell.isRevealed = true;
+            revealedCount++;
+            cell.el.classList.add('revealed');
+            
+            if (cell.isMine) {
+                gameOver(cell);
+            } else {
+                AudioEngine.reveal();
+                if (cell.neighborCount > 0) {
+                    cell.el.textContent = cell.neighborCount;
+                    cell.el.dataset.num = cell.neighborCount;
+                } else {
+                    const neighbors = getNeighbors(cell.index);
+                    setTimeout(() => {
+                        neighbors.forEach(n => revealCell(n));
+                    }, 20); 
+                }
+                checkWin();
+            }
+        }
+
+        function toggleFlag(cell) {
+            if (gameState !== 'playing' && gameState !== 'idle') return;
+            if (cell.isRevealed) return;
+
+            cell.isFlagged = !cell.isFlagged;
+            if (cell.isFlagged) {
+                cell.el.classList.add('flagged');
+                flags++;
+                AudioEngine.flag();
+            } else {
+                cell.el.classList.remove('flagged');
+                flags--;
+                AudioEngine.unflag();
+            }
+            updateMineCount();
+        }
+
+        function attemptChord(cell) {
+            if (!cell.isRevealed || cell.neighborCount === 0) return;
+
+            const neighbors = getNeighbors(cell.index);
+            const flaggedNeighbors = neighbors.filter(n => n.isFlagged).length;
+
+            if (flaggedNeighbors === cell.neighborCount) {
+                let didReveal = false;
+                neighbors.forEach(n => {
+                    if (!n.isRevealed && !n.isFlagged) {
+                        revealCell(n);
+                        didReveal = true;
+                    }
+                });
+                if(didReveal) AudioEngine.chord();
+            }
+        }
+
+        function updateMineCount() {
+            mineCountEl.textContent = Math.max(0, MINES - flags);
+        }
+
+        function gameOver(triggerCell) {
+            gameState = 'lost';
+            clearInterval(timerInterval);
+            resetBtn.textContent = '😵';
+            AudioEngine.explode();
+            boardEl.classList.add('shake');
+
+            triggerCell.el.classList.add('detonated');
+            triggerCell.el.textContent = '💣';
+
+            grid.forEach(cell => {
+                if (cell.isMine && !cell.isFlagged) {
+                    setTimeout(() => {
+                        cell.el.classList.add('revealed', 'mine');
+                        cell.el.textContent = '💣';
+                    }, Math.random() * 300);
+                } else if (!cell.isMine && cell.isFlagged) {
+                    cell.el.style.backgroundColor = '#fecaca';
+                }
+            });
+        }
+
+        function checkWin() {
+            const safeCells = (BOARD_SIZE * BOARD_SIZE) - MINES;
+            if (revealedCount === safeCells) {
+                gameState = 'won';
+                clearInterval(timerInterval);
+                resetBtn.textContent = '😎';
+                mineCountEl.textContent = '0';
+                AudioEngine.win();
+                
+                grid.forEach(cell => {
+                    if (cell.isMine && !cell.isFlagged) {
+                        cell.isFlagged = true;
+                        cell.el.classList.add('flagged');
+                    }
+                });
+                
+                boardEl.style.transform = "rotateX(0deg) scale(1.05)";
+                setTimeout(() => {
+                    boardEl.style.transform = "";
+                }, 500);
+            }
+        }
+
+        function setDifficulty(diff) {
+            if (diff === 'normal') {
+                MINES = 10;
+                document.getElementById('mode-normal').classList.add('active');
+                document.getElementById('mode-hard').classList.remove('active');
+            } else {
+                MINES = 16;
+                document.getElementById('mode-hard').classList.add('active');
+                document.getElementById('mode-normal').classList.remove('active');
+            }
+            initGame();
+        }
+
+        function resizeBoard() {
+            // Adjust perspective for very small screens if necessary
+            if (window.innerWidth < 350) {
+                boardEl.style.transform = 'rotateX(5deg)';
+            } else {
+                boardEl.style.removeProperty('transform');
+            }
+        }
+
+        window.addEventListener('resize', resizeBoard);
+
+        // Global Listeners
+        resetBtn.addEventListener('click', initGame);
+        resetBtn.addEventListener('touchend', (e) => {
+            e.preventDefault(); // Prevent double firing
+            initGame();
+        });
+
+        flagToggleBtn.addEventListener('click', () => {
+            isFlagMode = !isFlagMode;
+            flagToggleBtn.classList.toggle('active', isFlagMode);
+            AudioEngine.click();
+        });
+        flagToggleBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isFlagMode = !isFlagMode;
+            flagToggleBtn.classList.toggle('active', isFlagMode);
+            AudioEngine.click();
+        });
+
+        // Initialize
+        initGame();
+
+    </script>
+</body>
+</html>
