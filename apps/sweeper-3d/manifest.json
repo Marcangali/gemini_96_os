@@ -1,0 +1,10 @@
+{
+  "id": "sweeper-3d",
+  "name": "Sweeper 3D",
+  "description": "Modern 3D minesweeper with polished visuals and sound effects.",
+  "category": "Custom",
+  "icon": "https://i.ibb.co/HLsz6gsQ/2601ceac0582.png",
+  "width": 380,
+  "height": 560,
+  "version": "v7"
+}
