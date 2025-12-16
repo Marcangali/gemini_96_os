@@ -1,0 +1,1041 @@
+<!--
+APP_NAME: Smash 3D
+APP_DESCRIPTION: Throw colorful plates to smash 3D towers in this physics arcade game.
+APP_ICON: https://i.ibb.co/mCdZvfMS/d74515d961de.png
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+STORE_ID: plate-smash-3d
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smash 3D</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --primary-color: #0078d4;
+            --primary-hover: #006cc1;
+            --text-color: #202020;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            font-family: var(--font-family);
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.mobile-mode .ui-layer button {
+            padding: 16px 32px;
+            font-size: 1.2rem;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 16px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .score-pill {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            color: var(--text-color);
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .level-display {
+            position: absolute;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            text-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.4s, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        .level-display.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .menu-screen {
+            background: rgba(240, 240, 240, 0.85);
+            backdrop-filter: blur(20px);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 20;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin: 0 0 15px 0;
+            background: linear-gradient(135deg, #0078d4, #00bcf2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -2px;
+            text-shadow: 0 2px 10px rgba(0,120,212,0.2);
+        }
+
+        p {
+            color: #555;
+            margin-bottom: 35px;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        button {
+            background: linear-gradient(135deg, #0078d4, #005a9e);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 16px rgba(0, 120, 212, 0.25);
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform: translateY(0);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(0, 120, 212, 0.35);
+            filter: brightness(1.1);
+        }
+
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 4px 8px rgba(0, 120, 212, 0.2);
+        }
+
+        .instruction {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #777;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .instruction span {
+            font-size: 1.5rem;
+            animation: bounce 1.5s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="world"></canvas>
+
+        <div id="hud" class="hud hidden">
+            <div class="score-pill">Level <span id="level-val">1</span></div>
+            <div class="score-pill">Score <span id="score-val">0</span></div>
+            <div class="score-pill">Plates <span id="plates-val">5</span></div>
+        </div>
+
+        <div id="level-msg" class="level-display">LEVEL UP!</div>
+
+        <div id="start-screen" class="menu-screen ui-layer">
+            <h1>Smash 3D</h1>
+            <p>Smash the towers with colorful plates!</p>
+            <button id="btn-start">PLAY NOW</button>
+            <div class="instruction">
+                <span>👆</span>
+                Swipe UP to throw
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="menu-screen ui-layer hidden">
+            <h1>Game Over</h1>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button id="btn-restart">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Audio Engine (Synthesized Sounds)
+         */
+        const AudioSys = {
+            ctx: null,
+            init: function() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            playThrow: function() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                // Swoosh sound
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, t);
+                osc.frequency.exponentialRampToValueAtTime(800, t + 0.15);
+                
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.linearRampToValueAtTime(0.3, t + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.3);
+            },
+            playShatter: function(pitchMod = 1) {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                
+                // High frequency snaps for glass
+                for(let i=0; i<4; i++) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    // Vary pitch slightly
+                    osc.frequency.setValueAtTime((800 + Math.random()*1200) * pitchMod, t + i*0.04);
+                    
+                    gain.gain.setValueAtTime(0.15, t + i*0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.04 + 0.08);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t + i*0.04);
+                    osc.stop(t + i*0.04 + 0.1);
+                }
+
+                // Crash noise
+                const bufferSize = this.ctx.sampleRate * 0.4; 
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gainNoise = this.ctx.createGain();
+                
+                // Lowpass filter to make it sound solid
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(3000, t);
+                filter.frequency.linearRampToValueAtTime(500, t + 0.3);
+
+                gainNoise.gain.setValueAtTime(0.4, t);
+                gainNoise.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                
+                noise.connect(filter);
+                filter.connect(gainNoise);
+                gainNoise.connect(this.ctx.destination);
+                noise.start(t);
+            },
+            playLevelUp: function() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                
+                // Major chord arpeggio
+                const freqs = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+                freqs.forEach((f, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(f, t + i*0.08);
+                    
+                    gain.gain.setValueAtTime(0.1, t + i*0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.08 + 0.6);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t + i*0.08);
+                    osc.stop(t + i*0.08 + 0.6);
+                });
+            }
+        };
+
+        /**
+         * Game Engine
+         */
+        const canvas = document.getElementById('world');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        let width, height;
+
+        // State
+        let gameState = 'MENU';
+        let score = 0;
+        let platesLeft = 10;
+        let level = 1;
+        let lastTime = 0;
+
+        // Camera
+        const camera = { x: 0, y: 2.2, z: -5 };
+        const fov = 500;
+
+        // Physics Constants - Improved for "better throwing"
+        const GRAVITY = 20; // Heavier gravity
+        const DRAG_MULTIPLIER_X = 0.03;
+        const DRAG_MULTIPLIER_Y = 0.05; // Swipe sensitivity
+        const THROW_Z_FORCE = 2.0; // Multiplier for forward speed
+
+        // Objects
+        let plates = [];
+        let targets = [];
+        let shards = [];
+        
+        // Input
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let currentDrag = { x: 0, y: 0 };
+
+        class Vector3 {
+            constructor(x, y, z) { this.x = x; this.y = y; this.z = z; }
+        }
+
+        class Plate {
+            constructor() {
+                this.pos = new Vector3(0, 1.2, -3.5);
+                this.vel = new Vector3(0, 0, 0);
+                this.active = false;
+                this.radius = 0.35;
+                
+                // Random Color Generation
+                const hue = Math.floor(Math.random() * 360);
+                this.colorMain = `hsl(${hue}, 85%, 60%)`;
+                this.colorRim = `hsl(${hue}, 85%, 45%)`; // Darker rim
+                
+                // Animation states
+                this.rotX = 0; // Flipping rotation
+                this.rotZ = 0; // Spinning
+            }
+            update(dt) {
+                if (this.active) {
+                    this.pos.x += this.vel.x * dt;
+                    this.pos.y += this.vel.y * dt;
+                    this.pos.z += this.vel.z * dt;
+                    this.vel.y -= GRAVITY * dt; 
+                    
+                    // Add "Air Resistance"
+                    this.vel.x *= 0.99;
+                    this.vel.z *= 0.99;
+
+                    // 3D Flip animation
+                    this.rotX += 15 * dt; 
+                }
+            }
+        }
+
+        class Target {
+            constructor(x, y, z) {
+                this.pos = new Vector3(x, y, z);
+                // Dimensions
+                this.width = 0.6;
+                this.height = 0.6;
+                this.depth = 0.6;
+                
+                this.active = true;
+                // Pastel colors
+                const hue = Math.floor(Math.random() * 360);
+                this.colorFront = `hsl(${hue}, 70%, 75%)`;
+                this.colorTop = `hsl(${hue}, 70%, 85%)`;
+                this.colorSide = `hsl(${hue}, 70%, 65%)`;
+
+                // Spawn animation
+                this.targetY = y;
+                this.pos.y = y + 8; 
+                this.dropSpeed = 0;
+            }
+            update(dt) {
+                if (this.pos.y > this.targetY) {
+                    this.dropSpeed += 30 * dt;
+                    this.pos.y -= this.dropSpeed * dt;
+                    if (this.pos.y < this.targetY) {
+                        this.pos.y = this.targetY;
+                        this.dropSpeed = 0;
+                        // Little bounce could be added here
+                    }
+                }
+            }
+            
+            // Helper to get corners for 3D drawing
+            getVertices() {
+                const w = this.width/2;
+                const h = this.height/2;
+                const d = this.depth/2;
+                return [
+                    // Front Face (z - d)
+                    {x: this.pos.x - w, y: this.pos.y + h, z: this.pos.z - d}, // TL
+                    {x: this.pos.x + w, y: this.pos.y + h, z: this.pos.z - d}, // TR
+                    {x: this.pos.x + w, y: this.pos.y - h, z: this.pos.z - d}, // BR
+                    {x: this.pos.x - w, y: this.pos.y - h, z: this.pos.z - d}, // BL
+                    // Back Face (z + d)
+                    {x: this.pos.x - w, y: this.pos.y + h, z: this.pos.z + d}, // TL
+                    {x: this.pos.x + w, y: this.pos.y + h, z: this.pos.z + d}, // TR
+                    {x: this.pos.x + w, y: this.pos.y - h, z: this.pos.z + d}, // BR
+                    {x: this.pos.x - w, y: this.pos.y - h, z: this.pos.z + d}, // BL
+                ];
+            }
+        }
+
+        class Shard {
+            constructor(x, y, z, color) {
+                this.pos = new Vector3(x, y, z);
+                this.vel = new Vector3(
+                    (Math.random()-0.5)*10, 
+                    (Math.random())*8 + 2, 
+                    (Math.random()-0.5)*10
+                );
+                this.life = 1.0;
+                this.color = color;
+                
+                // Random triangle
+                const size = 0.15;
+                this.points = [
+                    {x: (Math.random()-0.5)*size, y: (Math.random()-0.5)*size},
+                    {x: (Math.random()-0.5)*size, y: (Math.random()-0.5)*size},
+                    {x: (Math.random()-0.5)*size, y: (Math.random()-0.5)*size}
+                ];
+                this.rot = Math.random() * Math.PI;
+                this.rotSpeed = (Math.random()-0.5) * 15;
+            }
+            update(dt) {
+                this.pos.x += this.vel.x * dt;
+                this.pos.y += this.vel.y * dt;
+                this.pos.z += this.vel.z * dt;
+                this.vel.y -= GRAVITY * dt;
+                
+                this.rot += this.rotSpeed * dt;
+
+                if (this.pos.y < 0) {
+                    this.pos.y = 0;
+                    this.vel.y = -this.vel.y * 0.5;
+                    this.vel.x *= 0.8; 
+                    this.vel.z *= 0.8;
+                    this.rotSpeed *= 0.5;
+                }
+                
+                this.life -= dt * 0.8;
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function initGame() {
+            score = 0;
+            platesLeft = 10;
+            level = 1;
+            plates = [new Plate()];
+            shards = [];
+            startLevel(level);
+        }
+
+        function startLevel(lvl) {
+            targets = [];
+            document.getElementById('level-val').textContent = lvl;
+            
+            // Layout Generators
+            const layouts = [
+                // 1. Basic Wall
+                () => {
+                    for (let x = -1.2; x <= 1.2; x+=0.7) {
+                        for(let y=0; y<3; y++) targets.push(new Target(x, 0.5 + (y * 0.7), 6));
+                    }
+                },
+                // 2. Pyramid
+                () => {
+                    for(let y=0; y<4; y++) {
+                        const count = 4 - y;
+                        for(let x=0; x<count; x++) {
+                            const offset = (count - 1) * 0.35;
+                            targets.push(new Target((x * 0.7) - offset, 0.5 + y * 0.7, 7));
+                        }
+                    }
+                },
+                // 3. Deep Corridor
+                () => {
+                    for(let z=0; z<5; z++) {
+                        targets.push(new Target(-1.5, 0.5, 5 + z*1.5));
+                        targets.push(new Target(1.5, 0.5, 5 + z*1.5));
+                        if (z%2===0) targets.push(new Target(0, 1.5, 5 + z*1.5));
+                    }
+                }
+            ];
+
+            const gen = layouts[(lvl - 1) % layouts.length];
+            gen();
+            
+            // Add some randomness for higher levels
+            if (lvl > 3) {
+                 const extra = Math.min(lvl, 10);
+                 for(let i=0; i<extra; i++) {
+                     targets.push(new Target((Math.random()-0.5)*4, 0.5 + Math.random()*3, 5 + Math.random()*5));
+                 }
+            }
+            
+            updateHUD();
+        }
+
+        function project(p) {
+            const dist = p.z - camera.z;
+            if (dist <= 0.1) return { x: 0, y: 0, scale: 0, visible: false, dist: dist };
+            
+            const scaleFactor = fov / dist;
+            const x2d = width / 2 + (p.x - camera.x) * scaleFactor;
+            const y2d = height / 2 - (p.y - camera.y) * scaleFactor;
+            
+            return { x: x2d, y: y2d, scale: scaleFactor, visible: true, dist: dist };
+        }
+
+        function spawnShards(pos, color = '#fff') {
+            for(let i=0; i<6; i++) {
+                shards.push(new Shard(pos.x, pos.y, pos.z, color));
+            }
+        }
+
+        function update(dt) {
+            if (gameState !== 'PLAYING') return;
+
+            targets.forEach(t => t.update(dt));
+
+            for (let i = plates.length - 1; i >= 0; i--) {
+                const p = plates[i];
+                p.update(dt);
+
+                if (p.pos.y < 0) {
+                    AudioSys.playShatter(0.8);
+                    spawnShards(p.pos, p.colorMain);
+                    plates.splice(i, 1);
+                    checkNextTurn();
+                    continue;
+                }
+
+                let hit = false;
+                for (let j = targets.length - 1; j >= 0; j--) {
+                    const t = targets[j];
+                    
+                    // Simple AABB Collision for cubes
+                    const dx = Math.abs(p.pos.x - t.pos.x);
+                    const dy = Math.abs(p.pos.y - t.pos.y);
+                    const dz = Math.abs(p.pos.z - t.pos.z);
+                    
+                    if (dx < (t.width/2 + p.radius*0.5) && 
+                        dy < (t.height/2 + p.radius*0.5) && 
+                        dz < (t.depth/2 + p.radius*0.5)) {
+                        
+                        hit = true;
+                        AudioSys.playShatter(1.2);
+                        spawnShards(t.pos, t.colorFront);
+                        score += 100 * level;
+                        targets.splice(j, 1);
+                        
+                        // Physics reaction
+                        p.vel.z *= -0.4;
+                        p.vel.y = 5;
+                        p.vel.x += (Math.random()-0.5)*5;
+                        break; 
+                    }
+                }
+                
+                if (hit) updateHUD();
+
+                if (p.pos.z > 30) {
+                    plates.splice(i, 1);
+                    checkNextTurn();
+                }
+            }
+
+            for (let i = shards.length - 1; i >= 0; i--) {
+                shards[i].update(dt);
+                if (shards[i].life <= 0) shards.splice(i, 1);
+            }
+
+            if (targets.length === 0 && gameState === 'PLAYING') {
+                nextLevel();
+            }
+        }
+
+        function checkNextTurn() {
+            if (plates.length === 0) {
+                if (platesLeft > 0) {
+                    // Small delay before next plate
+                    setTimeout(() => {
+                        if (gameState === 'PLAYING' && plates.length === 0) {
+                            plates.push(new Plate());
+                        }
+                    }, 300);
+                } else if (targets.length > 0) {
+                    setTimeout(() => {
+                        if(targets.length > 0 && plates.length === 0) endGame();
+                    }, 800);
+                }
+            }
+        }
+
+        function nextLevel() {
+            AudioSys.playLevelUp();
+            level++;
+            platesLeft += 5;
+            
+            const msg = document.getElementById('level-msg');
+            msg.textContent = "LEVEL " + level;
+            msg.classList.add('show');
+            setTimeout(() => msg.classList.remove('show'), 2000);
+            
+            plates = [];
+            plates.push(new Plate());
+            startLevel(level);
+        }
+
+        // Draw Helper: 3D Cube
+        function drawTarget3D(t, ctx) {
+            const vertices = t.getVertices().map(v => project(v));
+            if (vertices.some(v => !v.visible)) return; // Simple culling
+
+            // Calculate face visibility based on center relative to camera
+            // Camera is at x=0, so if x>0 we see Left Side? No.
+            // Vertices indices: 
+            // Front: 0,1,2,3. Back: 4,5,6,7
+            // 0:TLf, 1:TRf, 2:BRf, 3:BLf
+            // 4:TLb, 5:TRb, 6:BRb, 7:BLb
+            
+            // Draw Back Face (usually hidden, but for transparency/glass effect? Nah, opaque)
+            
+            // Draw Faces based on position
+            // We always see Front Face
+            // If y > camera.y (low), we see Top (0,1,5,4)
+            // If x > camera.x, we see Left Side (0,3,7,4)
+            // If x < camera.x, we see Right Side (1,2,6,5)
+            
+            const seeTop = t.pos.y < camera.y + 10; // Simple approximation
+            const seeRight = t.pos.x < camera.x;
+            const seeLeft = t.pos.x >= camera.x;
+
+            ctx.lineWidth = 1;
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+
+            // Back faces (rendered first if needed, but skipping for speed)
+
+            // Side Faces
+            if (seeLeft) {
+                ctx.fillStyle = t.colorSide;
+                ctx.beginPath();
+                ctx.moveTo(vertices[0].x, vertices[0].y); // TLf
+                ctx.lineTo(vertices[4].x, vertices[4].y); // TLb
+                ctx.lineTo(vertices[7].x, vertices[7].y); // BLb
+                ctx.lineTo(vertices[3].x, vertices[3].y); // BLf
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+            if (seeRight) {
+                ctx.fillStyle = t.colorSide;
+                ctx.beginPath();
+                ctx.moveTo(vertices[1].x, vertices[1].y); // TRf
+                ctx.lineTo(vertices[5].x, vertices[5].y); // TRb
+                ctx.lineTo(vertices[6].x, vertices[6].y); // BRb
+                ctx.lineTo(vertices[2].x, vertices[2].y); // BRf
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Top Face
+            if (seeTop) {
+                ctx.fillStyle = t.colorTop;
+                ctx.beginPath();
+                ctx.moveTo(vertices[0].x, vertices[0].y); // TLf
+                ctx.lineTo(vertices[1].x, vertices[1].y); // TRf
+                ctx.lineTo(vertices[5].x, vertices[5].y); // TRb
+                ctx.lineTo(vertices[4].x, vertices[4].y); // TLb
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Front Face (Always on top of sides/top)
+            ctx.fillStyle = t.colorFront;
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            ctx.lineTo(vertices[1].x, vertices[1].y);
+            ctx.lineTo(vertices[2].x, vertices[2].y);
+            ctx.lineTo(vertices[3].x, vertices[3].y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            // Shininess
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            ctx.lineTo(vertices[1].x, vertices[1].y);
+            ctx.lineTo(vertices[1].x, vertices[1].y + (vertices[2].y-vertices[1].y)*0.2);
+            ctx.lineTo(vertices[0].x, vertices[0].y + (vertices[3].y-vertices[0].y)*0.2);
+            ctx.fill();
+        }
+
+        function draw() {
+            // Background
+            ctx.fillStyle = '#eef2f5';
+            ctx.fillRect(0, 0, width, height);
+
+            // Floor
+            const projOrigin = project({x:0, y:0, z:100});
+            const horizonY = projOrigin.y;
+            
+            // Sky
+            const gradSky = ctx.createLinearGradient(0, 0, 0, horizonY);
+            gradSky.addColorStop(0, '#dbebf5');
+            gradSky.addColorStop(1, '#f5f7fa');
+            ctx.fillStyle = gradSky;
+            ctx.fillRect(0, 0, width, horizonY);
+
+            // Floor
+            const gradFloor = ctx.createLinearGradient(0, horizonY, 0, height);
+            gradFloor.addColorStop(0, '#d1d8dd');
+            gradFloor.addColorStop(1, '#ffffff');
+            ctx.fillStyle = gradFloor;
+            ctx.fillRect(0, horizonY, width, height - horizonY);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            // Z lines
+            for(let x=-10; x<=10; x+=2) {
+                const p1 = project({x:x, y:0, z:0});
+                const p2 = project({x:x, y:0, z:30});
+                if(p1.visible && p2.visible) { ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); }
+            }
+            // X lines
+            for(let z=0; z<30; z+=2) {
+                const p1 = project({x:-15, y:0, z:z});
+                const p2 = project({x:15, y:0, z:z});
+                if(p1.visible && p2.visible) { ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); }
+            }
+            ctx.stroke();
+
+            // Render List
+            let renderList = [];
+            targets.forEach(t => renderList.push({ type: 'target', obj: t, z: t.pos.z }));
+            plates.forEach(p => renderList.push({ type: 'plate', obj: p, z: p.pos.z }));
+            shards.forEach(s => renderList.push({ type: 'shard', obj: s, z: s.pos.z }));
+            
+            // Sort back to front
+            renderList.sort((a, b) => b.z - a.z);
+
+            // Shadows first
+            ctx.fillStyle = 'rgba(0,0,0,0.12)';
+            renderList.forEach(item => {
+                const o = item.obj;
+                if (item.type === 'target' || item.type === 'plate') {
+                    const shadowPos = {x: o.pos.x, y: 0.05, z: o.pos.z}; // Slightly above 0 to z-fight
+                    const proj = project(shadowPos);
+                    if (proj.visible) {
+                        const s = (item.type==='target'?0.6:0.35) * proj.scale;
+                        ctx.beginPath();
+                        ctx.ellipse(proj.x, proj.y, s, s*0.4, 0, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+            });
+
+            // Draw Objects
+            renderList.forEach(item => {
+                if (item.type === 'target') {
+                    drawTarget3D(item.obj, ctx);
+                } else if (item.type === 'plate') {
+                    const p = item.obj;
+                    const proj = project(p.pos);
+                    if (!proj.visible) return;
+                    
+                    const r = p.radius * proj.scale;
+                    
+                    ctx.save();
+                    ctx.translate(proj.x, proj.y);
+                    
+                    if (p.active) {
+                        // Flying state - flipping
+                        const flipScale = Math.cos(p.rotX);
+                        ctx.scale(1, flipScale);
+                        // Draw thickness (fake 3D cylinder)
+                        if (Math.abs(flipScale) > 0.1) {
+                            ctx.fillStyle = p.colorRim;
+                            ctx.beginPath();
+                            ctx.arc(0, 5 * proj.scale * Math.sign(flipScale), r, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    } else {
+                        // Idle in hand
+                        if(isDragging && p === plates[0]) {
+                             // Lag behind mouse slightly
+                             const dragX = (currentDrag.x - dragStart.x) * 0.1;
+                             const dragY = (currentDrag.y - dragStart.y) * 0.1;
+                             ctx.translate(dragX, dragY);
+                             
+                             // Visualizing tilt based on drag
+                             ctx.rotate((currentDrag.x - dragStart.x) * 0.002);
+                        }
+                        ctx.scale(1, 0.4); // Idle perspective
+                        
+                        // Thickness
+                        ctx.fillStyle = p.colorRim;
+                        ctx.beginPath();
+                        ctx.arc(0, 8, r, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    // Main face
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.fillStyle = p.colorMain;
+                    ctx.fill();
+                    
+                    // Detail rings
+                    ctx.lineWidth = Math.max(1, r * 0.05);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r * 0.7, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.restore();
+
+                } else if (item.type === 'shard') {
+                    const s = item.obj;
+                    const proj = project(s.pos);
+                    if (!proj.visible) return;
+
+                    ctx.save();
+                    ctx.translate(proj.x, proj.y);
+                    ctx.rotate(s.rot);
+                    ctx.fillStyle = s.color;
+                    ctx.globalAlpha = s.life;
+                    
+                    const sc = proj.scale * 200;
+                    ctx.beginPath();
+                    ctx.moveTo(s.points[0].x * sc, s.points[0].y * sc);
+                    ctx.lineTo(s.points[1].x * sc, s.points[1].y * sc);
+                    ctx.lineTo(s.points[2].x * sc, s.points[2].y * sc);
+                    ctx.fill();
+                    
+                    ctx.restore();
+                }
+            });
+
+            // Drag UI
+            if (isDragging && gameState === 'PLAYING') {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([10, 10]);
+                ctx.beginPath();
+                ctx.moveTo(dragStart.x, dragStart.y);
+                ctx.lineTo(currentDrag.x, currentDrag.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Aim hint
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.beginPath();
+                ctx.arc(dragStart.x, dragStart.y, 10, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        function loop(timestamp) {
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+            update(dt);
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Input
+        function onDown(x, y) {
+            if (gameState !== 'PLAYING') return;
+            const currentPlate = plates[0];
+            if (!currentPlate || currentPlate.active) return;
+            isDragging = true;
+            dragStart = { x, y };
+            currentDrag = { x, y };
+        }
+
+        function onMove(x, y) {
+            if (!isDragging) return;
+            currentDrag = { x, y };
+        }
+
+        function onUp() {
+            if (!isDragging) return;
+            isDragging = false;
+            const dx = currentDrag.x - dragStart.x;
+            const dy = currentDrag.y - dragStart.y;
+            // Throw threshold
+            if (Math.abs(dy) > 30 || Math.abs(dx) > 30) throwPlate(dx, dy);
+        }
+
+        function throwPlate(dx, dy) {
+            const plate = plates[0];
+            if (!plate) return;
+            
+            // Only throw if aiming UP (dragging UP) or mostly UP
+            // dy is negative when dragging up
+            if (dy > 100) return; // Prevent throwing downwards violently
+
+            plate.active = true;
+            platesLeft--;
+            updateHUD();
+            AudioSys.playThrow();
+
+            // Refined Physics for "Better Throwing"
+            // X: Lateral movement
+            plate.vel.x = dx * DRAG_MULTIPLIER_X;
+            
+            // Y: Upward arc (inverted dy)
+            // Clamp speed to prevent insane velocities
+            const throwSpeedY = Math.min(Math.abs(dy) * DRAG_MULTIPLIER_Y, 15);
+            plate.vel.y = 2 + throwSpeedY; 
+            
+            // Z: Forward speed. More vertical drag = more forward power too
+            const forwardPower = Math.abs(dy) * 0.05 * THROW_Z_FORCE;
+            plate.vel.z = Math.min(Math.max(8, forwardPower), 25);
+            
+            // Add spin
+            plate.rotSpeed = 10 + Math.random()*10;
+        }
+
+        // Events
+        canvas.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onUp);
+        
+        canvas.addEventListener('touchstart', e => { 
+            e.preventDefault(); 
+            onDown(e.touches[0].clientX, e.touches[0].clientY); 
+        }, {passive: false});
+        
+        window.addEventListener('touchmove', e => { 
+            e.preventDefault(); // Prevent scrolling
+            onMove(e.touches[0].clientX, e.touches[0].clientY); 
+        }, {passive: false});
+        
+        window.addEventListener('touchend', onUp);
+
+        // UI Logic
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const hud = document.getElementById('hud');
+
+        function updateHUD() {
+            document.getElementById('score-val').textContent = score;
+            document.getElementById('plates-val').textContent = platesLeft;
+        }
+
+        function startGame() {
+            AudioSys.init();
+            AudioSys.playLevelUp();
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            hud.classList.remove('hidden');
+            initGame();
+        }
+
+        function endGame() {
+            gameState = 'GAMEOVER';
+            hud.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+            document.getElementById('final-score').textContent = score;
+        }
+
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-restart').addEventListener('click', startGame);
+
+        requestAnimationFrame(loop);
+
+    </script>
+</body>
+</html>
