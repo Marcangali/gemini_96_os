@@ -1,0 +1,897 @@
+<!--
+APP_NAME: Smash 3D
+APP_DESCRIPTION: Throw colorful plates to smash towers in this physics-based arcade game.
+APP_ICON: https://i.ibb.co/mCdZvfMS/d74515d961de.png
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+STORE_ID: plate-smash-3d
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smash 3D</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --primary-color: #0078d4;
+            --primary-hover: #006cc1;
+            --text-color: #202020;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            font-family: var(--font-family);
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Mobile Mode Adjustments */
+        body.mobile-mode .ui-layer button {
+            padding: 16px 32px;
+            font-size: 1.2rem;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #f0f0f0 0%, #e0e0e0 100%);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .score-pill {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            color: var(--text-color);
+            display: flex;
+            gap: 8px;
+        }
+
+        .level-display {
+            position: absolute;
+            top: 25%;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+            z-index: 15;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.4s, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .level-display h2 {
+            font-size: 3.5rem;
+            margin: 0;
+            font-weight: 900;
+            background: linear-gradient(to bottom, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            filter: drop-shadow(0 2px 0px rgba(0,0,0,0.2));
+        }
+
+        .level-display .sub-text {
+            font-size: 1.2rem;
+            color: #444;
+            margin-top: 5px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.9);
+            padding: 4px 12px;
+            border-radius: 10px;
+        }
+
+        .level-display.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .menu-screen {
+            background: rgba(243, 243, 243, 0.8);
+            backdrop-filter: blur(20px);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            z-index: 20;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin: 0 0 10px 0;
+            background: linear-gradient(135deg, var(--primary-color), #00a4ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        p {
+            color: #555;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 120, 212, 0.3);
+            transition: transform 0.1s, background-color 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 120, 212, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .instruction {
+            margin-top: 24px;
+            font-size: 0.95rem;
+            color: #777;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="world"></canvas>
+
+        <div id="hud" class="hud hidden">
+            <div class="score-pill">Level <span id="level-val">1</span></div>
+            <div class="score-pill">Score: <span id="score-val">0</span></div>
+            <div class="score-pill">Plates: <span id="plates-val">5</span></div>
+        </div>
+
+        <div id="level-msg" class="level-display">
+            <h2>LEVEL UP!</h2>
+            <div class="sub-text">Bonus Points +500</div>
+        </div>
+
+        <div id="start-screen" class="menu-screen ui-layer">
+            <h1>Smash 3D</h1>
+            <p>Smash the towers with colorful plates!</p>
+            <button id="btn-start">Start Game</button>
+            <div class="instruction">Swipe UP to throw</div>
+        </div>
+
+        <div id="game-over-screen" class="menu-screen ui-layer hidden">
+            <h1>Game Over</h1>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button id="btn-restart">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Audio Engine
+         */
+        const AudioSys = {
+            ctx: null,
+            init: function() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            playThrow: function() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, t);
+                osc.frequency.exponentialRampToValueAtTime(800, t + 0.1);
+                
+                gain.gain.setValueAtTime(0.15, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.15);
+            },
+            playShatter: function() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                // High frequency snaps
+                for(let i=0; i<3; i++) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.setValueAtTime(1000 + Math.random()*1500, t + i*0.02);
+                    gain.gain.setValueAtTime(0.1, t + i*0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.02 + 0.1);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t + i*0.02);
+                    osc.stop(t + i*0.02 + 0.1);
+                }
+
+                // Crash noise
+                const bufferSize = this.ctx.sampleRate * 0.15; 
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gainNoise = this.ctx.createGain();
+                gainNoise.gain.setValueAtTime(0.25, t);
+                gainNoise.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.value = 2000;
+                
+                noise.connect(filter);
+                filter.connect(gainNoise);
+                gainNoise.connect(this.ctx.destination);
+                noise.start(t);
+            },
+            playLevelUp: function() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                
+                // Fanfare chord
+                [440, 554, 659, 880, 1108].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    
+                    osc.frequency.setValueAtTime(freq, t + i*0.05);
+                    
+                    gain.gain.setValueAtTime(0.0, t + i*0.05);
+                    gain.gain.linearRampToValueAtTime(0.1, t + i*0.05 + 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.05 + 1.0);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t + i*0.05);
+                    osc.stop(t + i*0.05 + 1.0);
+                });
+            }
+        };
+
+        /**
+         * Game Engine
+         */
+        const canvas = document.getElementById('world');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        let width, height;
+
+        // State
+        let gameState = 'MENU';
+        let score = 0;
+        let platesLeft = 10;
+        let level = 1;
+        let lastTime = 0;
+
+        // Camera
+        const camera = { x: 0, y: 1.5, z: -4 };
+        const fov = 500;
+
+        // Objects
+        let plates = [];
+        let targets = [];
+        let shards = [];
+        let confetti = [];
+        
+        // Interaction
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let currentDrag = { x: 0, y: 0 };
+
+        class Vector3 {
+            constructor(x, y, z) { this.x = x; this.y = y; this.z = z; }
+        }
+
+        class Plate {
+            constructor() {
+                this.pos = new Vector3(0, 1.2, -3);
+                this.vel = new Vector3(0, 0, 0);
+                this.active = false;
+                // Smaller plate as requested
+                this.radius = 0.16; 
+                this.rotation = 0;
+                
+                const hue = Math.floor(Math.random() * 360);
+                this.color = `hsl(${hue}, 85%, 70%)`;
+                this.rimColor = `hsl(${hue}, 85%, 50%)`;
+            }
+            update(dt) {
+                if (this.active) {
+                    this.pos.x += this.vel.x * dt;
+                    this.pos.y += this.vel.y * dt;
+                    this.pos.z += this.vel.z * dt;
+                    this.vel.y -= 12.0 * dt; 
+                    this.rotation += 20 * dt;
+                }
+            }
+        }
+
+        class Target {
+            constructor(x, y, z) {
+                this.pos = new Vector3(x, y, z);
+                this.width = 0.5;
+                this.height = 0.6;
+                this.depth = 0.5;
+                this.active = true;
+                this.color = `hsl(${Math.random() * 360}, 60%, 55%)`;
+                this.targetY = y;
+                this.pos.y = y + 8; 
+                this.dropSpeed = 0;
+            }
+            update(dt) {
+                if (this.pos.y > this.targetY) {
+                    this.dropSpeed += 25 * dt;
+                    this.pos.y -= this.dropSpeed * dt;
+                    if (this.pos.y < this.targetY) {
+                        this.pos.y = this.targetY;
+                        this.dropSpeed = 0;
+                        AudioSys.playShatter(); 
+                    }
+                }
+            }
+        }
+
+        class Shard {
+            constructor(x, y, z, color) {
+                this.pos = new Vector3(x, y, z);
+                this.vel = new Vector3(
+                    (Math.random()-0.5)*5, 
+                    (Math.random())*4 + 2, 
+                    (Math.random()-0.5)*5
+                );
+                this.life = 0.6;
+                this.color = color || `rgba(200, 200, 200, 0.8)`;
+                const size = 0.025; 
+                this.points = [
+                    {x: (Math.random()-0.5)*size, y: (Math.random()-0.5)*size},
+                    {x: (Math.random()-0.5)*size, y: (Math.random()-0.5)*size},
+                    {x: (Math.random()-0.5)*size, y: (Math.random()-0.5)*size}
+                ];
+                this.rot = Math.random() * Math.PI;
+                this.rotSpeed = (Math.random()-0.5) * 15;
+            }
+            update(dt) {
+                this.pos.x += this.vel.x * dt;
+                this.pos.y += this.vel.y * dt;
+                this.pos.z += this.vel.z * dt;
+                this.vel.y -= 15 * dt;
+                this.rot += this.rotSpeed * dt;
+                if (this.pos.y < 0) {
+                    this.pos.y = 0;
+                    this.vel.y = -this.vel.y * 0.3; 
+                }
+                if(this.life > 0) this.life -= dt * 1.0;
+            }
+        }
+
+        class Confetti {
+            constructor() {
+                // Spawn high above
+                this.pos = new Vector3((Math.random()-0.5)*8, 6, 0 + Math.random()*5);
+                this.vel = new Vector3((Math.random()-0.5)*2, -1 - Math.random(), (Math.random()-0.5)*2);
+                this.color = `hsl(${Math.random()*360}, 100%, 50%)`;
+                this.size = 0.05 + Math.random() * 0.05;
+                this.rot = Math.random() * Math.PI;
+                this.rotSpeed = (Math.random()-0.5) * 5;
+                this.life = 3.0;
+            }
+            update(dt) {
+                this.pos.x += this.vel.x * dt + Math.sin(this.life * 5) * 0.05; 
+                this.pos.y += this.vel.y * dt;
+                this.pos.z += this.vel.z * dt;
+                this.rot += this.rotSpeed * dt;
+                this.life -= dt;
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        function initGame() {
+            score = 0;
+            platesLeft = 10;
+            level = 1;
+            plates = [new Plate()];
+            shards = [];
+            confetti = [];
+            startLevel(level);
+        }
+
+        function startLevel(lvl) {
+            targets = [];
+            document.getElementById('level-val').textContent = lvl;
+            
+            // Random Level Generator logic - Made easier/closer
+            if (lvl === 1) {
+                // Simple Pyramid
+                for(let r=0; r<3; r++) {
+                    for(let c=0; c<=r; c++) {
+                        let xOff = (c * 0.6) - (r * 0.3);
+                        targets.push(new Target(xOff, 1 + ((2-r)*0.65), 5));
+                    }
+                }
+            } else {
+                // Procedural generation - More compact to make hitting easier
+                const count = Math.min(5 + lvl, 25);
+                for(let i=0; i<count; i++) {
+                    const tx = (Math.random() - 0.5) * 5; // Reduced spread
+                    const ty = 0.5 + Math.random() * 3.0; 
+                    const tz = 4 + Math.random() * 4;     // Closer range
+                    targets.push(new Target(tx, ty, tz));
+                }
+            }
+            updateHUD();
+        }
+
+        function project(p) {
+            const dist = p.z - camera.z;
+            if (dist <= 0.1) return { x: 0, y: 0, scale: 0, visible: false };
+            
+            const scaleFactor = fov / dist;
+            const x2d = width / 2 + (p.x - camera.x) * scaleFactor;
+            const y2d = height / 2 - (p.y - camera.y) * scaleFactor;
+            
+            return { x: x2d, y: y2d, scale: scaleFactor, visible: true, dist: dist };
+        }
+
+        function spawnShards(pos, color) {
+            for(let i=0; i<6; i++) {
+                shards.push(new Shard(pos.x, pos.y, pos.z, color));
+            }
+        }
+
+        function spawnConfetti() {
+            for(let i=0; i<40; i++) {
+                confetti.push(new Confetti());
+            }
+        }
+
+        function update(dt) {
+            if (gameState !== 'PLAYING') return;
+
+            // Targets
+            targets.forEach(t => t.update(dt));
+
+            // Plates
+            for (let i = plates.length - 1; i >= 0; i--) {
+                const p = plates[i];
+                p.update(dt);
+
+                // Floor Hit
+                if (p.pos.y < 0) {
+                    AudioSys.playShatter();
+                    spawnShards(p.pos, p.color);
+                    plates.splice(i, 1);
+                    checkNextTurn();
+                    continue;
+                }
+
+                // Target Hit - Hitbox made generous for easier gameplay
+                let hit = false;
+                for (let j = targets.length - 1; j >= 0; j--) {
+                    const t = targets[j];
+                    const zDiff = Math.abs(p.pos.z - t.pos.z);
+                    
+                    if (zDiff < 0.6) { // Generous depth check
+                        const xDiff = Math.abs(p.pos.x - t.pos.x);
+                        const yDiff = Math.abs(p.pos.y - t.pos.y);
+                        
+                        // Hitbox logic: Use divider < 1 to make hitbox bigger than visual
+                        if (xDiff < t.width/0.8 + p.radius && yDiff < t.height/0.8 + p.radius) {
+                            hit = true;
+                            AudioSys.playShatter();
+                            spawnShards(t.pos, t.color);
+                            score += 100 * level;
+                            targets.splice(j, 1);
+                            
+                            p.vel.z *= -0.2;
+                            p.vel.y += 3;
+                            p.vel.x += (Math.random()-0.5)*4;
+                            break; 
+                        }
+                    }
+                }
+                
+                if (hit) updateHUD();
+
+                if (p.pos.z > 30) {
+                    plates.splice(i, 1);
+                    checkNextTurn();
+                }
+            }
+
+            // Shards
+            for (let i = shards.length - 1; i >= 0; i--) {
+                shards[i].update(dt);
+                if (shards[i].life <= 0) shards.splice(i, 1);
+            }
+
+            // Confetti (Reward system)
+            for (let i = confetti.length - 1; i >= 0; i--) {
+                confetti[i].update(dt);
+                if (confetti[i].life <= 0) confetti.splice(i, 1);
+            }
+
+            // Level Complete
+            if (targets.length === 0 && gameState === 'PLAYING') {
+                nextLevel();
+            }
+        }
+
+        function checkNextTurn() {
+            if (plates.length === 0) {
+                if (platesLeft > 0) {
+                    setTimeout(() => {
+                        if (gameState === 'PLAYING' && plates.length === 0) {
+                            plates.push(new Plate());
+                        }
+                    }, 300);
+                } else if (targets.length > 0) {
+                    setTimeout(() => {
+                        if(targets.length > 0 && plates.length === 0) endGame();
+                    }, 1000);
+                }
+            }
+        }
+
+        function nextLevel() {
+            AudioSys.playLevelUp();
+            spawnConfetti(); // REWARDING: Visual feedback
+            
+            level++;
+            platesLeft += 6; // REWARDING: More plates to keep playing
+            score += 500; // REWARDING: Bonus points
+            
+            const msg = document.getElementById('level-msg');
+            msg.querySelector('h2').textContent = "LEVEL " + level;
+            msg.querySelector('.sub-text').textContent = "Bonus +500 | Plates +6";
+            msg.classList.add('show');
+            setTimeout(() => msg.classList.remove('show'), 2500);
+            
+            if (plates.length === 0) plates.push(new Plate());
+            startLevel(level);
+        }
+
+        function draw() {
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, width, height);
+
+            const projOrigin = project({x:0, y:0, z:100});
+            const horizonY = projOrigin.y;
+            
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+            skyGrad.addColorStop(0, '#eef2f3');
+            skyGrad.addColorStop(1, '#dcecfc');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, horizonY);
+
+            const floorGrad = ctx.createLinearGradient(0, horizonY, 0, height);
+            floorGrad.addColorStop(0, '#dcdcdc');
+            floorGrad.addColorStop(1, '#b0b0b0');
+            ctx.fillStyle = floorGrad;
+            ctx.fillRect(0, horizonY, width, height - horizonY);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let x=-10; x<=10; x+=2) {
+                const p1 = project({x:x, y:0, z:0});
+                const p2 = project({x:x*4, y:0, z:40}); 
+                if(p1.visible && p2.visible) {
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                }
+            }
+            for(let z=0; z<40; z+=4) {
+                const p1 = project({x:-20, y:0, z:z});
+                const p2 = project({x:20, y:0, z:z});
+                if(p1.visible && p2.visible) {
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                }
+            }
+            ctx.stroke();
+
+            let renderList = [];
+            targets.forEach(t => renderList.push({ type: 'target', obj: t, z: t.pos.z }));
+            plates.forEach(p => renderList.push({ type: 'plate', obj: p, z: p.pos.z }));
+            shards.forEach(s => renderList.push({ type: 'shard', obj: s, z: s.pos.z }));
+            confetti.forEach(c => renderList.push({ type: 'confetti', obj: c, z: c.pos.z }));
+            renderList.sort((a, b) => b.z - a.z);
+
+            renderList.forEach(item => {
+                const p = item.obj.pos;
+                const proj = project(p);
+                if (!proj.visible) return;
+
+                if (item.type === 'target') {
+                    const t = item.obj;
+                    const w = t.width * proj.scale;
+                    const h = t.height * proj.scale;
+                    
+                    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                    const shadowY = project({x: p.x, y:0, z: p.z}).y;
+                    const shadowW = w * 1.2;
+                    const shadowH = h * 0.3;
+                    ctx.beginPath();
+                    ctx.ellipse(proj.x, shadowY, shadowW/2, shadowH/2, 0, 0, Math.PI*2);
+                    ctx.fill();
+
+                    ctx.fillStyle = t.color;
+                    ctx.fillRect(proj.x - w/2, proj.y - h/2, w, h);
+                    
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(proj.x - w/2, proj.y - h/2, w, h*0.1);
+                    ctx.fillRect(proj.x - w/2, proj.y - h/2, w*0.1, h);
+
+                } else if (item.type === 'plate') {
+                    const plate = item.obj;
+                    const r = plate.radius * proj.scale;
+                    
+                    ctx.save();
+                    ctx.translate(proj.x, proj.y);
+                    
+                    if (plate.active) {
+                        ctx.scale(1, 0.6); 
+                        ctx.rotate(plate.rotation);
+                    } else {
+                         if(isDragging && plate === plates[0]) {
+                             let dx = (currentDrag.x - dragStart.x);
+                             let dy = (currentDrag.y - dragStart.y);
+                             ctx.translate(dx*0.2, dy*0.2);
+                         }
+                         ctx.scale(1, 1);
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r, 0, Math.PI * 2);
+                    ctx.fillStyle = plate.color;
+                    ctx.fill();
+                    
+                    ctx.lineWidth = Math.max(1, r * 0.15);
+                    ctx.strokeStyle = plate.rimColor;
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    ctx.stroke();
+
+                    ctx.restore();
+
+                } else if (item.type === 'shard') {
+                    const s = item.obj;
+                    const scale = proj.scale;
+                    
+                    ctx.save();
+                    ctx.translate(proj.x, proj.y);
+                    ctx.rotate(s.rot);
+                    
+                    ctx.fillStyle = s.color;
+                    ctx.globalAlpha = s.life; 
+                    
+                    ctx.beginPath();
+                    const m = 400; 
+                    ctx.moveTo(s.points[0].x * scale * m, s.points[0].y * scale * m);
+                    ctx.lineTo(s.points[1].x * scale * m, s.points[1].y * scale * m);
+                    ctx.lineTo(s.points[2].x * scale * m, s.points[2].y * scale * m);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                    ctx.globalAlpha = 1;
+
+                } else if (item.type === 'confetti') {
+                    const c = item.obj;
+                    const scale = proj.scale;
+                    const size = c.size * scale * 200;
+                    
+                    ctx.save();
+                    ctx.translate(proj.x, proj.y);
+                    ctx.rotate(c.rot);
+                    ctx.fillStyle = c.color;
+                    ctx.fillRect(-size/2, -size/2, size, size);
+                    ctx.restore();
+                }
+            });
+
+            if (isDragging && gameState === 'PLAYING') {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(dragStart.x, dragStart.y);
+                ctx.lineTo(currentDrag.x, currentDrag.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.beginPath();
+                ctx.arc(currentDrag.x, currentDrag.y, 6, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+
+        function loop(timestamp) {
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+            update(dt);
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function onDown(x, y) {
+            if (gameState !== 'PLAYING') return;
+            const currentPlate = plates[0];
+            if (!currentPlate || currentPlate.active) return;
+            isDragging = true;
+            dragStart = { x, y };
+            currentDrag = { x, y };
+        }
+
+        function onMove(x, y) {
+            if (!isDragging) return;
+            currentDrag = { x, y };
+        }
+
+        function onUp() {
+            if (!isDragging) return;
+            isDragging = false;
+            const dx = currentDrag.x - dragStart.x;
+            const dy = currentDrag.y - dragStart.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist > 30) throwPlate(dx, dy);
+        }
+
+        function throwPlate(dx, dy) {
+            const plate = plates[0];
+            if (!plate) return;
+            plate.active = true;
+            platesLeft--;
+            updateHUD();
+            AudioSys.playThrow();
+
+            const speedMult = 0.06; // Slightly faster throw for smaller plate feel
+            
+            plate.vel.x = dx * speedMult * 0.6;
+            plate.vel.y = -dy * speedMult * 0.5 + 2; 
+            plate.vel.z = Math.max(10, Math.abs(dy) * speedMult * 1.5);
+            
+            if (plate.vel.z > 25) plate.vel.z = 25;
+        }
+
+        canvas.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+        window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onUp);
+        
+        canvas.addEventListener('touchstart', e => { 
+            e.preventDefault(); 
+            const touch = e.touches[0];
+            onDown(touch.clientX, touch.clientY); 
+        }, {passive: false});
+        
+        window.addEventListener('touchmove', e => { 
+            const touch = e.touches[0];
+            onMove(touch.clientX, touch.clientY); 
+        }, {passive: false});
+        
+        window.addEventListener('touchend', onUp);
+
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const hud = document.getElementById('hud');
+
+        function updateHUD() {
+            document.getElementById('score-val').textContent = score;
+            document.getElementById('plates-val').textContent = platesLeft;
+        }
+
+        function startGame() {
+            AudioSys.init();
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            hud.classList.remove('hidden');
+            initGame();
+        }
+
+        function endGame() {
+            gameState = 'GAMEOVER';
+            hud.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+            document.getElementById('final-score').textContent = score;
+        }
+
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-restart').addEventListener('click', startGame);
+
+        requestAnimationFrame(loop);
+
+    </script>
+</body>
+</html>
