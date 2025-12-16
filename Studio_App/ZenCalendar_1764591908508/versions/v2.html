@@ -1,0 +1,762 @@
+<!--
+APP_NAME: Zen Calendar
+APP_DESCRIPTION: A modern calendar with daily notes, data export, and quick navigation.
+APP_ICON: https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/ZenCalendar_1764591908508/icon.png
+WINDOW_HEIGHT: 540
+STORE_ID: zen-cal-01
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zen Calendar</title>
+<style>
+    :root {
+        --bg-color: #f3f3f3;
+        --card-bg: #ffffff;
+        --text-primary: #202020;
+        --text-secondary: #666666;
+        --accent: #0078d4;
+        --accent-hover: #106ebe;
+        --accent-light: #e0efff;
+        --danger: #d13438;
+        --border-radius: 12px;
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        --today-dot: #ff5722;
+        --modal-overlay: rgba(255, 255, 255, 0.85);
+    }
+
+    * {
+        box-sizing: border-box;
+        user-select: none;
+        -webkit-user-select: none;
+        cursor: default;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Main Container */
+    #app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 16px;
+        position: relative;
+    }
+
+    /* Header */
+    header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        background: var(--card-bg);
+        padding: 8px 12px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+    }
+
+    .header-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    #current-month-year {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        min-width: 120px;
+        text-align: center;
+    }
+
+    .nav-btn, .icon-btn {
+        background: transparent;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--text-secondary);
+        transition: all 0.2s;
+    }
+
+    .nav-btn:hover, .icon-btn:hover {
+        background-color: #f0f0f0;
+        color: var(--text-primary);
+    }
+
+    .nav-btn:active, .icon-btn:active {
+        background-color: #e0e0e0;
+        transform: scale(0.95);
+    }
+
+    .icon-btn.active {
+        background-color: var(--accent-light);
+        color: var(--accent);
+    }
+
+    /* Calendar Grid */
+    .calendar-container {
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        padding: 16px;
+        box-shadow: var(--shadow);
+        flex-grow: 0;
+    }
+
+    .weekdays {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        margin-bottom: 8px;
+    }
+
+    .weekday {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .days-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+    }
+
+    .day {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .day:hover {
+        background-color: #f0f0f0;
+    }
+
+    .day.padding {
+        pointer-events: none;
+        opacity: 0;
+    }
+
+    .day.today {
+        font-weight: 700;
+        color: var(--accent);
+        border: 2px solid var(--accent-light);
+    }
+
+    .day.selected {
+        background-color: var(--accent);
+        color: white;
+        border: none;
+    }
+    
+    .day.has-note::after {
+        content: '';
+        position: absolute;
+        bottom: 5px;
+        width: 4px;
+        height: 4px;
+        background-color: var(--today-dot);
+        border-radius: 50%;
+    }
+    
+    .day.selected.has-note::after {
+        background-color: white;
+    }
+
+    /* Event/Note Section */
+    .note-section {
+        margin-top: 12px;
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        padding: 16px;
+        box-shadow: var(--shadow);
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0; 
+        position: relative;
+    }
+
+    .note-header {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    #note-date-display {
+        color: var(--text-primary);
+    }
+
+    textarea#daily-note {
+        width: 100%;
+        flex-grow: 1;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        font-family: inherit;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        resize: none;
+        outline: none;
+        transition: border-color 0.2s;
+        cursor: text;
+        background: #fafafa;
+    }
+
+    textarea#daily-note:focus {
+        border-color: var(--accent);
+        background: white;
+    }
+    
+    .action-row {
+        margin-top: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .btn-secondary {
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid #e0e0e0;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+        background: #f5f5f5;
+        border-color: #ccc;
+    }
+
+    button.save-btn {
+        background-color: var(--accent);
+        color: white;
+        border: none;
+        padding: 6px 16px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    button.save-btn:hover {
+        background-color: var(--accent-hover);
+    }
+
+    button.save-btn:active {
+        transform: scale(0.96);
+    }
+
+    /* Settings Modal */
+    .modal-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--modal-overlay);
+        backdrop-filter: blur(5px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    .modal-backdrop.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .settings-card {
+        background: white;
+        width: 90%;
+        max-width: 300px;
+        padding: 20px;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        transform: translateY(10px);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .modal-backdrop.visible .settings-card {
+        transform: translateY(0);
+    }
+
+    .settings-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .settings-btn-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .setting-action {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #eee;
+        background: white;
+        border-radius: 8px;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+        color: var(--text-primary);
+        transition: background 0.2s;
+    }
+
+    .setting-action:hover {
+        background: #f9f9f9;
+        border-color: #ddd;
+    }
+
+    .setting-action.danger {
+        color: var(--danger);
+        border-color: rgba(209, 52, 56, 0.2);
+    }
+    
+    .setting-action.danger:hover {
+        background: rgba(209, 52, 56, 0.05);
+    }
+
+    /* Animations */
+    @keyframes fadein {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .days-grid {
+        animation: fadein 0.3s ease-out;
+    }
+
+    /* Mobile Mode */
+    body.mobile-mode .nav-btn, body.mobile-mode .icon-btn {
+        width: 44px;
+        height: 44px;
+    }
+    
+    body.mobile-mode textarea#daily-note {
+        font-size: 1rem;
+    }
+
+</style>
+</head>
+<body>
+
+<div id="app">
+    <!-- Header -->
+    <header>
+        <div class="header-group">
+            <button class="icon-btn" id="btn-today" title="Jump to Today">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="M8 14h.01"></path></svg>
+            </button>
+        </div>
+        
+        <div class="header-group">
+            <button class="nav-btn" id="prev-month">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <div id="current-month-year"></div>
+            <button class="nav-btn" id="next-month">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+        </div>
+
+        <div class="header-group">
+            <button class="icon-btn" id="btn-settings" title="Settings">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Calendar -->
+    <div class="calendar-container">
+        <div class="weekdays">
+            <div class="weekday">S</div>
+            <div class="weekday">M</div>
+            <div class="weekday">T</div>
+            <div class="weekday">W</div>
+            <div class="weekday">T</div>
+            <div class="weekday">F</div>
+            <div class="weekday">S</div>
+        </div>
+        <div class="days-grid" id="calendar-days">
+            <!-- JS Generated -->
+        </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="note-section">
+        <div class="note-header">
+            <span id="note-date-display">Select a date</span>
+            <span id="save-status" style="font-size: 0.75rem; color: var(--accent); opacity: 0; transition: opacity 0.5s;">Saved</span>
+        </div>
+        <textarea id="daily-note" placeholder="Add a note for this day..."></textarea>
+        <div class="action-row">
+            <button class="btn-secondary" id="copy-note-btn" title="Copy to Clipboard">Copy</button>
+            <button class="save-btn" id="save-note-btn">
+                <span>Save Note</span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="modal-backdrop" id="settings-modal">
+        <div class="settings-card">
+            <div class="settings-title">
+                Data & Settings
+                <button class="icon-btn" id="close-settings">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="settings-btn-row">
+                <button class="setting-action" id="btn-export">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Export Data (JSON)
+                </button>
+                <button class="setting-action danger" id="btn-clear-all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Clear All Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Audio Context Setup
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playSound(type) {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } else if (type === 'pop') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(400, now);
+            gainNode.gain.setValueAtTime(0.08, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        } else if (type === 'save') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.setValueAtTime(800, now + 0.1);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'delete') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.2);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+    }
+
+    // State
+    let navDate = new Date();
+    let selectedDate = new Date();
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const STORAGE_KEY = 'zen_calendar_notes';
+
+    // DOM Elements
+    const monthYearDisplay = document.getElementById('current-month-year');
+    const daysContainer = document.getElementById('calendar-days');
+    const noteDateDisplay = document.getElementById('note-date-display');
+    const noteTextarea = document.getElementById('daily-note');
+    const saveBtn = document.getElementById('save-note-btn');
+    const copyBtn = document.getElementById('copy-note-btn');
+    const saveStatus = document.getElementById('save-status');
+    
+    // Modal Elements
+    const settingsModal = document.getElementById('settings-modal');
+    const btnSettings = document.getElementById('btn-settings');
+    const closeSettings = document.getElementById('close-settings');
+    const btnExport = document.getElementById('btn-export');
+    const btnClear = document.getElementById('btn-clear-all');
+    const btnToday = document.getElementById('btn-today');
+
+    // --- Logic ---
+
+    function getNotes() {
+        try {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        } catch {
+            return {};
+        }
+    }
+
+    function saveNoteToStorage(dateStr, text) {
+        const notes = getNotes();
+        if (text.trim() === "") {
+            delete notes[dateStr];
+        } else {
+            notes[dateStr] = text;
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    }
+
+    function getNoteForDate(dateStr) {
+        const notes = getNotes();
+        return notes[dateStr] || "";
+    }
+
+    function formatDateKey(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function renderCalendar() {
+        daysContainer.innerHTML = "";
+        
+        const year = navDate.getFullYear();
+        const month = navDate.getMonth();
+
+        monthYearDisplay.textContent = `${months[month]} ${year}`;
+
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        // Previous month padding
+        for (let i = firstDayIndex; i > 0; i--) {
+            const dayDiv = document.createElement('div');
+            dayDiv.classList.add('day', 'padding');
+            daysContainer.appendChild(dayDiv);
+        }
+
+        const today = new Date();
+        const notes = getNotes();
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dayDiv = document.createElement('div');
+            dayDiv.classList.add('day');
+            dayDiv.innerText = i;
+            
+            const currentIterDate = new Date(year, month, i);
+            const dateKey = formatDateKey(currentIterDate);
+
+            // Today check
+            if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                dayDiv.classList.add('today');
+            }
+
+            // Selected check
+            if (selectedDate && 
+                i === selectedDate.getDate() && 
+                month === selectedDate.getMonth() && 
+                year === selectedDate.getFullYear()) {
+                dayDiv.classList.add('selected');
+            }
+
+            // Has note check
+            if (notes[dateKey]) {
+                dayDiv.classList.add('has-note');
+            }
+
+            dayDiv.addEventListener('click', () => {
+                playSound('pop');
+                selectedDate = new Date(year, month, i);
+                renderCalendar();
+                loadNote();
+            });
+
+            daysContainer.appendChild(dayDiv);
+        }
+
+        // Animation reset
+        daysContainer.style.animation = 'none';
+        daysContainer.offsetHeight; 
+        daysContainer.style.animation = 'fadein 0.3s ease-out';
+    }
+
+    function loadNote() {
+        const dateKey = formatDateKey(selectedDate);
+        noteDateDisplay.textContent = selectedDate.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        noteTextarea.value = getNoteForDate(dateKey);
+    }
+
+    function showToast(msg) {
+        saveStatus.textContent = msg;
+        saveStatus.style.opacity = 1;
+        setTimeout(() => {
+            saveStatus.style.opacity = 0;
+        }, 1500);
+    }
+
+    // --- Event Listeners ---
+
+    // Navigation
+    document.getElementById('prev-month').addEventListener('click', () => {
+        playSound('click');
+        navDate.setMonth(navDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    document.getElementById('next-month').addEventListener('click', () => {
+        playSound('click');
+        navDate.setMonth(navDate.getMonth() + 1);
+        renderCalendar();
+    });
+    
+    // Jump to Today
+    btnToday.addEventListener('click', () => {
+        playSound('click');
+        const now = new Date();
+        navDate = new Date(now);
+        selectedDate = new Date(now);
+        renderCalendar();
+        loadNote();
+    });
+
+    // Save
+    saveBtn.addEventListener('click', () => {
+        const dateKey = formatDateKey(selectedDate);
+        saveNoteToStorage(dateKey, noteTextarea.value);
+        playSound('save');
+        renderCalendar(); // Update dots
+        showToast("Saved");
+    });
+
+    // Copy
+    copyBtn.addEventListener('click', () => {
+        if(noteTextarea.value) {
+            navigator.clipboard.writeText(noteTextarea.value);
+            playSound('click');
+            showToast("Copied");
+        }
+    });
+
+    // Modal Handling
+    function toggleModal(show) {
+        playSound(show ? 'pop' : 'click');
+        if (show) settingsModal.classList.add('visible');
+        else settingsModal.classList.remove('visible');
+    }
+
+    btnSettings.addEventListener('click', () => toggleModal(true));
+    closeSettings.addEventListener('click', () => toggleModal(false));
+    settingsModal.addEventListener('click', (e) => {
+        if(e.target === settingsModal) toggleModal(false);
+    });
+
+    // Export Data
+    btnExport.addEventListener('click', () => {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (!data) {
+            alert("No data to export.");
+            return;
+        }
+        const blob = new Blob([data], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `zen-calendar-backup-${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        playSound('save');
+        toggleModal(false);
+    });
+
+    // Clear Data
+    btnClear.addEventListener('click', () => {
+        playSound('click');
+        if(confirm("Are you sure you want to delete all notes? This cannot be undone.")) {
+            localStorage.removeItem(STORAGE_KEY);
+            playSound('delete');
+            renderCalendar();
+            loadNote();
+            toggleModal(false);
+        }
+    });
+
+    // Mobile check
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.attributeName === "class") {
+                // Handled via CSS mostly
+            }
+        });
+    });
+    observer.observe(document.body, { attributes: true });
+
+    // Initial load
+    renderCalendar();
+    loadNote();
+
+</script>
+</body>
+</html>
