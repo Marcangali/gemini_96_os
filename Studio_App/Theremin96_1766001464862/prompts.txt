@@ -8,3 +8,7 @@ Change right side the way, that lowest sound should be G
 ---
 [17. 12. 2025 22:54:58]
 Left side do not change. On right side octave will start with G. Other things do not change.
+
+---
+[2025. 12. 17. 22:58:44] v11:
+Make the first note G from the bottom, do not change anything else
