@@ -28,3 +28,7 @@ The lowest tone of scale should be G
 ---
 [17. 12. 2025 23:21:33] v15:
 Please add button to switch off half tones
+
+---
+[17. 12. 2025 23:24:59] v16:
+Keep everything, but add one more button for switching off half tones, when snap is on
