@@ -16,3 +16,7 @@ Make the first note G from the bottom, do not change anything else
 ---
 [17. 12. 2025 23:02:32] v12:
 Increase the scale by one octave.
+
+---
+[17. 12. 2025 23:11:09] v13:
+Make scale 1.5 octave
