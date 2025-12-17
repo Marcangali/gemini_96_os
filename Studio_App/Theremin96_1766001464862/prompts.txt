@@ -24,3 +24,7 @@ Make scale 1.5 octave
 ---
 [17. 12. 2025 23:15:14] v14:
 The lowest tone of scale should be G
+
+---
+[17. 12. 2025 23:21:33] v15:
+Please add button to switch off half tones
