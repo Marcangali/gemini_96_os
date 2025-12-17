@@ -1,6 +1,6 @@
 <!--
 APP_NAME: Theremin 96
-APP_DESCRIPTION: A modern, touch-friendly virtual theremin with dual-axis control.
+APP_DESCRIPTION: Virtual theremin with push-to-swell volume, pitch control, and scale snapping.
 APP_ICON: 
 APP_CATEGORY: Entertainment
 WINDOW_WIDTH: 400
@@ -24,7 +24,7 @@ STORE_ID: theremin-96
             --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
             --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
             --radius: 12px;
-            --slider-width: 60px;
+            --active-scale: 0.98;
         }
 
         body {
@@ -39,11 +39,6 @@ STORE_ID: theremin-96
             overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
-        }
-
-        /* Responsive Layout for Mobile Mode */
-        body.mobile-mode {
-            --slider-width: 80px;
         }
 
         /* App Container */
@@ -113,24 +108,19 @@ STORE_ID: theremin-96
             position: relative;
         }
 
-        /* Slider Tracks */
-        .slider-container {
+        /* Common Control Styles */
+        .control-panel {
             flex: 1;
             background: var(--surface-color);
             border-radius: var(--radius);
             box-shadow: var(--shadow-sm);
             position: relative;
-            cursor: pointer;
             overflow: hidden;
-            touch-action: none; /* CRITICAL: Prevent scrolling/zooming */
-            transition: transform 0.1s;
+            touch-action: none;
+            transition: transform 0.1s, box-shadow 0.2s;
         }
 
-        .slider-container:active {
-            transform: scale(0.99);
-        }
-
-        .slider-label {
+        .control-label {
             position: absolute;
             top: 16px;
             left: 0;
@@ -142,7 +132,60 @@ STORE_ID: theremin-96
             text-transform: uppercase;
             letter-spacing: 1px;
             pointer-events: none;
-            z-index: 2;
+            z-index: 5;
+        }
+
+        /* LEFT SIDE: Volume Button */
+        #volume-btn {
+            cursor: pointer;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            border: 2px solid transparent;
+        }
+
+        #volume-btn:active {
+            transform: scale(var(--active-scale));
+        }
+
+        #volume-btn.active-press {
+            border-color: rgba(0, 204, 106, 0.3);
+            box-shadow: 0 0 15px rgba(0, 204, 106, 0.2);
+        }
+
+        .btn-fill {
+            width: 100%;
+            background-color: var(--accent-vol);
+            opacity: 0.3;
+            height: 0%; /* Dynamic */
+            transition: none; /* Controlled by JS loop */
+            pointer-events: none;
+        }
+
+        .btn-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            color: var(--accent-vol);
+            opacity: 0.5;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        #volume-btn:active .btn-icon {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        /* RIGHT SIDE: Pitch Slider */
+        #freq-slider {
+            cursor: ns-resize;
+        }
+
+        /* Avoid scaling the whole panel when clicking internal toggle */
+        #freq-slider.slider-active:active {
+            transform: scale(var(--active-scale));
         }
 
         .slider-fill {
@@ -154,6 +197,7 @@ STORE_ID: theremin-96
             opacity: 0.2;
             pointer-events: none;
             transition: height 0.05s linear;
+            background-color: var(--accent-freq);
         }
 
         .slider-handle {
@@ -171,6 +215,8 @@ STORE_ID: theremin-96
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 3;
+            border: 2px solid var(--accent-freq);
         }
 
         .slider-handle::after {
@@ -181,12 +227,101 @@ STORE_ID: theremin-96
             border-radius: 2px;
         }
 
-        /* Specific Colors */
-        #volume-slider .slider-fill { background-color: var(--accent-vol); }
-        #volume-slider .slider-handle { border: 2px solid var(--accent-vol); }
-        
-        #freq-slider .slider-fill { background-color: var(--accent-freq); }
-        #freq-slider .slider-handle { border: 2px solid var(--accent-freq); }
+        /* Snap Toggle Switch */
+        .snap-control {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.8);
+            padding: 4px 8px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .snap-control span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 28px;
+            height: 16px;
+            background: #ddd;
+            border-radius: 16px;
+            transition: background 0.2s;
+        }
+
+        .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        input[type="checkbox"]#snap-check {
+            display: none;
+        }
+
+        input[type="checkbox"]:checked + .toggle-switch {
+            background: var(--accent-freq);
+        }
+
+        input[type="checkbox"]:checked + .toggle-switch .toggle-knob {
+            transform: translateX(12px);
+        }
+
+        /* Note Markers */
+        #note-markers {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: 30%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .note-tick {
+            position: absolute;
+            right: 12px;
+            width: 100%;
+            height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            transform: translateY(50%);
+        }
+
+        .note-tick::after {
+            content: '';
+            width: 8px;
+            height: 1px;
+            background-color: #ccc;
+            margin-left: 4px;
+        }
+
+        .note-text {
+            font-size: 10px;
+            font-weight: 600;
+            color: #aaa;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 0 2px;
+            border-radius: 3px;
+        }
 
         /* Power Button */
         .power-btn-container {
@@ -232,7 +367,7 @@ STORE_ID: theremin-96
             transform: scale(1.05);
         }
 
-        /* Help Text */
+        /* Footer */
         .footer-info {
             text-align: center;
             font-size: 11px;
@@ -257,33 +392,48 @@ STORE_ID: theremin-96
 
         <!-- Controls -->
         <div class="controls-area">
-            <!-- Volume (Left) -->
-            <div class="slider-container" id="volume-slider">
-                <div class="slider-label">Volume</div>
-                <div class="slider-fill" id="vol-fill"></div>
-                <div class="slider-handle" id="vol-handle"></div>
+            
+            <!-- Volume Button (Left) -->
+            <div class="control-panel" id="volume-btn">
+                <div class="control-label">Hold Vol</div>
+                <!-- Icons for visual feedback -->
+                <div class="btn-icon">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                        <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
+                    </svg>
+                </div>
+                <!-- Rising Fill -->
+                <div class="btn-fill" id="vol-fill"></div>
             </div>
 
             <!-- Power Button (Center Overlay) -->
             <div class="power-btn-container">
                 <button id="power-btn" aria-label="Power On/Off">
                     <svg viewBox="0 0 24 24">
-                        <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,7H13V13H11V7M11,15H13V17H11V15Z" style="display:none;"/> 
                         <path d="M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13" />
                     </svg>
                 </button>
             </div>
 
-            <!-- Frequency (Right) -->
-            <div class="slider-container" id="freq-slider">
-                <div class="slider-label">Pitch</div>
+            <!-- Frequency Slider (Right) -->
+            <div class="control-panel slider-active" id="freq-slider">
+                <div class="control-label" style="text-align: left; left: 12px;">Pitch</div>
+                
+                <!-- Snap Switch -->
+                <label class="snap-control" for="snap-check">
+                    <span>Snap</span>
+                    <input type="checkbox" id="snap-check">
+                    <div class="toggle-switch"><div class="toggle-knob"></div></div>
+                </label>
+
                 <div class="slider-fill" id="freq-fill"></div>
+                <div id="note-markers"></div>
                 <div class="slider-handle" id="freq-handle"></div>
             </div>
         </div>
 
         <div class="footer-info">
-            Tap Power to Start • Slide to Adjust
+            Power On • Hold Left for Vol • Slide Right for Pitch
         </div>
 
     </div>
@@ -296,21 +446,21 @@ STORE_ID: theremin-96
         // --- State ---
         const state = {
             isOn: false,
-            volume: 0.5, // 0.0 to 1.0
-            freq: 0.5,   // 0.0 to 1.0 (mapped later)
-            minFreq: 100,
-            maxFreq: 1500
+            volume: 0.0, // Start at 0
+            freq: 0.5,   // 0.0 to 1.0 (raw position)
+            snapToScale: false,
+            minFreq: 261.63, // C4
+            maxFreq: 1480    // Approx 2.5 octaves
         };
 
         // --- Audio Context ---
         let audioCtx;
         let masterGain;
         let oscillator;
-        let lfo; // Vibrato
+        let lfo; 
         let lfoGain;
         let analyser;
         
-        // UI Sounds
         const createBeep = (freq, type = 'sine', duration = 0.1) => {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
@@ -325,7 +475,6 @@ STORE_ID: theremin-96
             osc.stop(audioCtx.currentTime + duration);
         };
 
-        // Initialize Audio Engine
         function initAudio() {
             if (!audioCtx) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -339,29 +488,25 @@ STORE_ID: theremin-96
         function startTheremin() {
             if (!audioCtx) initAudio();
             
-            // Nodes
             oscillator = audioCtx.createOscillator();
             oscillator.type = 'sine';
             
             masterGain = audioCtx.createGain();
-            masterGain.gain.value = 0; // Start silent
+            masterGain.gain.value = 0; 
 
-            // Vibrato (LFO)
+            // Vibrato
             lfo = audioCtx.createOscillator();
-            lfo.frequency.value = 6; // 6Hz vibrato
+            lfo.frequency.value = 6; 
             lfoGain = audioCtx.createGain();
-            lfoGain.gain.value = 5; // Depth of vibrato
+            lfoGain.gain.value = 5; 
             lfo.connect(lfoGain);
             lfoGain.connect(oscillator.frequency);
 
-            // Analyser
+            // Audio Path
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 2048;
-
-            // Compressor (limit clipping)
             const compressor = audioCtx.createDynamicsCompressor();
 
-            // Connections
             oscillator.connect(masterGain);
             masterGain.connect(compressor);
             compressor.connect(analyser);
@@ -370,13 +515,14 @@ STORE_ID: theremin-96
             oscillator.start();
             lfo.start();
 
-            // Apply initial values
+            // Set Initial Values
+            state.volume = 0; // Ensure 0 on start
+            updateVolumeVisuals();
             updateAudioParams();
         }
 
         function stopTheremin() {
             if (oscillator) {
-                // Ramp down to avoid click
                 masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
                 setTimeout(() => {
                     if(oscillator) oscillator.stop();
@@ -387,96 +533,216 @@ STORE_ID: theremin-96
             }
         }
 
+        function getTargetFrequency() {
+            // Logarithmic mapping for natural pitch scaling
+            const rawFreq = state.minFreq * Math.pow(state.maxFreq / state.minFreq, state.freq);
+            
+            if (state.snapToScale) {
+                // MIDI Note conversion: 69 is A4 (440Hz)
+                const midi = 69 + 12 * Math.log2(rawFreq / 440);
+                const snappedMidi = Math.round(midi);
+                const snappedFreq = 440 * Math.pow(2, (snappedMidi - 69) / 12);
+                return snappedFreq;
+            }
+            
+            return rawFreq;
+        }
+
         function updateAudioParams() {
             if (!oscillator || !masterGain) return;
             
-            // Exponential mapping: min * (max/min)^val
-            const targetFreq = state.minFreq * Math.pow(state.maxFreq / state.minFreq, state.freq);
+            const targetFreq = getTargetFrequency();
+            // Faster slide if snapping to avoid "glissando" effect between notes, but keep small slide to avoid pops
+            const rampTime = state.snapToScale ? 0.02 : 0.05; 
+            oscillator.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, rampTime);
             
-            // Smooth transitions
-            const now = audioCtx.currentTime;
-            oscillator.frequency.setTargetAtTime(targetFreq, now, 0.05);
-            
-            // Volume
-            masterGain.gain.setTargetAtTime(state.volume, now, 0.05);
-            
-            // NOTE: DOM updates moved to drawVisualizer to improve multitouch performance
+            // Volume Mapping
+            masterGain.gain.setTargetAtTime(state.volume, audioCtx.currentTime, 0.02);
         }
-
 
         // --- UI Interactions ---
 
         // DOM Elements
         const powerBtn = document.getElementById('power-btn');
         const freqDisplay = document.getElementById('freq-display');
-        const volSlider = document.getElementById('volume-slider');
         const freqSlider = document.getElementById('freq-slider');
-        const volFill = document.getElementById('vol-fill');
-        const volHandle = document.getElementById('vol-handle');
         const freqFill = document.getElementById('freq-fill');
         const freqHandle = document.getElementById('freq-handle');
+        const snapCheck = document.getElementById('snap-check');
+        
+        // Volume Elements
+        const volBtn = document.getElementById('volume-btn');
+        const volFill = document.getElementById('vol-fill');
 
-        // Setup Sliders with Optimization for Multitouch
-        function setupSlider(element, isFreq) {
-            let rect; // Cache dimensions during drag to avoid reflow
+        // --- Volume Button Logic ---
+        let volumeRafId = null;
+
+        function updateVolumeVisuals() {
+            // Update fill height percentage
+            volFill.style.height = `${state.volume * 100}%`;
+        }
+
+        function startVolumeIncrease() {
+            if (!state.isOn) return;
+            volBtn.classList.add('active-press');
+            
+            // Cancel any existing loop
+            cancelAnimationFrame(volumeRafId);
+
+            const ramp = () => {
+                if (state.volume < 1.0) {
+                    // Increase volume
+                    state.volume += 0.015; 
+                    if (state.volume > 1.0) state.volume = 1.0;
+                    
+                    updateAudioParams();
+                    updateVolumeVisuals();
+                    
+                    if (state.volume < 1.0) {
+                        volumeRafId = requestAnimationFrame(ramp);
+                    }
+                }
+            };
+            volumeRafId = requestAnimationFrame(ramp);
+        }
+
+        function stopVolume() {
+            volBtn.classList.remove('active-press');
+            cancelAnimationFrame(volumeRafId);
+            
+            // Drop to zero
+            state.volume = 0;
+            updateAudioParams();
+            updateVolumeVisuals();
+        }
+
+        // Add Listeners to Volume Button
+        volBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            startVolumeIncrease();
+        });
+        volBtn.addEventListener('mouseup', stopVolume);
+        volBtn.addEventListener('mouseleave', stopVolume);
+
+        volBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startVolumeIncrease();
+        }, { passive: false });
+        
+        volBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopVolume();
+        });
+        volBtn.addEventListener('touchcancel', stopVolume);
+
+
+        // --- Frequency Slider Logic ---
+        
+        // Handle Snap Toggle
+        snapCheck.addEventListener('change', (e) => {
+            state.snapToScale = e.target.checked;
+            // Play a small sound to confirm switch
+            if (audioCtx && audioCtx.state === 'running') {
+                createBeep(state.snapToScale ? 800 : 600, 'sine', 0.05);
+            }
+            // If already playing, update immediate frequency and visuals
+            if (state.isOn) {
+                updateAudioParams();
+                updateFreqVisualsFromState();
+            }
+        });
+
+        // Helper to visualize snap position
+        function updateFreqVisualsFromState() {
+            let displayVal = state.freq;
+
+            if (state.snapToScale) {
+                // Reverse engineering visual position from snapped frequency
+                const snappedFreq = getTargetFrequency();
+                // log(f / min) / log(max / min)
+                displayVal = Math.log(snappedFreq / state.minFreq) / Math.log(state.maxFreq / state.minFreq);
+                // Clamp for visuals
+                displayVal = Math.max(0, Math.min(1, displayVal));
+            }
+
+            const percent = displayVal * 100;
+            freqFill.style.height = `${percent}%`;
+            freqHandle.style.bottom = `${percent}%`;
+        }
+
+        function setupFreqSlider() {
+            let rect; 
 
             const updateValue = (e) => {
-                // PointerEvents provide standardized clientX/Y.
-                // We use cached rect to calculate position without DOM reading overhead.
+                // Don't drag if we touched the checkbox
+                if (e.target.closest('.snap-control')) return;
+
                 const clientY = e.clientY; 
-                
-                // Calculate 0-1 (0 at bottom, 1 at top)
                 let val = 1 - ((clientY - rect.top) / rect.height);
-                
-                // Clamp
                 val = Math.max(0, Math.min(1, val));
 
-                if (isFreq) {
-                    state.freq = val;
-                    updateSliderVisuals(freqFill, freqHandle, val);
-                } else {
-                    state.volume = val;
-                    updateSliderVisuals(volFill, volHandle, val);
-                }
+                state.freq = val;
                 
+                updateFreqVisualsFromState();
                 updateAudioParams();
             };
 
             const onPointerDown = (e) => {
-                e.preventDefault(); 
-                // CRITICAL OPTIMIZATION: Calculate layout once per drag session
-                rect = element.getBoundingClientRect(); 
+                if (e.target.closest('.snap-control')) return;
                 
-                element.setPointerCapture(e.pointerId);
-                element.addEventListener('pointermove', updateValue);
-                element.addEventListener('pointerup', onPointerUp);
-                element.addEventListener('pointercancel', onPointerUp);
+                e.preventDefault(); 
+                rect = freqSlider.getBoundingClientRect(); 
+                freqSlider.setPointerCapture(e.pointerId);
+                freqSlider.addEventListener('pointermove', updateValue);
+                freqSlider.addEventListener('pointerup', onPointerUp);
+                freqSlider.addEventListener('pointercancel', onPointerUp);
                 updateValue(e);
             };
 
             const onPointerUp = (e) => {
-                element.removeEventListener('pointermove', updateValue);
-                element.removeEventListener('pointerup', onPointerUp);
-                element.removeEventListener('pointercancel', onPointerUp);
-                element.releasePointerCapture(e.pointerId);
+                freqSlider.removeEventListener('pointermove', updateValue);
+                freqSlider.removeEventListener('pointerup', onPointerUp);
+                freqSlider.removeEventListener('pointercancel', onPointerUp);
+                freqSlider.releasePointerCapture(e.pointerId);
             };
 
-            element.addEventListener('pointerdown', onPointerDown);
+            freqSlider.addEventListener('pointerdown', onPointerDown);
         }
 
-        function updateSliderVisuals(fill, handle, val) {
-            const percent = val * 100;
-            fill.style.height = `${percent}%`;
-            handle.style.bottom = `${percent}%`;
+        // --- Initialization ---
+
+        function generateNoteMarkers() {
+            const container = document.getElementById('note-markers');
+            container.innerHTML = ''; 
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const minLog = Math.log(state.minFreq);
+            const maxLog = Math.log(state.maxFreq);
+            const rangeLog = maxLog - minLog;
+
+            for (let midi = 48; midi <= 96; midi++) {
+                const freq = 440 * Math.pow(2, (midi - 69) / 12);
+                if (freq < state.minFreq) continue;
+                if (freq > state.maxFreq) break;
+
+                const noteIndex = midi % 12;
+                if (!noteNames[noteIndex].includes('#')) {
+                    const val = (Math.log(freq) - minLog) / rangeLog;
+                    const percent = val * 100;
+                    const marker = document.createElement('div');
+                    marker.className = 'note-tick';
+                    marker.style.bottom = `${percent}%`;
+                    marker.innerHTML = `<span class="note-text">${noteNames[noteIndex]}</span>`;
+                    container.appendChild(marker);
+                }
+            }
         }
 
-        // Initialize Sliders
-        setupSlider(volSlider, false); // Volume
-        setupSlider(freqSlider, true); // Freq
+        // Run Setup
+        setupFreqSlider();
+        generateNoteMarkers();
 
-        // Set Initial Visuals
-        updateSliderVisuals(volFill, volHandle, state.volume);
-        updateSliderVisuals(freqFill, freqHandle, state.freq);
+        // Initial Visual State
+        updateFreqVisualsFromState();
 
         // Power Toggle
         powerBtn.addEventListener('click', () => {
@@ -486,17 +752,17 @@ STORE_ID: theremin-96
                 initAudio();
                 startTheremin();
                 powerBtn.classList.add('active');
-                createBeep(880, 'sine', 0.1); // Power On Sound
+                createBeep(880, 'sine', 0.1); 
             } else {
                 stopTheremin();
+                stopVolume(); // Reset volume UI
                 powerBtn.classList.remove('active');
-                // DOM update handled here for OFF state
                 freqDisplay.textContent = "OFF";
-                createBeep(440, 'triangle', 0.1); // Power Off Sound
+                createBeep(440, 'triangle', 0.1);
             }
         });
 
-        // --- Visualizer ---
+        // --- Visualizer Loop ---
         const canvas = document.getElementById('visualizer');
         const ctx = canvas.getContext('2d');
         
@@ -509,14 +775,11 @@ STORE_ID: theremin-96
 
         function drawVisualizer() {
             requestAnimationFrame(drawVisualizer);
-
-            // 1. Handle Visualizer Drawing
             const w = canvas.width;
             const h = canvas.height;
             ctx.clearRect(0, 0, w, h);
 
             if (!state.isOn) {
-                // Draw inactive line
                 ctx.beginPath();
                 ctx.moveTo(0, h/2);
                 ctx.lineTo(w, h/2);
@@ -526,20 +789,31 @@ STORE_ID: theremin-96
                 return;
             }
 
-            // Update Text Display (Moved here from move handler to prevent lag)
-            const targetFreq = state.minFreq * Math.pow(state.maxFreq / state.minFreq, state.freq);
-            freqDisplay.textContent = Math.round(targetFreq) + ' Hz';
+            // Get the actual playing freq (snapped or raw)
+            const targetFreq = getTargetFrequency();
+            
+            // Note name display if snapped
+            if (state.snapToScale && targetFreq > 0) {
+                 const midi = Math.round(69 + 12 * Math.log2(targetFreq / 440));
+                 const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                 const note = noteNames[midi % 12];
+                 const oct = Math.floor(midi / 12) - 1;
+                 freqDisplay.textContent = `${note}${oct}`;
+            } else {
+                freqDisplay.textContent = Math.round(targetFreq) + ' Hz';
+            }
 
-            // Draw Waveform
             if(analyser) {
                 const bufferLength = analyser.frequencyBinCount;
                 const dataArray = new Uint8Array(bufferLength);
                 analyser.getByteTimeDomainData(dataArray);
 
                 ctx.lineWidth = 2;
-                // Dynamic color based on freq
+                // Hue shifts with pitch, Saturation shifts with volume
+                // Adjust hue calc based on slider position (state.freq) not target freq for smoother gradient
                 const hue = 260 + (state.freq * 100); 
-                ctx.strokeStyle = `hsl(${hue}, 70%, 50%)`;
+                const sat = 30 + (state.volume * 70);
+                ctx.strokeStyle = `hsl(${hue}, ${sat}%, 50%)`;
 
                 ctx.beginPath();
                 const sliceWidth = w * 1.0 / bufferLength;
@@ -548,13 +822,10 @@ STORE_ID: theremin-96
                 for(let i = 0; i < bufferLength; i++) {
                     const v = dataArray[i] / 128.0;
                     const y = v * h/2;
-
                     if(i === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
-
                     x += sliceWidth;
                 }
-
                 ctx.lineTo(canvas.width, canvas.height/2);
                 ctx.stroke();
             }
