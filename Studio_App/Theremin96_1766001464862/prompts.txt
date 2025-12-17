@@ -1,2 +1,6 @@
 [17. 12. 2025 22:49:07]
 Right bottom sound should start from G
+
+---
+[17. 12. 2025 22:51:47]
+Change right side the way, that lowest sound should be G
