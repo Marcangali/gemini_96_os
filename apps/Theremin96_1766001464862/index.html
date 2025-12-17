@@ -1,6 +1,6 @@
 <!--
 APP_NAME: Theremin 96
-APP_DESCRIPTION: A modern, touch-friendly virtual theremin with dual-axis control.
+APP_DESCRIPTION: A modern, touch-friendly virtual theremin with dual-axis control and pitch guide.
 APP_ICON: 
 APP_CATEGORY: Entertainment
 WINDOW_WIDTH: 400
@@ -171,6 +171,7 @@ STORE_ID: theremin-96
             display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 3;
         }
 
         .slider-handle::after {
@@ -187,6 +188,45 @@ STORE_ID: theremin-96
         
         #freq-slider .slider-fill { background-color: var(--accent-freq); }
         #freq-slider .slider-handle { border: 2px solid var(--accent-freq); }
+
+        /* Note Markers */
+        #note-markers {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: 30%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .note-tick {
+            position: absolute;
+            right: 12px;
+            width: 100%;
+            height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            transform: translateY(50%); /* Center vertically on the exact point */
+        }
+
+        .note-tick::after {
+            content: '';
+            width: 8px;
+            height: 1px;
+            background-color: #ccc;
+            margin-left: 4px;
+        }
+
+        .note-text {
+            font-size: 10px;
+            font-weight: 600;
+            color: #aaa;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 0 2px;
+            border-radius: 3px;
+        }
 
         /* Power Button */
         .power-btn-container {
@@ -278,6 +318,7 @@ STORE_ID: theremin-96
             <div class="slider-container" id="freq-slider">
                 <div class="slider-label">Pitch</div>
                 <div class="slider-fill" id="freq-fill"></div>
+                <div id="note-markers"></div>
                 <div class="slider-handle" id="freq-handle"></div>
             </div>
         </div>
@@ -399,8 +440,6 @@ STORE_ID: theremin-96
             
             // Volume
             masterGain.gain.setTargetAtTime(state.volume, now, 0.05);
-            
-            // NOTE: DOM updates moved to drawVisualizer to improve multitouch performance
         }
 
 
@@ -421,8 +460,6 @@ STORE_ID: theremin-96
             let rect; // Cache dimensions during drag to avoid reflow
 
             const updateValue = (e) => {
-                // PointerEvents provide standardized clientX/Y.
-                // We use cached rect to calculate position without DOM reading overhead.
                 const clientY = e.clientY; 
                 
                 // Calculate 0-1 (0 at bottom, 1 at top)
@@ -470,13 +507,49 @@ STORE_ID: theremin-96
             handle.style.bottom = `${percent}%`;
         }
 
-        // Initialize Sliders
+        // Generate Note Markers
+        function generateNoteMarkers() {
+            const container = document.getElementById('note-markers');
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'H'];
+            
+            // Constants for logarithmic mapping
+            const minLog = Math.log(state.minFreq);
+            const maxLog = Math.log(state.maxFreq);
+            const rangeLog = maxLog - minLog;
+
+            // Generate frequencies for MIDI notes approx 48 (C3) to 90
+            for (let midi = 48; midi <= 95; midi++) {
+                // A4 (69) = 440Hz
+                const freq = 440 * Math.pow(2, (midi - 69) / 12);
+                
+                if (freq < state.minFreq) continue;
+                if (freq > state.maxFreq) break;
+
+                const noteIndex = midi % 12;
+                const noteName = noteNames[noteIndex];
+
+                // Only render Natural notes (white keys) as requested + H logic
+                // noteName 'H' is used for B index 11
+                if (!noteName.includes('#')) {
+                    // Calculate position (0.0 to 1.0)
+                    const val = (Math.log(freq) - minLog) / rangeLog;
+                    const percent = val * 100;
+
+                    const marker = document.createElement('div');
+                    marker.className = 'note-tick';
+                    marker.style.bottom = `${percent}%`;
+                    marker.innerHTML = `<span class="note-text">${noteName}</span>`;
+                    container.appendChild(marker);
+                }
+            }
+        }
+
+        // Initialize
         setupSlider(volSlider, false); // Volume
         setupSlider(freqSlider, true); // Freq
-
-        // Set Initial Visuals
         updateSliderVisuals(volFill, volHandle, state.volume);
         updateSliderVisuals(freqFill, freqHandle, state.freq);
+        generateNoteMarkers();
 
         // Power Toggle
         powerBtn.addEventListener('click', () => {
