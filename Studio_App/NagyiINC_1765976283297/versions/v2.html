@@ -1,0 +1,610 @@
+<!--
+APP_NAME: Nagyi .INC
+APP_DESCRIPTION: Segíts a nagyinak eljutni a boltba! Most még gyorsabb és könnyebb!
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 600
+STORE_ID: nagyi-inc-v1
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nagyi .INC</title>
+<style>
+    :root {
+        --bg-color: #f3f3f3;
+        --surface-color: #ffffff;
+        --primary-color: #0078d4;
+        --primary-hover: #106ebe;
+        --text-color: #202020;
+        --secondary-text: #606060;
+        --border-radius: 12px;
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        --accent-green: #107c10;
+        --road-color: #e0e0e0;
+    }
+
+    body {
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        margin: 0;
+        padding: 0;
+        color: var(--text-color);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        user-select: none;
+    }
+
+    /* Mobile Mode Handling */
+    body.mobile-mode {
+        font-size: 16px;
+    }
+
+    /* Header */
+    header {
+        background: var(--surface-color);
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        z-index: 10;
+    }
+
+    .app-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .money-display {
+        font-weight: 700;
+        color: var(--accent-green);
+        background: #e6f2e6;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-family: monospace;
+        font-size: 1.1rem;
+    }
+
+    /* Game Scene */
+    .scene {
+        flex: 0 0 160px;
+        background: linear-gradient(to bottom, #87CEEB 0%, #e0f7fa 70%, var(--road-color) 70%);
+        position: relative;
+        overflow: hidden;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .cloud {
+        position: absolute;
+        top: 20px;
+        font-size: 24px;
+        opacity: 0.8;
+        animation: drift 20s linear infinite;
+    }
+    .cloud:nth-child(2) { top: 50px; animation-duration: 35s; animation-delay: -10s; }
+
+    @keyframes drift {
+        from { transform: translateX(-50px); }
+        to { transform: translateX(450px); }
+    }
+
+    .store {
+        position: absolute;
+        right: 10px;
+        bottom: 50px; /* On the horizon line */
+        font-size: 48px;
+        z-index: 1;
+    }
+
+    .road-lines {
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: repeating-linear-gradient(90deg, #fff 0, #fff 20px, transparent 20px, transparent 40px);
+        opacity: 0.6;
+    }
+
+    .grandma-container {
+        position: absolute;
+        bottom: 30px; /* Sitting on road */
+        left: 10px;
+        font-size: 48px;
+        transition: transform 0.1s linear;
+        z-index: 2;
+        transform-origin: bottom center;
+        filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.2));
+    }
+
+    .grandma.walking {
+        animation: wobble 0.2s infinite alternate ease-in-out; /* Faster wobble */
+    }
+
+    @keyframes wobble {
+        0% { transform: rotate(-5deg) translateY(0); }
+        100% { transform: rotate(5deg) translateY(-4px); }
+    }
+
+    /* Speed lines when going fast */
+    .speed-lines {
+        position: absolute;
+        top: 70%;
+        left: 0;
+        width: 100%;
+        height: 30%;
+        background: repeating-linear-gradient(90deg, rgba(255,255,255,0.5) 0, rgba(255,255,255,0) 50px);
+        display: none;
+        z-index: 0;
+    }
+
+    /* Stats Panel */
+    .stats {
+        padding: 10px 16px;
+        display: flex;
+        gap: 12px;
+        font-size: 0.85rem;
+        color: var(--secondary-text);
+        background: #f9f9f9;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    /* Main Interaction Area */
+    .main-controls {
+        padding: 16px;
+        text-align: center;
+        background: var(--surface-color);
+    }
+
+    button.tap-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        border-radius: 50px;
+        cursor: pointer;
+        box-shadow: 0 4px 0 #005a9e;
+        transition: all 0.1s;
+        width: 100%;
+        max-width: 300px;
+        touch-action: manipulation;
+    }
+
+    button.tap-btn:active {
+        transform: translateY(4px);
+        box-shadow: 0 0 0 #005a9e;
+        background: var(--primary-hover);
+    }
+
+    /* Upgrades List */
+    .upgrades-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        background: var(--bg-color);
+    }
+
+    .upgrade-section-title {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--secondary-text);
+        margin-bottom: 10px;
+        font-weight: 700;
+    }
+
+    .upgrade-item {
+        background: var(--surface-color);
+        padding: 12px;
+        border-radius: var(--border-radius);
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        transition: opacity 0.3s;
+    }
+
+    .upgrade-item.disabled {
+        opacity: 0.6;
+        pointer-events: none;
+        filter: grayscale(0.8);
+    }
+
+    .upgrade-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .upgrade-name {
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .upgrade-desc {
+        font-size: 0.8rem;
+        color: var(--secondary-text);
+    }
+
+    .upgrade-btn {
+        background: #fff;
+        border: 2px solid var(--accent-green);
+        color: var(--accent-green);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: 0.9rem;
+        min-width: 80px;
+        text-align: center;
+        transition: all 0.2s;
+    }
+
+    .upgrade-btn:hover {
+        background: var(--accent-green);
+        color: #fff;
+    }
+    
+    .upgrade-btn:disabled {
+        border-color: #ccc;
+        color: #ccc;
+        cursor: not-allowed;
+        background: transparent;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 3px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    /* Floating Text Animation */
+    .floating-text {
+        position: absolute;
+        color: var(--accent-green);
+        font-weight: bold;
+        pointer-events: none;
+        animation: floatUp 1s ease-out forwards;
+        text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+        z-index: 100;
+    }
+
+    @keyframes floatUp {
+        0% { opacity: 1; transform: translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+    }
+
+</style>
+</head>
+<body>
+
+<header>
+    <div class="app-title">👵 Nagyi .INC</div>
+    <div class="money-display" id="moneyDisplay">0 Ft</div>
+</header>
+
+<div class="scene" id="gameScene">
+    <div class="cloud">☁️</div>
+    <div class="cloud">☁️</div>
+    <div class="store">🏪</div>
+    <div class="speed-lines" id="speedLines"></div>
+    <div class="road-lines"></div>
+    <div class="grandma-container" id="grandma">👵</div>
+</div>
+
+<div class="stats">
+    <span id="speedDisplay">Sebesség: 5 km/h</span>
+    <span id="tripsDisplay">Vásárlások: 0</span>
+</div>
+
+<div class="main-controls">
+    <button class="tap-btn" id="walkBtn">FUTÁS! 🦶</button>
+</div>
+
+<div class="upgrades-container">
+    <div class="upgrade-section-title">Bolt (Szuper Olcsó!)</div>
+    <div id="upgradesList">
+        <!-- Upgrades injected via JS -->
+    </div>
+</div>
+
+<script>
+/**
+ * Audio Engine using Web Audio API
+ */
+class AudioController {
+    constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.enabled = true;
+    }
+
+    playTone(freq, type, duration, vol = 0.1) {
+        if (!this.enabled) return;
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    playClick() {
+        this.playTone(400, 'sine', 0.1, 0.1);
+    }
+
+    playCash() {
+        // High ding sequence
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.setValueAtTime(2000, now + 0.1);
+        
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.4);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.4);
+    }
+
+    playUpgrade() {
+        this.playTone(600, 'square', 0.1, 0.05);
+        setTimeout(() => this.playTone(900, 'square', 0.2, 0.05), 100);
+    }
+}
+
+/**
+ * Game Data - UPDATED: Prices slashed significantly!
+ */
+const UPGRADES = [
+    { id: 'shoes', name: 'Kényelmes Papucs', desc: '+5 Sebesség', cost: 10, type: 'speed', value: 5, icon: '🥿' }, // Was 50
+    { id: 'cane', name: 'Sétabot', desc: '+10 Sebesség', cost: 50, type: 'speed', value: 10, icon: '🦯' }, // Was 200
+    { id: 'glasses', name: 'Új Szemüveg', desc: '+20% Nyugdíj/kör', cost: 150, type: 'multiplier', value: 1.2, icon: '👓' }, // Was 500
+    { id: 'vitamins', name: 'Turbó Vitamin', desc: '+20 Sebesség', cost: 300, type: 'speed', value: 20, icon: '💊' }, // Was 1000
+    { id: 'walker', name: 'Járókeret', desc: 'Gyorsabb Auto séta', cost: 600, type: 'auto', value: 1.5, icon: '🛒' }, // Was 2500
+    { id: 'grandchild', name: 'Unoka Segít', desc: 'Száguldó Auto séta', cost: 1500, type: 'auto', value: 4.0, icon: '👦' }, // Was 7500
+    { id: 'scooter', name: 'Elektromos Moped', desc: '+100 Sebesség', cost: 4000, type: 'speed', value: 100, icon: '🛵' }, // Was 15000
+    { id: 'rocket', name: 'Rakéta Kerekesszék', desc: 'Fénysebesség!', cost: 10000, type: 'speed', value: 1000, icon: '🚀' } // Was 100000
+];
+
+/**
+ * Game Logic
+ */
+class Game {
+    constructor() {
+        this.money = 0;
+        this.speed = 5; // Start 5x faster (was 1)
+        this.position = 0;
+        this.trips = 0;
+        this.multiplier = 1;
+        this.autoSpeed = 2; // Auto-walk enabled by default (was 0)
+        
+        this.lastTime = 0;
+        this.isMoving = false;
+        this.moveTimer = null;
+        
+        this.audio = new AudioController();
+
+        this.elements = {
+            money: document.getElementById('moneyDisplay'),
+            speed: document.getElementById('speedDisplay'),
+            trips: document.getElementById('tripsDisplay'),
+            grandma: document.getElementById('grandma'),
+            upgradesList: document.getElementById('upgradesList'),
+            walkBtn: document.getElementById('walkBtn'),
+            scene: document.getElementById('gameScene'),
+            speedLines: document.getElementById('speedLines')
+        };
+
+        this.init();
+    }
+
+    init() {
+        this.renderUpgrades();
+        this.updateUI();
+        
+        // Check for mobile mode
+        if (document.body.classList.contains('mobile-mode')) {
+            this.elements.walkBtn.style.padding = "24px";
+            this.elements.walkBtn.style.fontSize = "1.5rem";
+        }
+
+        // Event Listeners
+        this.elements.walkBtn.addEventListener('mousedown', () => this.handleWalkInput());
+        this.elements.walkBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // prevent double tap zoom
+            this.handleWalkInput();
+        });
+
+        // Loop
+        requestAnimationFrame((t) => this.loop(t));
+    }
+
+    handleWalkInput() {
+        this.audio.playClick();
+        this.moveGrandma(this.speed * 3); // Click gives a burst
+        
+        // Add wobble animation temporarily
+        this.elements.grandma.classList.add('walking');
+        clearTimeout(this.moveTimer);
+        this.moveTimer = setTimeout(() => {
+            // Only remove walking class if autoSpeed is very low, but since autoSpeed starts at 2, she is always walking
+            if (this.autoSpeed < 0.1) {
+                this.elements.grandma.classList.remove('walking');
+            }
+        }, 200);
+    }
+
+    moveGrandma(amount) {
+        this.position += amount * 0.1; // Scale factor
+        
+        if (this.position >= 90) {
+            // Reached store (at approx 90% of screen width)
+            this.completeTrip();
+        }
+    }
+
+    completeTrip() {
+        this.trips++;
+        const baseReward = 25; // Increased reward (was 10)
+        const reward = Math.floor(baseReward * this.multiplier + (this.speed * 0.2)); // Higher speed bonus
+        this.addMoney(reward);
+        this.audio.playCash();
+        
+        // Visual feedback
+        this.showFloatingText(`+${reward} Ft`, 'right');
+        
+        // Reset
+        this.position = 0;
+    }
+
+    addMoney(amount) {
+        this.money += amount;
+        this.updateUI();
+        this.checkUpgrades();
+    }
+
+    showFloatingText(text, side) {
+        const el = document.createElement('div');
+        el.className = 'floating-text';
+        el.textContent = text;
+        
+        if (side === 'right') {
+            el.style.right = '20px';
+            el.style.top = '50%';
+        }
+        
+        this.elements.scene.appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+    }
+
+    loop(timestamp) {
+        const dt = (timestamp - this.lastTime) / 16; // Normalize to ~60fps
+        this.lastTime = timestamp;
+
+        // Auto walk (now active by default)
+        if (this.autoSpeed > 0) {
+            this.position += this.autoSpeed * dt * 0.15; // Faster auto-walk scaling
+            this.elements.grandma.classList.add('walking');
+            if (this.position >= 90) this.completeTrip();
+        }
+
+        // Visual update
+        this.elements.grandma.style.left = `${Math.min(this.position, 90)}%`;
+        
+        // Speed lines effect
+        if (this.speed > 30 || this.autoSpeed > 5) {
+            this.elements.speedLines.style.display = 'block';
+        } else {
+            this.elements.speedLines.style.display = 'none';
+        }
+
+        requestAnimationFrame((t) => this.loop(t));
+    }
+
+    buyUpgrade(id) {
+        const upgrade = UPGRADES.find(u => u.id === id);
+        if (!upgrade || this.money < upgrade.cost) return;
+
+        this.money -= upgrade.cost;
+        this.audio.playUpgrade();
+
+        // Apply effect
+        if (upgrade.type === 'speed') {
+            this.speed += upgrade.value;
+            // Update icon
+            if (upgrade.icon) this.elements.grandma.textContent = upgrade.icon;
+        } else if (upgrade.type === 'multiplier') {
+            this.multiplier *= upgrade.value;
+        } else if (upgrade.type === 'auto') {
+            this.autoSpeed += upgrade.value;
+        }
+
+        // Increase cost slightly for next time (simple game balance)
+        upgrade.cost = Math.floor(upgrade.cost * 1.3); // Lower inflation (was 1.5)
+        
+        this.updateUI();
+        this.renderUpgrades(); // Re-render to update costs
+    }
+
+    updateUI() {
+        this.elements.money.textContent = `${Math.floor(this.money)} Ft`;
+        
+        // Calculate "km/h" nicely
+        let displaySpeed = (this.speed + (this.autoSpeed * 10)).toFixed(1);
+        this.elements.speed.textContent = `Sebesség: ${displaySpeed} km/h`;
+        this.elements.trips.textContent = `Vásárlások: ${this.trips}`;
+    }
+
+    checkUpgrades() {
+        const buttons = document.querySelectorAll('.upgrade-btn');
+        buttons.forEach(btn => {
+            const cost = parseInt(btn.dataset.cost);
+            btn.disabled = this.money < cost;
+        });
+    }
+
+    renderUpgrades() {
+        this.elements.upgradesList.innerHTML = '';
+        
+        UPGRADES.forEach(u => {
+            const div = document.createElement('div');
+            div.className = 'upgrade-item';
+            div.innerHTML = `
+                <div class="upgrade-info">
+                    <div class="upgrade-name">${u.icon} ${u.name}</div>
+                    <div class="upgrade-desc">${u.desc}</div>
+                </div>
+                <button class="upgrade-btn" data-id="${u.id}" data-cost="${u.cost}">
+                    ${u.cost} Ft
+                </button>
+            `;
+            
+            const btn = div.querySelector('button');
+            if (this.money < u.cost) btn.disabled = true;
+            
+            btn.onclick = () => this.buyUpgrade(u.id);
+            
+            this.elements.upgradesList.appendChild(div);
+        });
+    }
+}
+
+// Start Game
+window.addEventListener('DOMContentLoaded', () => {
+    const game = new Game();
+});
+
+</script>
+</body>
+</html>
