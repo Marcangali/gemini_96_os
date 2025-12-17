@@ -1,0 +1,973 @@
+<!--
+APP_NAME: Grandma's Theremin
+APP_DESCRIPTION: Play music as a grandma! Unlock 12 wacky instruments and effects.
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 640
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grandma's Theremin</title>
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-light: #a78bfa;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --accent: #f472b6;
+            --radius: 16px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        body.mobile-mode {
+            --radius: 0px;
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            padding: 12px 16px;
+            box-shadow: var(--shadow);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .level-badge {
+            background: var(--primary);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+        }
+
+        /* XP Bar */
+        .xp-container {
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .xp-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.3s ease-out;
+        }
+
+        .xp-text {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+
+        /* Main Pad */
+        main {
+            flex: 1;
+            position: relative;
+            margin: 12px;
+            background: linear-gradient(135deg, #ede9fe 0%, #fce7f3 100%);
+            border-radius: var(--radius);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            overflow: hidden;
+            cursor: crosshair;
+            touch-action: none;
+            border: 2px solid white;
+            transition: filter 0.3s;
+            min-height: 200px;
+        }
+
+        main.active {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+            border-color: var(--primary-light);
+        }
+
+        /* Grandma SVG container */
+        .grandma-container {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            height: 220px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.9;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        main.active .grandma-container {
+            transform: translateX(-50%) scale(1.05);
+        }
+
+        .grandma-hand {
+            transition: cx 0.1s, cy 0.1s;
+        }
+
+        #visualizer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .overlay-text {
+            position: absolute;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 1rem;
+            pointer-events: none;
+            opacity: 0.7;
+            text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+            transition: opacity 0.3s;
+        }
+
+        /* Controls Grid */
+        .controls-area {
+            background: var(--surface);
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+            z-index: 5;
+            box-shadow: 0 -4px 6px -1px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+            max-height: 45vh;
+            overflow-y: auto;
+        }
+
+        .controls-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .upgrade-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 6px 2px;
+            text-align: center;
+            opacity: 0.5;
+            filter: grayscale(1);
+            transition: all 0.2s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 55px;
+            user-select: none;
+        }
+
+        /* Locked State */
+        .upgrade-card.locked {
+            background: #e5e7eb;
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        /* Unlocked but Inactive */
+        .upgrade-card.unlocked {
+            cursor: pointer;
+            opacity: 0.8;
+            background: #f3f4f6;
+            filter: grayscale(1);
+        }
+        
+        /* Unlocked AND Active */
+        .upgrade-card.unlocked.active {
+            opacity: 1;
+            filter: grayscale(0);
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 6px rgba(139, 92, 246, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .upgrade-card.unlocked:active {
+            transform: scale(0.95);
+        }
+
+        .upgrade-icon { font-size: 1.2rem; margin-bottom: 2px; }
+        .upgrade-name { font-size: 0.55rem; font-weight: 600; line-height: 1.1; color: var(--text); }
+        .upgrade-lvl { 
+            position: absolute; top: -4px; right: -4px; 
+            background: var(--text-light); color: white; 
+            font-size: 0.5rem; padding: 1px 4px; border-radius: 10px;
+            font-weight: bold;
+        }
+        .unlocked .upgrade-lvl { background: #9ca3af; }
+        .unlocked.active .upgrade-lvl { background: var(--primary); }
+
+        /* Toast */
+        .toast {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: #1f2937;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+            white-space: nowrap;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Animations */
+        @keyframes sway {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        
+        .grandma-head {
+            transform-origin: 50% 80%;
+        }
+        main.active .grandma-head {
+            animation: sway 2s infinite ease-in-out;
+        }
+
+        /* Reset Button (Subtle) */
+        .reset-btn {
+            font-size: 0.6rem;
+            color: var(--text-light);
+            text-decoration: underline;
+            cursor: pointer;
+            opacity: 0.5;
+        }
+        .reset-btn:hover { opacity: 1; color: var(--accent); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="top-row">
+            <h1>Grandma's Theremin</h1>
+            <div class="level-badge" id="level-badge">Lvl 1</div>
+        </div>
+        <div>
+            <div class="xp-text">
+                <span id="xp-label">Practice Progress</span>
+                <span id="xp-text">0 / 60</span>
+            </div>
+            <div class="xp-container">
+                <div class="xp-bar" id="xp-bar"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="toast" id="toast">
+        <span>🎉</span> <span id="toast-msg">Unlocked: Vibrato!</span>
+    </div>
+
+    <main id="pad">
+        <canvas id="visualizer"></canvas>
+        <div class="overlay-text" id="instruction">Touch & Hold to Play</div>
+        
+        <!-- SVG Grandma Character -->
+        <svg class="grandma-container" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                    <feOffset dx="0" dy="2" result="offsetblur"/>
+                    <feComponentTransfer>
+                        <feFuncA type="linear" slope="0.3"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            
+            <g filter="url(#shadow)">
+                <!-- Body -->
+                <path d="M30 100 Q50 65 70 100" fill="#a78bfa" />
+                <path d="M30 100 Q50 90 70 100" fill="#8b5cf6" opacity="0.3" />
+
+                <!-- Head Group -->
+                <g class="grandma-head">
+                    <!-- Bun -->
+                    <circle cx="50" cy="35" r="13" fill="#e5e7eb" />
+                    <!-- Face -->
+                    <circle cx="50" cy="50" r="15" fill="#ffedd5" />
+                    <!-- Hair -->
+                    <path d="M35 50 Q50 28 65 50" fill="none" stroke="#e5e7eb" stroke-width="5" stroke-linecap="round"/>
+                    <!-- Glasses -->
+                    <g fill="none" stroke="#1f2937" stroke-width="1.5">
+                        <circle cx="44" cy="52" r="4" />
+                        <circle cx="56" cy="52" r="4" />
+                        <line x1="48" y1="52" x2="52" y2="52" />
+                        <line x1="40" y1="52" x2="36" y2="50" />
+                        <line x1="60" y1="52" x2="64" y2="50" />
+                    </g>
+                    <!-- Smile -->
+                    <path d="M45 62 Q50 65 55 62" fill="none" stroke="#1f2937" stroke-width="1" stroke-linecap="round" />
+                    <!-- Cheeks -->
+                    <circle cx="42" cy="58" r="2" fill="#fca5a5" opacity="0.6" />
+                    <circle cx="58" cy="58" r="2" fill="#fca5a5" opacity="0.6" />
+                    
+                    <!-- Cool Sunglasses (Unlock at max lvl 12) -->
+                    <g id="sunglasses" style="display:none">
+                        <path d="M38 48 h10 v5 a2 2 0 0 1 -2 2 h-6 a2 2 0 0 1 -2 -2 z" fill="#111"/>
+                        <path d="M52 48 h10 v5 a2 2 0 0 1 -2 2 h-6 a2 2 0 0 1 -2 -2 z" fill="#111"/>
+                        <line x1="48" y1="50" x2="52" y2="50" stroke="#111" stroke-width="2"/>
+                    </g>
+                </g>
+
+                <!-- Hands (Animated via JS) -->
+                <circle id="hand-l" cx="35" cy="80" r="5" fill="#ffedd5" stroke="#a78bfa" stroke-width="2" />
+                <circle id="hand-r" cx="65" cy="80" r="5" fill="#ffedd5" stroke="#a78bfa" stroke-width="2" />
+            </g>
+        </svg>
+
+        <!-- Axis Labels -->
+        <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: rgba(0,0,0,0.4); font-weight: bold; letter-spacing: 1px;">LOW PITCH <span style="opacity:0.5">———</span> HIGH PITCH</div>
+        <div style="position: absolute; top: 50%; left: 8px; transform: translateY(-50%) rotate(-90deg); font-size: 0.65rem; color: rgba(0,0,0,0.4); font-weight: bold; letter-spacing: 1px;">QUIET <span style="opacity:0.5">———</span> LOUD</div>
+
+    </main>
+
+    <div class="controls-area">
+        <div class="controls-header">
+            <span>Sound Lab</span>
+            <span class="reset-btn" onclick="resetProgress()">Reset</span>
+        </div>
+        <div class="controls-grid" id="upgrade-grid">
+            <!-- Generated via JS -->
+        </div>
+    </div>
+
+<script>
+    // --- Configuration ---
+    const UPGRADES = [
+        { id: 'sine', name: 'Humming', icon: '👵', level: 1, desc: 'Basic Sound' },
+        { id: 'vibrato', name: 'Vibrato', icon: '〰️', level: 2, desc: 'Wobbly Pitch' },
+        { id: 'triangle', name: 'Clarity', icon: '🔔', level: 3, desc: 'Clearer Tone' },
+        { id: 'echo', name: 'Memory', icon: '🏰', level: 4, desc: 'Echo Effect' },
+        { id: 'sub', name: 'Cookies', icon: '🍪', level: 5, desc: 'Warm Bass' },
+        { id: 'chorus', name: 'Choir', icon: '👥', level: 6, desc: 'Chorus Effect' },
+        { id: 'harmony', name: 'Duet', icon: '✨', level: 7, desc: 'Harmonic Fifth' },
+        { id: 'master', name: 'Legend', icon: '🕶️', level: 8, desc: 'Filter Open' },
+        { id: 'tremolo', name: 'Shaky', icon: '👋', level: 9, desc: 'Wobbly Vol' },
+        { id: 'distortion', name: 'Candy', icon: '🍬', level: 10, desc: 'Hard Edge' },
+        { id: 'saw', name: 'Knitting', icon: '🧶', level: 11, desc: 'Sharp Tone' },
+        { id: 'square', name: 'Bingo', icon: '🎰', level: 12, desc: '8-Bit Sound' }
+    ];
+
+    const STORAGE_KEY = 'grandma_theremin_v4'; // Updated version for new leveling
+    const MAX_LEVEL = 12;
+
+    let STATE = {
+        level: 1,
+        xp: 0,
+        xpReq: 60, // Lowered from 150 for faster leveling
+        activeModes: ['sine'], 
+        isPlaying: false,
+        x: 0.5,
+        y: 0.5
+    };
+
+    // --- Audio System ---
+    let actx;
+    let master;
+    let osc, subOsc, harmOsc, detuneOsc, sawOsc, sqOsc;
+    let lfo, lfoGain; // Vibrato
+    let tremLfo, tremGain; // Tremolo
+    let delay, feedback;
+    let filter;
+    let distorter;
+    let voiceGain;
+    let isInit = false;
+    let distortionCurve;
+
+    // Create Distortion Curve
+    function makeDistortionCurve(amount) {
+        const k = amount;
+        const n_samples = 44100;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < n_samples; ++i) {
+            const x = i * 2 / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
+    }
+
+    function initAudio() {
+        if (isInit) return;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        actx = new AC();
+        
+        // Master Chain
+        master = actx.createGain();
+        master.gain.value = 0;
+        
+        // Effects Setup
+        filter = actx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 2500;
+        
+        delay = actx.createDelay();
+        delay.delayTime.value = 0.35;
+        feedback = actx.createGain();
+        feedback.gain.value = 0.4;
+        delay.connect(feedback);
+        feedback.connect(delay);
+        
+        distorter = actx.createWaveShaper();
+        distortionCurve = makeDistortionCurve(400); // 400 is amount
+        distorter.curve = distortionCurve;
+        distorter.oversample = '4x';
+
+        tremGain = actx.createGain();
+        tremGain.gain.value = 1;
+
+        master.connect(actx.destination);
+        isInit = true;
+    }
+
+    function hasMode(id) {
+        return STATE.activeModes.includes(id);
+    }
+
+    function startNote() {
+        if (!isInit) initAudio();
+        if (actx.state === 'suspended') actx.resume();
+
+        const now = actx.currentTime;
+        voiceGain = actx.createGain();
+        voiceGain.gain.setValueAtTime(0, now);
+        voiceGain.gain.linearRampToValueAtTime(0.5, now + 0.05);
+
+        // --- Routing Chain ---
+        // Sources -> VoiceGain -> Filter
+        voiceGain.connect(filter);
+
+        let lastNode = filter;
+
+        // Effect 1: Distortion (Hard Candy)
+        if (hasMode('distortion')) {
+            filter.connect(distorter);
+            lastNode = distorter;
+        }
+
+        // Effect 2: Tremolo (Shaky Hands)
+        if (hasMode('tremolo')) {
+            tremLfo = actx.createOscillator();
+            tremLfo.frequency.value = 6; // 6Hz shake
+            const tremDepth = actx.createGain();
+            tremDepth.gain.value = 0.5; // Depth
+            
+            tremLfo.connect(tremDepth);
+            tremDepth.connect(tremGain.gain);
+            
+            // Connect previous node to tremGain
+            lastNode.connect(tremGain);
+            lastNode = tremGain;
+            
+            tremLfo.start();
+        } else {
+            tremGain.gain.setValueAtTime(1, now); // Reset if not active
+        }
+
+        // Connect Last Node to Master
+        lastNode.connect(master);
+
+        // Echo Logic (Memory)
+        if (hasMode('echo')) {
+            lastNode.connect(delay); // Parallel path
+            delay.connect(master);
+        } else {
+             try { lastNode.disconnect(delay); delay.disconnect(master); } catch(e){}
+        }
+
+        // --- Modulation ---
+        // LFO (Vibrato)
+        lfo = actx.createOscillator();
+        lfoGain = actx.createGain();
+        lfo.frequency.value = 5.5; 
+        lfoGain.gain.value = hasMode('vibrato') ? 15 : 0;
+        lfo.connect(lfoGain);
+        lfo.start();
+
+        // --- Oscillators (Sources) ---
+        // 1. Fundamental (Sine/Triangle)
+        if (hasMode('sine') || hasMode('triangle')) {
+            osc = actx.createOscillator();
+            osc.type = hasMode('triangle') ? 'triangle' : 'sine';
+            lfoGain.connect(osc.frequency);
+            osc.connect(voiceGain);
+            osc.start();
+        }
+
+        // 2. Sub Osc (Cookies)
+        if (hasMode('sub')) {
+            subOsc = actx.createOscillator();
+            subOsc.type = 'sine';
+            subOsc.connect(voiceGain);
+            subOsc.start();
+        }
+
+        // 3. Chorus Detune (Choir)
+        if (hasMode('chorus')) {
+            detuneOsc = actx.createOscillator();
+            detuneOsc.type = hasMode('triangle') ? 'triangle' : 'sine';
+            detuneOsc.detune.value = 12; 
+            lfoGain.connect(detuneOsc.frequency);
+            detuneOsc.connect(voiceGain);
+            detuneOsc.start();
+        }
+
+        // 4. Harmony (Duet)
+        if (hasMode('harmony')) {
+            harmOsc = actx.createOscillator();
+            harmOsc.type = 'sine';
+            lfoGain.connect(harmOsc.frequency);
+            harmOsc.connect(voiceGain);
+            harmOsc.start();
+        }
+
+        // 5. Sawtooth (Knitting)
+        if (hasMode('saw')) {
+            sawOsc = actx.createOscillator();
+            sawOsc.type = 'sawtooth';
+            lfoGain.connect(sawOsc.frequency);
+            // Lower volume slightly as sawtooth is harsh
+            const sawG = actx.createGain(); 
+            sawG.gain.value = 0.4;
+            sawOsc.connect(sawG);
+            sawG.connect(voiceGain);
+            sawOsc.start();
+        }
+
+        // 6. Square (Bingo)
+        if (hasMode('square')) {
+            sqOsc = actx.createOscillator();
+            sqOsc.type = 'square';
+            lfoGain.connect(sqOsc.frequency);
+            const sqG = actx.createGain();
+            sqG.gain.value = 0.3;
+            sqOsc.connect(sqG);
+            sqG.connect(voiceGain);
+            sqOsc.start();
+        }
+
+        // Master Mode - Opens up the filter
+        const cutoff = hasMode('master') ? 8000 : 2500;
+        filter.frequency.setTargetAtTime(cutoff, now, 0.2);
+
+        STATE.isPlaying = true;
+        document.getElementById('pad').classList.add('active');
+        document.getElementById('instruction').style.opacity = 0;
+        
+        // Start XP Timer
+        clearInterval(xpTimer);
+        xpTimer = setInterval(addXP, 100);
+    }
+
+    function moveNote(x, y) {
+        if (!STATE.isPlaying) return;
+        
+        const minF = 130;
+        const maxF = 880;
+        let freq = minF + (x * (maxF - minF));
+        
+        const now = actx.currentTime;
+        
+        // Update all active oscillators
+        if (osc) osc.frequency.setTargetAtTime(freq, now, 0.05);
+        if (subOsc) subOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.05);
+        if (detuneOsc) detuneOsc.frequency.setTargetAtTime(freq, now, 0.05);
+        if (harmOsc) harmOsc.frequency.setTargetAtTime(freq * 1.498, now, 0.05);
+        if (sawOsc) sawOsc.frequency.setTargetAtTime(freq, now, 0.05);
+        if (sqOsc) sqOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.05); // Square sounds good at octave down too, but let's do 0.5 or 1? Let's do 0.5 for beefy 8-bit bass
+
+        // Volume mapped to Y (inverted: top is Max Vol)
+        const vol = 1 - y; 
+        master.gain.setTargetAtTime(vol * 0.5, now, 0.05); 
+
+        updateGrandmaHands(x, y);
+    }
+
+    function stopNote() {
+        const now = actx ? actx.currentTime : 0;
+        if (voiceGain) voiceGain.gain.setTargetAtTime(0, now, 0.1);
+        
+        const stopTime = now + 0.2;
+        
+        [osc, subOsc, harmOsc, detuneOsc, sawOsc, sqOsc, lfo, tremLfo].forEach(o => {
+            if (o) {
+                try { o.stop(stopTime); } catch(e){}
+            }
+        });
+
+        // Cleanup references
+        osc = null; subOsc = null; harmOsc = null; detuneOsc = null; 
+        sawOsc = null; sqOsc = null; lfo = null; tremLfo = null;
+
+        STATE.isPlaying = false;
+        document.getElementById('pad').classList.remove('active');
+        clearInterval(xpTimer);
+        document.getElementById('instruction').style.opacity = 0.7;
+        
+        updateGrandmaHands(0.5, 0.8);
+    }
+
+    // --- Game Logic ---
+    let xpTimer;
+    
+    function loadGame() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                const d = JSON.parse(saved);
+                STATE.level = d.level;
+                STATE.xp = d.xp;
+                STATE.xpReq = d.xpReq;
+                STATE.activeModes = d.activeModes || ['sine'];
+            } catch (e) {
+                console.error("Save corrupted, resetting");
+                resetProgress();
+            }
+        }
+        renderUI();
+    }
+
+    function addXP() {
+        if (STATE.level >= MAX_LEVEL) return;
+
+        // Base XP + Bonus for complexity (FASTER LEVELING)
+        // Was 0.5 + bonus. Now 1.5 + bonus.
+        const xpRate = 1.5 + (STATE.activeModes.length * 0.3); 
+        STATE.xp += xpRate;
+        
+        if (STATE.xp >= STATE.xpReq) {
+            levelUp();
+        }
+        
+        const pct = Math.min(100, (STATE.xp / STATE.xpReq) * 100);
+        document.getElementById('xp-bar').style.width = `${pct}%`;
+        document.getElementById('xp-text').innerText = `${Math.floor(STATE.xp)} / ${STATE.xpReq}`;
+    }
+
+    function levelUp() {
+        if (STATE.level >= MAX_LEVEL) return;
+        
+        STATE.level++;
+        STATE.xp = 0;
+        // Slower growth in difficulty: was 1.5x, now 1.3x
+        STATE.xpReq = Math.floor(STATE.xpReq * 1.3);
+        
+        const upgrade = UPGRADES[STATE.level - 1]; 
+        
+        if (upgrade && !STATE.activeModes.includes(upgrade.id)) {
+            STATE.activeModes.push(upgrade.id);
+        }
+
+        playSoundEffect('levelup');
+        showToast(`Unlocked: ${upgrade.name}!`);
+        save();
+        renderUI();
+    }
+
+    function toggleUpgrade(id) {
+        const upgrade = UPGRADES.find(u => u.id === id);
+        if (STATE.level < upgrade.level) {
+            playSoundEffect('error');
+            return; 
+        }
+
+        const idx = STATE.activeModes.indexOf(id);
+        if (idx >= 0) {
+            STATE.activeModes.splice(idx, 1);
+        } else {
+            STATE.activeModes.push(id);
+        }
+        
+        if (STATE.isPlaying) {
+            stopNote();
+            setTimeout(startNote, 20);
+        } else {
+            playSoundEffect('click');
+        }
+
+        save();
+        renderUI();
+    }
+
+    function save() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            level: STATE.level,
+            xp: STATE.xp,
+            xpReq: STATE.xpReq,
+            activeModes: STATE.activeModes
+        }));
+    }
+
+    function resetProgress() {
+        if(confirm("Reset all progress?")) {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+        }
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        document.getElementById('toast-msg').innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function playSoundEffect(type) {
+        if (!isInit && type !== 'click') return; 
+        if (!isInit && type === 'click') { initAudio(); }
+        if (!actx) return;
+        if (actx.state === 'suspended') actx.resume();
+        
+        const o = actx.createOscillator();
+        const g = actx.createGain();
+        o.connect(g);
+        g.connect(actx.destination);
+        
+        const now = actx.currentTime;
+        
+        if (type === 'levelup') {
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(440, now);
+            o.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+            o.frequency.exponentialRampToValueAtTime(1320, now + 0.3);
+            g.gain.setValueAtTime(0.2, now);
+            g.gain.linearRampToValueAtTime(0, now + 0.6);
+            o.start();
+            o.stop(now + 0.6);
+        } else if (type === 'click') {
+            o.type = 'sine';
+            o.frequency.setValueAtTime(600, now);
+            g.gain.setValueAtTime(0.1, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            o.start();
+            o.stop(now + 0.1);
+        } else if (type === 'error') {
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(150, now);
+            o.frequency.linearRampToValueAtTime(100, now + 0.15);
+            g.gain.setValueAtTime(0.1, now);
+            g.gain.linearRampToValueAtTime(0, now + 0.15);
+            o.start();
+            o.stop(now + 0.15);
+        }
+    }
+
+    // --- Visuals ---
+    function renderUI() {
+        document.getElementById('level-badge').innerText = `Lvl ${STATE.level}`;
+        const pct = Math.min(100, (STATE.xp / STATE.xpReq) * 100);
+        document.getElementById('xp-bar').style.width = `${pct}%`;
+        document.getElementById('xp-text').innerText = (STATE.level === MAX_LEVEL) ? "MAX LEVEL" : `${Math.floor(STATE.xp)} / ${STATE.xpReq}`;
+
+        const grid = document.getElementById('upgrade-grid');
+        grid.innerHTML = '';
+        UPGRADES.forEach(u => {
+            const unlocked = STATE.level >= u.level;
+            const active = STATE.activeModes.includes(u.id);
+            
+            const el = document.createElement('div');
+            el.className = `upgrade-card ${unlocked ? 'unlocked' : 'locked'} ${active ? 'active' : ''}`;
+            el.onclick = () => toggleUpgrade(u.id);
+            
+            el.innerHTML = `
+                <div class="upgrade-lvl">${unlocked ? '✔' : '🔒' + u.level}</div>
+                <div class="upgrade-icon">${u.icon}</div>
+                <div class="upgrade-name">${u.name}</div>
+            `;
+            grid.appendChild(el);
+        });
+
+        document.getElementById('sunglasses').style.display = (STATE.level >= MAX_LEVEL && hasMode('square')) ? 'block' : 'none';
+    }
+
+    const handL = document.getElementById('hand-l');
+    const handR = document.getElementById('hand-r');
+
+    function updateGrandmaHands(x, y) {
+        // Right hand (Pitch) moves horizontally
+        const rx = 60 + (x * 25);
+        const ry = 75 - (Math.abs(x - 0.5) * 10); 
+        
+        // Left hand (Volume) moves vertically
+        const ly = 90 - (y * 30);
+        const lx = 25 - (y * 5);
+
+        handR.setAttribute('cx', rx);
+        handR.setAttribute('cy', ry);
+        
+        handL.setAttribute('cx', lx);
+        handL.setAttribute('cy', ly);
+    }
+
+    // Canvas Visuals
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resize() {
+        canvas.width = canvas.parentElement.offsetWidth;
+        canvas.height = canvas.parentElement.offsetHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function draw() {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        
+        if (STATE.isPlaying) {
+            // More particles for higher complexity
+            const chance = 0.8 - (STATE.activeModes.length * 0.05);
+            if (Math.random() > Math.max(0.1, chance)) {
+                particles.push({
+                    x: canvas.width * STATE.x,
+                    y: canvas.height * STATE.y,
+                    vx: (Math.random()-0.5) * 3,
+                    vy: (Math.random()-0.5) * 3,
+                    life: 1,
+                    size: Math.random() * (STATE.level + 2),
+                    color: `hsl(${Date.now() % 360}, 70%, 70%)`
+                });
+            }
+        }
+
+        particles.forEach((p, i) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.03;
+            
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            ctx.fill();
+        });
+        
+        ctx.globalAlpha = 1;
+        particles = particles.filter(p => p.life > 0);
+        requestAnimationFrame(draw);
+    }
+    draw();
+
+    // --- Input Handling ---
+    const pad = document.getElementById('pad');
+
+    function handleInput(e) {
+        e.preventDefault();
+        const rect = pad.getBoundingClientRect();
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
+
+        let x = (clientX - rect.left) / rect.width;
+        let y = (clientY - rect.top) / rect.height;
+        x = Math.max(0, Math.min(1, x));
+        y = Math.max(0, Math.min(1, y));
+
+        STATE.x = x;
+        STATE.y = y;
+
+        if (!STATE.isPlaying) startNote();
+        moveNote(x, y);
+    }
+
+    pad.addEventListener('mousedown', handleInput);
+    pad.addEventListener('mousemove', (e) => { if(STATE.isPlaying) handleInput(e); });
+    pad.addEventListener('mouseup', stopNote);
+    pad.addEventListener('mouseleave', stopNote);
+
+    pad.addEventListener('touchstart', handleInput, {passive: false});
+    pad.addEventListener('touchmove', handleInput, {passive: false});
+    pad.addEventListener('touchend', stopNote);
+
+    // Initial Load
+    loadGame();
+    updateGrandmaHands(0.5, 0.5);
+
+</script>
+</body>
+</html>
