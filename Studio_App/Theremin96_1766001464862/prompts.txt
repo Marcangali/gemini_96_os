@@ -20,3 +20,7 @@ Increase the scale by one octave.
 ---
 [17. 12. 2025 23:11:09] v13:
 Make scale 1.5 octave
+
+---
+[17. 12. 2025 23:15:14] v14:
+The lowest tone of scale should be G
