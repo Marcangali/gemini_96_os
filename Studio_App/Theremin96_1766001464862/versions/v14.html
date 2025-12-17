@@ -1,0 +1,840 @@
+<!--
+APP_NAME: Theremin 96
+APP_DESCRIPTION: Virtual theremin with push-to-swell volume, pitch control, and scale snapping.
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 500
+STORE_ID: theremin-96
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theremin 96</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --surface-color: #ffffff;
+            --primary-color: #0078d4;
+            --accent-vol: #00cc6a; /* Green for Volume */
+            --accent-freq: #b146c2; /* Purple for Freq */
+            --text-color: #202020;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --active-scale: 0.98;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* App Container */
+        .app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 16px;
+            box-sizing: border-box;
+        }
+
+        /* Header / Visualizer Area */
+        .header {
+            flex: 0 0 100px;
+            background: var(--surface-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas#visualizer {
+            width: 100%;
+            height: 100%;
+            opacity: 0.6;
+        }
+
+        .status-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .status-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-color);
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Controls Container */
+        .controls-area {
+            flex: 1;
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            align-items: stretch;
+            position: relative;
+        }
+
+        /* Common Control Styles */
+        .control-panel {
+            flex: 1;
+            background: var(--surface-color);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        .control-label {
+            position: absolute;
+            top: 16px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* LEFT SIDE: Volume Button */
+        #volume-btn {
+            cursor: pointer;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            border: 2px solid transparent;
+        }
+
+        #volume-btn:active {
+            transform: scale(var(--active-scale));
+        }
+
+        #volume-btn.active-press {
+            border-color: rgba(0, 204, 106, 0.3);
+            box-shadow: 0 0 15px rgba(0, 204, 106, 0.2);
+        }
+
+        .btn-fill {
+            width: 100%;
+            background-color: var(--accent-vol);
+            opacity: 0.3;
+            height: 0%; /* Dynamic */
+            transition: none; /* Controlled by JS loop */
+            pointer-events: none;
+        }
+
+        .btn-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            color: var(--accent-vol);
+            opacity: 0.5;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        #volume-btn:active .btn-icon {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        /* RIGHT SIDE: Pitch Slider */
+        #freq-slider {
+            cursor: ns-resize;
+        }
+
+        /* Avoid scaling the whole panel when clicking internal toggle */
+        #freq-slider.slider-active:active {
+            transform: scale(var(--active-scale));
+        }
+
+        .slider-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%; /* Dynamic */
+            opacity: 0.2;
+            pointer-events: none;
+            transition: height 0.05s linear;
+            background-color: var(--accent-freq);
+        }
+
+        .slider-handle {
+            position: absolute;
+            left: 50%;
+            bottom: 0%; /* Dynamic */
+            width: 40px;
+            height: 24px;
+            border-radius: 12px;
+            background: white;
+            transform: translate(-50%, 50%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            pointer-events: none;
+            transition: bottom 0.05s linear;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            border: 2px solid var(--accent-freq);
+        }
+
+        .slider-handle::after {
+            content: '';
+            width: 20px;
+            height: 4px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 2px;
+        }
+
+        /* Snap Toggle Switch */
+        .snap-control {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.8);
+            padding: 4px 8px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .snap-control span {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 28px;
+            height: 16px;
+            background: #ddd;
+            border-radius: 16px;
+            transition: background 0.2s;
+        }
+
+        .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        input[type="checkbox"]#snap-check {
+            display: none;
+        }
+
+        input[type="checkbox"]:checked + .toggle-switch {
+            background: var(--accent-freq);
+        }
+
+        input[type="checkbox"]:checked + .toggle-switch .toggle-knob {
+            transform: translateX(12px);
+        }
+
+        /* Note Markers */
+        #note-markers {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: 30%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .note-tick {
+            position: absolute;
+            right: 12px;
+            width: 100%;
+            height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            transform: translateY(50%);
+        }
+
+        .note-tick::after {
+            content: '';
+            width: 8px;
+            height: 1px;
+            background-color: #ccc;
+            margin-left: 4px;
+        }
+
+        .note-text {
+            font-size: 10px;
+            font-weight: 600;
+            color: #aaa;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 0 2px;
+            border-radius: 3px;
+        }
+
+        /* Power Button */
+        .power-btn-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        #power-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: none;
+            background: var(--surface-color);
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        #power-btn svg {
+            width: 32px;
+            height: 32px;
+            fill: #ccc;
+            transition: fill 0.3s;
+        }
+
+        #power-btn.active {
+            box-shadow: 0 0 15px var(--primary-color), inset 0 0 10px rgba(0,0,0,0.05);
+        }
+
+        #power-btn.active svg {
+            fill: var(--primary-color);
+            filter: drop-shadow(0 0 5px var(--primary-color));
+        }
+
+        #power-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Footer */
+        .footer-info {
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Header / Visualizer -->
+        <div class="header">
+            <canvas id="visualizer"></canvas>
+            <div class="status-overlay">
+                <div class="status-text">OUTPUT</div>
+                <div class="status-value" id="freq-display">OFF</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-area">
+            
+            <!-- Volume Button (Left) -->
+            <div class="control-panel" id="volume-btn">
+                <div class="control-label">Hold Vol</div>
+                <!-- Icons for visual feedback -->
+                <div class="btn-icon">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                        <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z" />
+                    </svg>
+                </div>
+                <!-- Rising Fill -->
+                <div class="btn-fill" id="vol-fill"></div>
+            </div>
+
+            <!-- Power Button (Center Overlay) -->
+            <div class="power-btn-container">
+                <button id="power-btn" aria-label="Power On/Off">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Frequency Slider (Right) -->
+            <div class="control-panel slider-active" id="freq-slider">
+                <div class="control-label" style="text-align: left; left: 12px;">Pitch</div>
+                
+                <!-- Snap Switch -->
+                <label class="snap-control" for="snap-check">
+                    <span>Snap</span>
+                    <input type="checkbox" id="snap-check">
+                    <div class="toggle-switch"><div class="toggle-knob"></div></div>
+                </label>
+
+                <div class="slider-fill" id="freq-fill"></div>
+                <div id="note-markers"></div>
+                <div class="slider-handle" id="freq-handle"></div>
+            </div>
+        </div>
+
+        <div class="footer-info">
+            Power On • Hold Left for Vol • Slide Right for Pitch
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * Theremin 96 Logic
+         */
+        
+        // --- State ---
+        const state = {
+            isOn: false,
+            volume: 0.0, // Start at 0
+            freq: 0.5,   // 0.0 to 1.0 (raw position)
+            snapToScale: false,
+            // UPDATED: Scale set to 2 Octaves (G4 to G6)
+            minFreq: 392.00, // G4 (Lowest tone as requested)
+            maxFreq: 1567.98 // G6 (Approx 2 Octaves)
+        };
+
+        // --- Audio Context ---
+        let audioCtx;
+        let masterGain;
+        let oscillator;
+        let lfo; 
+        let lfoGain;
+        let analyser;
+        
+        const createBeep = (freq, type = 'sine', duration = 0.1) => {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        };
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function startTheremin() {
+            if (!audioCtx) initAudio();
+            
+            oscillator = audioCtx.createOscillator();
+            oscillator.type = 'sine';
+            
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0; 
+
+            // Vibrato
+            lfo = audioCtx.createOscillator();
+            lfo.frequency.value = 6; 
+            lfoGain = audioCtx.createGain();
+            lfoGain.gain.value = 5; 
+            lfo.connect(lfoGain);
+            lfoGain.connect(oscillator.frequency);
+
+            // Audio Path
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 2048;
+            const compressor = audioCtx.createDynamicsCompressor();
+
+            oscillator.connect(masterGain);
+            masterGain.connect(compressor);
+            compressor.connect(analyser);
+            analyser.connect(audioCtx.destination);
+
+            oscillator.start();
+            lfo.start();
+
+            // Set Initial Values
+            state.volume = 0; // Ensure 0 on start
+            updateVolumeVisuals();
+            updateAudioParams();
+        }
+
+        function stopTheremin() {
+            if (oscillator) {
+                masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                setTimeout(() => {
+                    if(oscillator) oscillator.stop();
+                    if(lfo) lfo.stop();
+                    oscillator = null;
+                    lfo = null;
+                }, 100);
+            }
+        }
+
+        function getTargetFrequency() {
+            // Logarithmic mapping for natural pitch scaling
+            const rawFreq = state.minFreq * Math.pow(state.maxFreq / state.minFreq, state.freq);
+            
+            if (state.snapToScale) {
+                // MIDI Note conversion: 69 is A4 (440Hz)
+                const midi = 69 + 12 * Math.log2(rawFreq / 440);
+                const snappedMidi = Math.round(midi);
+                const snappedFreq = 440 * Math.pow(2, (snappedMidi - 69) / 12);
+                return snappedFreq;
+            }
+            
+            return rawFreq;
+        }
+
+        function updateAudioParams() {
+            if (!oscillator || !masterGain) return;
+            
+            const targetFreq = getTargetFrequency();
+            // Faster slide if snapping to avoid "glissando" effect between notes, but keep small slide to avoid pops
+            const rampTime = state.snapToScale ? 0.02 : 0.05; 
+            oscillator.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, rampTime);
+            
+            // Volume Mapping
+            masterGain.gain.setTargetAtTime(state.volume, audioCtx.currentTime, 0.02);
+        }
+
+        // --- UI Interactions ---
+
+        // DOM Elements
+        const powerBtn = document.getElementById('power-btn');
+        const freqDisplay = document.getElementById('freq-display');
+        const freqSlider = document.getElementById('freq-slider');
+        const freqFill = document.getElementById('freq-fill');
+        const freqHandle = document.getElementById('freq-handle');
+        const snapCheck = document.getElementById('snap-check');
+        
+        // Volume Elements
+        const volBtn = document.getElementById('volume-btn');
+        const volFill = document.getElementById('vol-fill');
+
+        // --- Volume Button Logic ---
+        let volumeRafId = null;
+
+        function updateVolumeVisuals() {
+            // Update fill height percentage
+            volFill.style.height = `${state.volume * 100}%`;
+        }
+
+        function startVolumeIncrease() {
+            if (!state.isOn) return;
+            volBtn.classList.add('active-press');
+            
+            // Cancel any existing loop
+            cancelAnimationFrame(volumeRafId);
+
+            const ramp = () => {
+                if (state.volume < 1.0) {
+                    // Increase volume
+                    state.volume += 0.015; 
+                    if (state.volume > 1.0) state.volume = 1.0;
+                    
+                    updateAudioParams();
+                    updateVolumeVisuals();
+                    
+                    if (state.volume < 1.0) {
+                        volumeRafId = requestAnimationFrame(ramp);
+                    }
+                }
+            };
+            volumeRafId = requestAnimationFrame(ramp);
+        }
+
+        function stopVolume() {
+            volBtn.classList.remove('active-press');
+            cancelAnimationFrame(volumeRafId);
+            
+            // Drop to zero
+            state.volume = 0;
+            updateAudioParams();
+            updateVolumeVisuals();
+        }
+
+        // Add Listeners to Volume Button
+        volBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            startVolumeIncrease();
+        });
+        volBtn.addEventListener('mouseup', stopVolume);
+        volBtn.addEventListener('mouseleave', stopVolume);
+
+        volBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startVolumeIncrease();
+        }, { passive: false });
+        
+        volBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            stopVolume();
+        });
+        volBtn.addEventListener('touchcancel', stopVolume);
+
+
+        // --- Frequency Slider Logic ---
+        
+        // Handle Snap Toggle
+        snapCheck.addEventListener('change', (e) => {
+            state.snapToScale = e.target.checked;
+            // Play a small sound to confirm switch
+            if (audioCtx && audioCtx.state === 'running') {
+                createBeep(state.snapToScale ? 800 : 600, 'sine', 0.05);
+            }
+            // If already playing, update immediate frequency and visuals
+            if (state.isOn) {
+                updateAudioParams();
+                updateFreqVisualsFromState();
+            }
+        });
+
+        // Helper to visualize snap position
+        function updateFreqVisualsFromState() {
+            let displayVal = state.freq;
+
+            if (state.snapToScale) {
+                // Reverse engineering visual position from snapped frequency
+                const snappedFreq = getTargetFrequency();
+                // log(f / min) / log(max / min)
+                displayVal = Math.log(snappedFreq / state.minFreq) / Math.log(state.maxFreq / state.minFreq);
+                // Clamp for visuals
+                displayVal = Math.max(0, Math.min(1, displayVal));
+            }
+
+            const percent = displayVal * 100;
+            freqFill.style.height = `${percent}%`;
+            freqHandle.style.bottom = `${percent}%`;
+        }
+
+        function setupFreqSlider() {
+            let rect; 
+
+            const updateValue = (e) => {
+                // Don't drag if we touched the checkbox
+                if (e.target.closest('.snap-control')) return;
+
+                const clientY = e.clientY; 
+                let val = 1 - ((clientY - rect.top) / rect.height);
+                val = Math.max(0, Math.min(1, val));
+
+                state.freq = val;
+                
+                updateFreqVisualsFromState();
+                updateAudioParams();
+            };
+
+            const onPointerDown = (e) => {
+                if (e.target.closest('.snap-control')) return;
+                
+                e.preventDefault(); 
+                rect = freqSlider.getBoundingClientRect(); 
+                freqSlider.setPointerCapture(e.pointerId);
+                freqSlider.addEventListener('pointermove', updateValue);
+                freqSlider.addEventListener('pointerup', onPointerUp);
+                freqSlider.addEventListener('pointercancel', onPointerUp);
+                updateValue(e);
+            };
+
+            const onPointerUp = (e) => {
+                freqSlider.removeEventListener('pointermove', updateValue);
+                freqSlider.removeEventListener('pointerup', onPointerUp);
+                freqSlider.removeEventListener('pointercancel', onPointerUp);
+                freqSlider.releasePointerCapture(e.pointerId);
+            };
+
+            freqSlider.addEventListener('pointerdown', onPointerDown);
+        }
+
+        // --- Initialization ---
+
+        function generateNoteMarkers() {
+            const container = document.getElementById('note-markers');
+            container.innerHTML = ''; 
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const minLog = Math.log(state.minFreq);
+            const maxLog = Math.log(state.maxFreq);
+            const rangeLog = maxLog - minLog;
+
+            // Updated Loop Range for Higher Octaves (MIDI 108 is C8)
+            for (let midi = 48; midi <= 108; midi++) {
+                const freq = 440 * Math.pow(2, (midi - 69) / 12);
+                if (freq < state.minFreq - 1) continue; // -1 for float safety
+                if (freq > state.maxFreq + 1) break;
+
+                const noteIndex = midi % 12;
+                if (!noteNames[noteIndex].includes('#')) {
+                    const val = (Math.log(freq) - minLog) / rangeLog;
+                    const percent = val * 100;
+                    const marker = document.createElement('div');
+                    marker.className = 'note-tick';
+                    marker.style.bottom = `${percent}%`;
+                    marker.innerHTML = `<span class="note-text">${noteNames[noteIndex]}</span>`;
+                    container.appendChild(marker);
+                }
+            }
+        }
+
+        // Run Setup
+        setupFreqSlider();
+        generateNoteMarkers();
+
+        // Initial Visual State
+        updateFreqVisualsFromState();
+
+        // Power Toggle
+        powerBtn.addEventListener('click', () => {
+            state.isOn = !state.isOn;
+            
+            if (state.isOn) {
+                initAudio();
+                startTheremin();
+                powerBtn.classList.add('active');
+                createBeep(880, 'sine', 0.1); 
+            } else {
+                stopTheremin();
+                stopVolume(); // Reset volume UI
+                powerBtn.classList.remove('active');
+                freqDisplay.textContent = "OFF";
+                createBeep(440, 'triangle', 0.1);
+            }
+        });
+
+        // --- Visualizer Loop ---
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            if (!state.isOn) {
+                ctx.beginPath();
+                ctx.moveTo(0, h/2);
+                ctx.lineTo(w, h/2);
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                return;
+            }
+
+            // Get the actual playing freq (snapped or raw)
+            const targetFreq = getTargetFrequency();
+            
+            // Note name display if snapped
+            if (state.snapToScale && targetFreq > 0) {
+                 const midi = Math.round(69 + 12 * Math.log2(targetFreq / 440));
+                 const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                 const note = noteNames[midi % 12];
+                 const oct = Math.floor(midi / 12) - 1;
+                 freqDisplay.textContent = `${note}${oct}`;
+            } else {
+                freqDisplay.textContent = Math.round(targetFreq) + ' Hz';
+            }
+
+            if(analyser) {
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                analyser.getByteTimeDomainData(dataArray);
+
+                ctx.lineWidth = 2;
+                // Hue shifts with pitch, Saturation shifts with volume
+                // Adjust hue calc based on slider position (state.freq) not target freq for smoother gradient
+                const hue = 260 + (state.freq * 100); 
+                const sat = 30 + (state.volume * 70);
+                ctx.strokeStyle = `hsl(${hue}, ${sat}%, 50%)`;
+
+                ctx.beginPath();
+                const sliceWidth = w * 1.0 / bufferLength;
+                let x = 0;
+
+                for(let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * h/2;
+                    if(i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                    x += sliceWidth;
+                }
+                ctx.lineTo(canvas.width, canvas.height/2);
+                ctx.stroke();
+            }
+        }
+
+        drawVisualizer();
+
+    </script>
+</body>
+</html>
