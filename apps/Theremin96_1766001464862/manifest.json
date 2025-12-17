@@ -1,0 +1,10 @@
+{
+  "id": "Theremin96_1766001464862",
+  "name": "Theremin 96",
+  "description": "A modern, touch-friendly virtual theremin with dual-axis control.",
+  "category": "Custom",
+  "icon": "icon.png",
+  "width": 400,
+  "height": 500,
+  "version": "1.0.2"
+}
