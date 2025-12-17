@@ -1,0 +1,827 @@
+<!--
+APP_NAME: Grandma's Theremin
+APP_DESCRIPTION: Play music as a grandma! Toggle unlocked upgrades to customize your sound.
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 640
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grandma's Theremin</title>
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-light: #a78bfa;
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --accent: #f472b6;
+            --radius: 16px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        body.mobile-mode {
+            --radius: 0px;
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            padding: 12px 16px;
+            box-shadow: var(--shadow);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .level-badge {
+            background: var(--primary);
+            color: white;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* XP Bar */
+        .xp-container {
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .xp-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.3s ease-out;
+        }
+
+        .xp-text {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        /* Main Pad */
+        main {
+            flex: 1;
+            position: relative;
+            margin: 12px;
+            background: linear-gradient(135deg, #ede9fe 0%, #fce7f3 100%);
+            border-radius: var(--radius);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            overflow: hidden;
+            cursor: crosshair;
+            touch-action: none;
+            border: 2px solid white;
+            transition: filter 0.3s;
+        }
+
+        main.active {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+        }
+
+        /* Grandma SVG container */
+        .grandma-container {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 200px;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.8;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        main.active .grandma-container {
+            transform: translateX(-50%) scale(1.05);
+        }
+
+        .grandma-hand {
+            transition: cx 0.1s, cy 0.1s;
+        }
+
+        #visualizer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .overlay-text {
+            position: absolute;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* Controls Grid */
+        .controls-area {
+            background: var(--surface);
+            padding: 12px;
+            border-top: 1px solid #e5e7eb;
+            z-index: 5;
+        }
+
+        .controls-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .upgrade-card {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 8px 4px;
+            text-align: center;
+            opacity: 0.4;
+            filter: grayscale(1);
+            transition: all 0.2s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 50px;
+        }
+
+        /* Unlocked but Inactive: Grayish/Clickable */
+        .upgrade-card.unlocked {
+            cursor: pointer;
+            opacity: 0.7;
+            background: #f3f4f6;
+            filter: grayscale(1);
+        }
+        
+        /* Unlocked AND Active: Full Color */
+        .upgrade-card.unlocked.active {
+            opacity: 1;
+            filter: grayscale(0);
+            background: white;
+            border-color: var(--primary-light);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .upgrade-card.unlocked:active {
+            transform: scale(0.95);
+        }
+
+        .upgrade-icon { font-size: 1.2rem; margin-bottom: 2px; }
+        .upgrade-name { font-size: 0.6rem; font-weight: 600; line-height: 1.1; }
+        .upgrade-lvl { 
+            position: absolute; top: -4px; right: -4px; 
+            background: var(--text-light); color: white; 
+            font-size: 0.5rem; padding: 2px 4px; border-radius: 4px;
+        }
+        .unlocked .upgrade-lvl { background: #9ca3af; }
+        .unlocked.active .upgrade-lvl { background: var(--primary); }
+
+        /* Toast */
+        .toast {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--text);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            z-index: 100;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Animations */
+        @keyframes sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        .grandma-head {
+            transform-origin: 50% 80%;
+        }
+        main.active .grandma-head {
+            animation: sway 1s infinite ease-in-out;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="top-row">
+            <h1>Grandma's Theremin</h1>
+            <div class="level-badge" id="level-badge">Lvl 1</div>
+        </div>
+        <div>
+            <div class="xp-text">
+                <span>Music Mastery</span>
+                <span id="xp-text">0/100</span>
+            </div>
+            <div class="xp-container">
+                <div class="xp-bar" id="xp-bar"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="toast" id="toast">Unlocked: Vibrato!</div>
+
+    <main id="pad">
+        <canvas id="visualizer"></canvas>
+        <div class="overlay-text" id="instruction">Touch to Play</div>
+        
+        <!-- SVG Grandma Character -->
+        <svg class="grandma-container" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                    <feOffset dx="0" dy="2" result="offsetblur"/>
+                    <feComponentTransfer>
+                        <feFuncA type="linear" slope="0.3"/>
+                    </feComponentTransfer>
+                    <feMerge>
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            
+            <g filter="url(#shadow)">
+                <!-- Body -->
+                <path d="M30 100 Q50 70 70 100" fill="#a78bfa" />
+                
+                <!-- Head Group -->
+                <g class="grandma-head">
+                    <!-- Bun -->
+                    <circle cx="50" cy="35" r="12" fill="#e5e7eb" />
+                    <!-- Face -->
+                    <circle cx="50" cy="50" r="14" fill="#ffedd5" />
+                    <!-- Hair -->
+                    <path d="M36 50 Q50 30 64 50" fill="none" stroke="#e5e7eb" stroke-width="4" stroke-linecap="round"/>
+                    <!-- Glasses -->
+                    <g fill="none" stroke="#1f2937" stroke-width="1.5">
+                        <circle cx="45" cy="52" r="3.5" />
+                        <circle cx="55" cy="52" r="3.5" />
+                        <line x1="48.5" y1="52" x2="51.5" y2="52" />
+                    </g>
+                    <!-- Smile -->
+                    <path d="M46 60 Q50 63 54 60" fill="none" stroke="#1f2937" stroke-width="1" stroke-linecap="round" />
+                    <!-- Cool Sunglasses (Hidden by default) -->
+                    <g id="sunglasses" style="display:none">
+                        <path d="M40 50 h20 v4 a4 4 0 0 1 -4 4 h-12 a4 4 0 0 1 -4 -4 z" fill="black"/>
+                    </g>
+                </g>
+
+                <!-- Hands (Animated via JS) -->
+                <circle id="hand-l" cx="35" cy="80" r="5" fill="#ffedd5" stroke="#a78bfa" stroke-width="2" />
+                <circle id="hand-r" cx="65" cy="80" r="5" fill="#ffedd5" stroke="#a78bfa" stroke-width="2" />
+            </g>
+        </svg>
+
+        <!-- Axis Labels -->
+        <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 0.6rem; color: rgba(0,0,0,0.3); font-weight: bold;">PITCH ↔</div>
+        <div style="position: absolute; top: 50%; left: 8px; transform: translateY(-50%) rotate(-90deg); font-size: 0.6rem; color: rgba(0,0,0,0.3); font-weight: bold;">VOLUME ↕</div>
+
+    </main>
+
+    <div class="controls-area">
+        <div class="controls-header">
+            <span>Grandma's Upgrades</span>
+            <span style="font-size: 0.6rem; opacity: 0.7;">Tap to Toggle</span>
+        </div>
+        <div class="controls-grid" id="upgrade-grid">
+            <!-- Generated via JS -->
+        </div>
+    </div>
+
+<script>
+    // --- Configuration ---
+    const UPGRADES = [
+        { id: 'sine', name: 'Humming', icon: '👵', level: 1, desc: 'Basic Sound' },
+        { id: 'vibrato', name: 'Tremble', icon: '〰️', level: 2, desc: 'Add Vibrato' },
+        { id: 'triangle', name: 'Clarity', icon: '🔔', level: 3, desc: 'Clearer Tone' },
+        { id: 'echo', name: 'Memory', icon: '🏰', level: 4, desc: 'Echo Effect' },
+        { id: 'sub', name: 'Cookies', icon: '🍪', level: 5, desc: 'Warm Bass' },
+        { id: 'chorus', name: 'Choir', icon: '👥', level: 6, desc: 'Chorus Effect' },
+        { id: 'harmony', name: 'Duet', icon: '✨', level: 7, desc: 'Harmonic Fifth' },
+        { id: 'master', name: 'Legend', icon: '🕶️', level: 8, desc: 'Full Power' }
+    ];
+
+    const STATE = {
+        level: 1,
+        xp: 0,
+        xpReq: 100,
+        activeModes: ['sine'], // Start with Level 1 enabled
+        isPlaying: false,
+        x: 0.5,
+        y: 0.5
+    };
+
+    // --- Audio Context ---
+    let actx;
+    let master;
+    let osc, subOsc, harmOsc, detuneOsc;
+    let lfo, lfoGain;
+    let delay, feedback;
+    let filter;
+    let isInit = false;
+
+    function initAudio() {
+        if (isInit) return;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        actx = new AC();
+        
+        // Master Chain
+        master = actx.createGain();
+        master.gain.value = 0;
+        
+        // Filter (for warmth)
+        filter = actx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 2000;
+        
+        // Delay (Echo)
+        delay = actx.createDelay();
+        delay.delayTime.value = 0.3;
+        feedback = actx.createGain();
+        feedback.gain.value = 0.3;
+        delay.connect(feedback);
+        feedback.connect(delay);
+        
+        master.connect(actx.destination);
+        isInit = true;
+    }
+
+    let voiceGain;
+
+    function hasMode(id) {
+        return STATE.activeModes.includes(id);
+    }
+
+    function startNote() {
+        if (!isInit) initAudio();
+        if (actx.state === 'suspended') actx.resume();
+
+        const now = actx.currentTime;
+        voiceGain = actx.createGain();
+        voiceGain.gain.setValueAtTime(0, now);
+        voiceGain.gain.linearRampToValueAtTime(0.5, now + 0.1);
+
+        // Connections
+        voiceGain.connect(filter);
+        filter.connect(master);
+        
+        // Echo connection logic
+        if (hasMode('echo')) {
+            filter.connect(delay);
+            delay.connect(master);
+        } else {
+            // Disconnect delay to avoid bleed or CPU use
+            try { filter.disconnect(delay); delay.disconnect(master); } catch(e){}
+        }
+
+        // LFO (Vibrato)
+        lfo = actx.createOscillator();
+        lfoGain = actx.createGain();
+        lfo.frequency.value = 6; 
+        lfoGain.gain.value = hasMode('vibrato') ? 10 : 0;
+        lfo.connect(lfoGain);
+        lfo.start();
+
+        // Main Osc
+        // Level 3 (Triangle) replaces Sine. Level 1 (Sine) must be on for sound if Level 3 off.
+        // If both off, no main osc.
+        if (hasMode('sine') || hasMode('triangle')) {
+            osc = actx.createOscillator();
+            osc.type = hasMode('triangle') ? 'triangle' : 'sine';
+            lfoGain.connect(osc.frequency);
+            osc.connect(voiceGain);
+            osc.start();
+        }
+
+        // Sub Osc
+        if (hasMode('sub')) {
+            subOsc = actx.createOscillator();
+            subOsc.type = 'sine';
+            subOsc.connect(voiceGain);
+            subOsc.start();
+        }
+
+        // Chorus/Detune
+        if (hasMode('chorus')) {
+            detuneOsc = actx.createOscillator();
+            detuneOsc.type = hasMode('triangle') ? 'triangle' : 'sine';
+            detuneOsc.detune.value = 15;
+            lfoGain.connect(detuneOsc.frequency);
+            detuneOsc.connect(voiceGain);
+            detuneOsc.start();
+        }
+
+        // Harmony
+        if (hasMode('harmony')) {
+            harmOsc = actx.createOscillator();
+            harmOsc.type = 'sine';
+            lfoGain.connect(harmOsc.frequency);
+            harmOsc.connect(voiceGain);
+            harmOsc.start();
+        }
+
+        // Master Filter
+        if (hasMode('master')) {
+            filter.frequency.exponentialRampToValueAtTime(8000, now + 0.5);
+        } else {
+            filter.frequency.value = 2000;
+        }
+
+        STATE.isPlaying = true;
+        document.getElementById('pad').classList.add('active');
+        document.getElementById('instruction').style.opacity = 0;
+        
+        // Start XP Loop
+        xpTimer = setInterval(addXP, 100);
+    }
+
+    function moveNote(x, y) {
+        if (!STATE.isPlaying) return;
+        
+        const minF = 130;
+        const maxF = 880;
+        let freq = minF + (x * (maxF - minF));
+        
+        // Quantize if Triangle (Level 3) is unlocked AND active (or just unlocked? Original logic was based on level).
+        // Let's stick to using the active mode for the sound quality
+        if (hasMode('triangle')) {
+            freq = quantize(freq);
+        }
+
+        const now = actx.currentTime;
+        
+        if (osc) osc.frequency.setTargetAtTime(freq, now, 0.05);
+        if (subOsc) subOsc.frequency.setTargetAtTime(freq * 0.5, now, 0.05);
+        if (detuneOsc) detuneOsc.frequency.setTargetAtTime(freq, now, 0.05);
+        if (harmOsc) harmOsc.frequency.setTargetAtTime(freq * 1.5, now, 0.05);
+
+        // Volume
+        const vol = 1 - y;
+        master.gain.setTargetAtTime(vol, now, 0.05);
+
+        // Visuals
+        updateGrandmaHands(x, y);
+    }
+
+    function stopNote() {
+        const now = actx ? actx.currentTime : 0;
+        if (voiceGain) voiceGain.gain.setTargetAtTime(0, now, 0.1);
+        
+        const stopTime = now + 0.2;
+        if (osc) osc.stop(stopTime);
+        if (subOsc) subOsc.stop(stopTime);
+        if (harmOsc) harmOsc.stop(stopTime);
+        if (detuneOsc) detuneOsc.stop(stopTime);
+        if (lfo) lfo.stop(stopTime);
+        
+        osc = null;
+        subOsc = null;
+        harmOsc = null;
+        detuneOsc = null;
+
+        STATE.isPlaying = false;
+        document.getElementById('pad').classList.remove('active');
+        clearInterval(xpTimer);
+        
+        updateGrandmaHands(0.5, 0.8);
+    }
+
+    const scale = [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00];
+    function quantize(f) {
+        return scale.reduce((prev, curr) => Math.abs(curr - f) < Math.abs(prev - f) ? curr : prev);
+    }
+
+    // --- Game Logic ---
+    let xpTimer;
+    
+    // Load Save
+    const saved = localStorage.getItem('grandma_theremin_v2');
+    if (saved) {
+        const d = JSON.parse(saved);
+        STATE.level = d.level;
+        STATE.xp = d.xp;
+        STATE.xpReq = d.xpReq;
+        STATE.activeModes = d.activeModes || ['sine'];
+    } else {
+        // Migration from v1 or fresh start
+        const old = localStorage.getItem('grandma_theremin');
+        if (old) {
+            const d = JSON.parse(old);
+            STATE.level = d.level;
+            STATE.xp = d.xp;
+            STATE.xpReq = d.xpReq;
+            // Auto-enable all unlocked for migration
+            STATE.activeModes = UPGRADES.filter(u => STATE.level >= u.level).map(u => u.id);
+        }
+    }
+
+    function addXP() {
+        if (STATE.level >= 8 && STATE.xp >= STATE.xpReq) return;
+
+        STATE.xp += (1 + (STATE.level * 0.5));
+        
+        if (STATE.xp >= STATE.xpReq) {
+            if (STATE.level < 8) {
+                levelUp();
+            } else {
+                STATE.xp = STATE.xpReq;
+            }
+        }
+        renderUI();
+    }
+
+    function levelUp() {
+        STATE.level++;
+        STATE.xp = 0;
+        STATE.xpReq = Math.floor(STATE.xpReq * 1.4);
+        
+        const upgrade = UPGRADES[STATE.level - 1];
+        
+        // Auto-enable the new upgrade
+        if (!STATE.activeModes.includes(upgrade.id)) {
+            STATE.activeModes.push(upgrade.id);
+        }
+
+        showToast(`Unlocked: ${upgrade.name}!`);
+        playSoundEffect('levelup');
+        save();
+    }
+
+    function toggleUpgrade(id) {
+        const upgrade = UPGRADES.find(u => u.id === id);
+        if (STATE.level < upgrade.level) return; // Locked
+
+        const idx = STATE.activeModes.indexOf(id);
+        if (idx >= 0) {
+            STATE.activeModes.splice(idx, 1);
+        } else {
+            STATE.activeModes.push(id);
+        }
+        
+        // If playing, restart the note to apply changes instantly
+        if (STATE.isPlaying) {
+            stopNote();
+            setTimeout(startNote, 50);
+        } else {
+            playSoundEffect('click');
+        }
+
+        save();
+        renderUI();
+    }
+
+    function save() {
+        localStorage.setItem('grandma_theremin_v2', JSON.stringify({
+            level: STATE.level,
+            xp: STATE.xp,
+            xpReq: STATE.xpReq,
+            activeModes: STATE.activeModes
+        }));
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function playSoundEffect(type) {
+        if (!actx && type === 'click') { initAudio(); if(actx.state === 'suspended') actx.resume(); }
+        if (!actx) return;
+        
+        const o = actx.createOscillator();
+        const g = actx.createGain();
+        o.connect(g);
+        g.connect(actx.destination);
+        
+        const now = actx.currentTime;
+        if (type === 'levelup') {
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(440, now);
+            o.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+            o.frequency.exponentialRampToValueAtTime(1760, now + 0.3);
+            g.gain.setValueAtTime(0.1, now);
+            g.gain.linearRampToValueAtTime(0, now + 0.5);
+            o.start();
+            o.stop(now + 0.5);
+        } else if (type === 'click') {
+            o.type = 'sine';
+            o.frequency.setValueAtTime(800, now);
+            g.gain.setValueAtTime(0.05, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            o.start();
+            o.stop(now + 0.1);
+        }
+    }
+
+    // --- Visuals ---
+    function renderUI() {
+        document.getElementById('level-badge').innerText = `Lvl ${STATE.level}`;
+        const pct = Math.min(100, (STATE.xp / STATE.xpReq) * 100);
+        document.getElementById('xp-bar').style.width = `${pct}%`;
+        document.getElementById('xp-text').innerText = (STATE.level === 8) ? "MAX LEVEL" : `${Math.floor(STATE.xp)} / ${STATE.xpReq}`;
+
+        // Render Grid
+        const grid = document.getElementById('upgrade-grid');
+        grid.innerHTML = '';
+        UPGRADES.forEach(u => {
+            const unlocked = STATE.level >= u.level;
+            const active = STATE.activeModes.includes(u.id);
+            
+            const el = document.createElement('div');
+            // Class logic: unlocked is base, active is modifier
+            el.className = `upgrade-card ${unlocked ? 'unlocked' : ''} ${active ? 'active' : ''}`;
+            el.onclick = () => toggleUpgrade(u.id);
+            
+            el.innerHTML = `
+                <div class="upgrade-lvl">${u.level}</div>
+                <div class="upgrade-icon">${u.icon}</div>
+                <div class="upgrade-name">${u.name}</div>
+            `;
+            grid.appendChild(el);
+        });
+
+        document.getElementById('sunglasses').style.display = hasMode('master') ? 'block' : 'none';
+    }
+
+    const handL = document.getElementById('hand-l');
+    const handR = document.getElementById('hand-r');
+
+    function updateGrandmaHands(x, y) {
+        const rx = 60 + (x * 30);
+        const ry = 75 + (y * 10);
+        const ly = 90 - (y * 40);
+        const lx = 20 + (x * 10);
+
+        handR.setAttribute('cx', rx);
+        handR.setAttribute('cy', ry);
+        
+        handL.setAttribute('cx', lx);
+        handL.setAttribute('cy', ly);
+    }
+
+    // Canvas Visuals
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resize() {
+        canvas.width = canvas.parentElement.offsetWidth;
+        canvas.height = canvas.parentElement.offsetHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function draw() {
+        ctx.clearRect(0,0, canvas.width, canvas.height);
+        
+        if (STATE.isPlaying) {
+            if (Math.random() > 0.7) {
+                particles.push({
+                    x: canvas.width * STATE.x,
+                    y: canvas.height * STATE.y,
+                    vx: (Math.random()-0.5)*2,
+                    vy: (Math.random()-0.5)*2,
+                    life: 1,
+                    hue: (Date.now() / 10) % 360
+                });
+            }
+        }
+
+        particles.forEach((p, i) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.life -= 0.02;
+            
+            ctx.fillStyle = `hsla(${p.hue}, 70%, 60%, ${p.life})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 3 + (STATE.level/2), 0, Math.PI*2);
+            ctx.fill();
+        });
+        
+        particles = particles.filter(p => p.life > 0);
+        requestAnimationFrame(draw);
+    }
+    draw();
+
+    // --- Input Handling ---
+    const pad = document.getElementById('pad');
+
+    function handleInput(e) {
+        e.preventDefault();
+        const rect = pad.getBoundingClientRect();
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
+
+        let x = (clientX - rect.left) / rect.width;
+        let y = (clientY - rect.top) / rect.height;
+        x = Math.max(0, Math.min(1, x));
+        y = Math.max(0, Math.min(1, y));
+
+        STATE.x = x;
+        STATE.y = y;
+
+        if (!STATE.isPlaying) startNote();
+        moveNote(x, y);
+    }
+
+    pad.addEventListener('mousedown', handleInput);
+    pad.addEventListener('mousemove', (e) => { if(STATE.isPlaying) handleInput(e); });
+    pad.addEventListener('mouseup', stopNote);
+    pad.addEventListener('mouseleave', stopNote);
+
+    pad.addEventListener('touchstart', handleInput, {passive: false});
+    pad.addEventListener('touchmove', handleInput, {passive: false});
+    pad.addEventListener('touchend', stopNote);
+
+    // Initial Render
+    renderUI();
+    updateGrandmaHands(0.5, 0.5);
+
+</script>
+</body>
+</html>
