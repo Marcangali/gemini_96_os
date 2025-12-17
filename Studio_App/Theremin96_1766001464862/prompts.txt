@@ -4,3 +4,7 @@ Right bottom sound should start from G
 ---
 [17. 12. 2025 22:51:47]
 Change right side the way, that lowest sound should be G
+
+---
+[17. 12. 2025 22:54:58]
+Left side do not change. On right side octave will start with G. Other things do not change.
