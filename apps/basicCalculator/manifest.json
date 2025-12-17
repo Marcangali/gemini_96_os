@@ -1,7 +1,0 @@
-{
-  "id": "basicCalculator",
-  "name": "Calculator",
-  "description": "A simple arithmetic calculator with a retro Windows 95 aesthetic.",
-  "icon": "https://win98icons.alexmeub.com/icons/png/calculator-2.png",
-  "category": "Utilities"
-}
