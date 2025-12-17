@@ -1,0 +1,1041 @@
+<!--
+APP_NAME: Fizikaóra: Ucník
+APP_DESCRIPTION: Éld túl a fizikaórát a rettegett Ucník tanárnővel! Vigyázz, mert énekel, "kiscsillagoz", harap és figyeli a puskázást.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+STORE_ID: fizika-ucnik-sim
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fizikaóra: Ucník Tanárnő</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --surface-color: #ffffff;
+            --primary-color: #0078d4;
+            --primary-hover: #0063b1;
+            --danger-color: #d13438;
+            --board-color: #2b3a28;
+            --chalk-color: #e0e0e0;
+            --text-color: #202020;
+            --radius: 12px;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* App Container */
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            gap: 10px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 8px 8px 8px;
+            border-bottom: 1px solid #e0e0e0;
+            background: var(--bg-color);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 16px;
+            margin: 0;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .stat {
+            background: var(--surface-color);
+            padding: 4px 8px;
+            border-radius: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        /* Grading: 1 is best, 5 is worst */
+        .grade-good { color: #107c10; } /* 1.0 - 2.4 */
+        .grade-avg { color: #d83b01; }  /* 2.5 - 3.9 */
+        .grade-bad { color: var(--danger-color); } /* 4.0 - 5.0 */
+
+        /* Blackboard Area */
+        .classroom-view {
+            flex: 1;
+            background: var(--board-color);
+            border: 6px solid #5d4037;
+            border-radius: 6px;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.6), 0 4px 10px rgba(0,0,0,0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            overflow: hidden;
+            min-height: 180px;
+        }
+
+        .teacher-avatar {
+            width: 80px;
+            height: 80px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            z-index: 5;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .teacher-avatar.angry {
+            animation: shake 0.4s infinite;
+            background: #ffebeb;
+            border-color: #d13438;
+        }
+
+        .teacher-avatar.singing {
+            animation: bounce 0.5s infinite alternate;
+            background: #e6f7ff;
+            border-color: #0078d4;
+        }
+
+        .chalk-text {
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--chalk-color);
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        }
+
+        .chalk-notes {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-family: 'Courier New', monospace;
+            color: rgba(255,255,255,0.4);
+            font-size: 12px;
+            text-align: right;
+        }
+
+        /* Dialogue Box */
+        .dialogue-box {
+            background: var(--surface-color);
+            border-radius: var(--radius);
+            padding: 12px;
+            min-height: 80px;
+            box-shadow: var(--shadow);
+            border-left: 5px solid var(--danger-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: transform 0.1s;
+            flex-shrink: 0;
+        }
+
+        .dialogue-box.active {
+            transform: scale(1.02);
+        }
+
+        .dialogue-text {
+            font-style: italic;
+            color: #444;
+            font-size: 15px; 
+            line-height: 1.4;
+        }
+
+        .speaker-name {
+            font-weight: 800;
+            font-size: 11px;
+            color: var(--danger-color);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Controls */
+        .controls-container {
+            position: relative;
+            min-height: 190px;
+            flex-shrink: 0;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .controls.fade-out {
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+        }
+        
+        .controls.fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        button {
+            background: var(--surface-color);
+            border: 1px solid #d1d1d1;
+            border-radius: var(--radius);
+            padding: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            color: #444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: #ffffff;
+            border-color: #999;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+            background: #f0f0f0;
+        }
+
+        /* Quiz Buttons */
+        .quiz-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr auto; 
+            gap: 8px;
+        }
+
+        .quiz-grid button {
+            text-align: center;
+            justify-content: center;
+            padding: 8px;
+            font-size: 13px;
+            height: 100%;
+            border-left: 2px solid transparent;
+        }
+
+        .quiz-grid button:hover {
+            border-left-color: var(--primary-color);
+            background: #f8fbff;
+        }
+
+        .btn-cheat {
+            grid-column: 1 / -1; 
+            background: #fff8e1;
+            border: 1px solid #f1c40f;
+            color: #d35400;
+            font-weight: 700;
+            min-height: 40px;
+        }
+        
+        .btn-cheat:hover {
+            background: #fef9e7;
+            border-color: #d35400;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(211, 84, 0, 0.2);
+        }
+
+        .btn-volunteer {
+            background: linear-gradient(135deg, #fff 0%, #f0f4ff 100%);
+            border-color: #cce0ff;
+            color: var(--primary-color);
+        }
+        .btn-volunteer:hover {
+            border-color: var(--primary-color);
+        }
+
+        #controls-normal {
+            grid-template-rows: 1fr 1fr;
+            height: auto;
+            max-height: 120px;
+        }
+        #controls-normal button {
+            height: 50px;
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-2deg); }
+            20% { transform: translate(-3px, 0px) rotate(2deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(2deg); }
+            50% { transform: translate(-1px, 2px) rotate(-2deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-2deg); }
+            80% { transform: translate(-1px, -1px) rotate(2deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-2deg); }
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+
+        .hidden { display: none !important; }
+        
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            text-align: center;
+            padding: 24px;
+            backdrop-filter: blur(8px);
+        }
+
+        .overlay h2 { 
+            margin-bottom: 12px; 
+            font-size: 26px; 
+            color: #202020;
+        }
+        
+        .overlay p { 
+            margin-bottom: 24px; 
+            color: #606060; 
+            max-width: 320px; 
+            line-height: 1.6; 
+        }
+        
+        .overlay button {
+            width: auto;
+            min-width: 180px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            font-size: 16px;
+        }
+        
+        .overlay button:hover {
+            background: var(--primary-hover);
+        }
+
+        .final-score-box {
+            font-size: 48px;
+            font-weight: 800;
+            margin: 20px 0;
+            padding: 10px 30px;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <header>
+            <h1>Fizikaóra Szimulátor</h1>
+            <div class="stats-bar">
+                <div class="stat">
+                    <span>Jegy:</span>
+                    <strong id="grade-display" class="grade-good">1.0</strong>
+                </div>
+                <div class="stat">
+                    <span>Idő:</span>
+                    <strong id="timer-display">45:00</strong>
+                </div>
+            </div>
+        </header>
+
+        <div class="classroom-view">
+            <div class="chalk-notes">7.b osztály</div>
+            <div id="blackboard-text" class="chalk-text">Vonalzókat a padra!</div>
+            <div style="margin-top:auto; opacity:0.7">
+                 <svg width="100" height="60" viewBox="0 0 100 60">
+                    <path d="M10,50 L90,50 L90,10 L10,50" stroke="#e0e0e0" stroke-width="2" fill="none"/>
+                    <text x="40" y="45" fill="#e0e0e0" font-family="monospace" font-size="10">α</text>
+                    <text x="50" y="60" fill="#e0e0e0" font-family="monospace" font-size="10">F = m*a</text>
+                </svg>
+            </div>
+            <div id="teacher" class="teacher-avatar">👩‍🏫</div>
+        </div>
+
+        <div class="dialogue-box" id="dialogue-box">
+            <div class="speaker-name" id="speaker-name">Ucník Tanárnő</div>
+            <div id="dialogue-text" class="dialogue-text">"Kérlek... a csend frekvenciája legyen nulla."</div>
+        </div>
+
+        <div class="controls-container">
+            <!-- Normal Controls -->
+            <div id="controls-normal" class="controls fade-in">
+                <button onclick="game.action('nod')">🙂 Bólogatás</button>
+                <button onclick="game.action('write')">📝 Jegyzetelés</button>
+                <button onclick="game.action('sleep')">😴 Bambulás</button>
+                <button onclick="game.action('volunteer')" class="btn-volunteer">🙋‍♂️ Jelentkezés</button>
+            </div>
+
+            <!-- Quiz Controls: 2x2 Grid + Cheat button -->
+            <div id="controls-quiz" class="controls quiz-grid fade-out">
+                <!-- Dynamically filled -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="overlay">
+        <div style="font-size: 64px; margin-bottom: 10px;">👩‍🏫</div>
+        <h2>Fizikaóra: Ucník</h2>
+        <p>A tanárnő ma különösen érzékeny a részletekre. A cél: minél <b>kisebb</b> jegy (<b>1-es</b>). Az 5-ös bukás!<br><br>Vigyázz! Furcsa dolgokat mond és nem szereti a hangos levegővételt.</p>
+        <button onclick="game.start()">Becsengettek</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="overlay hidden">
+        <h2 id="end-title">Megbuktál!</h2>
+        <p id="end-reason">Az átlagod 5.0 lett.</p>
+        <div id="final-score" class="final-score-box">5.0</div>
+        <button onclick="game.reset()">Pótvizsga</button>
+    </div>
+
+    <script>
+        if (window.innerWidth < 420 || document.body.classList.contains('mobile-mode')) {
+            document.body.classList.add('mobile-mode');
+        }
+
+        // --- Audio System (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        const sounds = {
+            chalk: () => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+                const bufferSize = audioCtx.sampleRate * 0.15; 
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                filter.type = 'bandpass';
+                filter.frequency.value = 900;
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                noise.start();
+            },
+            ding: () => { 
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, t); 
+                osc.frequency.setValueAtTime(659.25, t + 0.1); 
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.linearRampToValueAtTime(0.001, t + 0.4);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(t + 0.4);
+            },
+            fail: () => { 
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, t);
+                osc.frequency.linearRampToValueAtTime(80, t + 0.3);
+                gain.gain.setValueAtTime(0.15, t);
+                gain.gain.linearRampToValueAtTime(0.001, t + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(t + 0.3);
+            },
+            mumble: () => { 
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(200, t);
+                osc.frequency.linearRampToValueAtTime(150, t + 0.1);
+                gain.gain.setValueAtTime(0.05, t);
+                gain.gain.linearRampToValueAtTime(0, t + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(t + 0.1);
+            },
+            bell: () => { 
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, t);
+                const lfo = audioCtx.createOscillator();
+                lfo.frequency.value = 20;
+                const lfoGain = audioCtx.createGain();
+                lfoGain.gain.value = 600;
+                lfo.connect(lfoGain);
+                lfoGain.connect(osc.frequency);
+                lfo.start();
+                gain.gain.setValueAtTime(0.2, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(t + 1.5);
+            },
+            sing: () => {
+                const now = audioCtx.currentTime;
+                const notes = [392, 523, 659, 523, 392, 330];
+                notes.forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.08, now + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.12);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.15);
+                });
+            }
+        };
+
+        const playSound = (name) => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (sounds[name]) sounds[name]();
+        };
+
+        // --- Data (Adapted for strange/eccentric teacher + 1-5 grading logic) ---
+        
+        const insults = [
+            "A nadrágja szövete és a szék közötti súrlódás... pazarolt energia. Felesleges hőtermelés.",
+            "Kiscsillag, a válasza olyan, mint a vákuum: semmi sincs benne, csak a nagy üresség.",
+            "Ne nézzen rám. A fotonjai irritálják a retinámat. A válasza meg az agyamat.",
+            "Ez fizikailag fájt. Érzem, ahogy az entrópia nő a teremben a maga butasága miatt.",
+            "A kréta molekuláris rácsszerkezete ma instabil. Mint a maga tudása. Borzalmas.",
+            "Kérem, ne lélegezzen ilyen aszimmetrikusan! Zavarja az erőteret.",
+            "Maga szerint az Ohm-törvény egy javaslat? Ez törvény, nem népmese!",
+            "Üljön le. Egyes. Olyan egyes, mint a magányos proton.",
+            "Ihajla tyuhajla, maga az információs entrópia csúcsa!",
+            "A válasza nem koherens. Hullámzik, mint a Balaton, de nincs benne értelem.",
+            "Kiscsillagom, maga egy fizikai anomália. Nem kéne léteznie.",
+            "Jaj, drágám... a frekvenciája nagyon alacsony. Túl mélyen van a színvonal.",
+            "Maga szerencsétlen, a könyv borítója simább, mint az agytekervényei?",
+            "Ez az amőbák szellemi szintje. És sértem az amőbákat.",
+            "Látom, a gravitáció az egyetlen erő, ami a földhöz ragasztja, nem az ész.",
+            "Hihetetlen. A sötét anyagnak nagyobb a kisugárzása, mint magának.",
+            "Maga egy fekete lyuk. Elnyeli a tudást, és nem ad vissza semmit.",
+            "Szégyenfolt a téridő kontinuumban.",
+            "Ezt a teljesítményt még egy súrlódásmentes lejtőn se tudná produkálni.",
+            "A válasza íze... keserű. Mint az égett ellenállás.",
+            "Látom, a súrlódási együtthatója az agyában nulla. Minden kicsúszik.",
+            "Ha a butaság energia lenne, maga lenne a Nap.",
+            "Maga a bizonyíték, hogy a káosz elmélet igaz.",
+            "Kiscsillag, a maga hatásfoka rosszabb, mint egy izzóé. 95% hő, 0% fény.",
+            "A padló mintázata érdekesebb, mint a felelete.",
+            "Maga nem tanuló, maga egy statisztikai hiba.",
+            "Olyan sötét van a fejében, hogy nem látom a kiutat.",
+            "Ez a teljesítmény abszolút nulla Kelvin. Megfagyott a levegő."
+        ];
+
+        const shoutPhrases = [
+            "MIRE VÁR? HOGY A NEUTRÍNÓK ÁTHALADJANAK MAGÁN?!",
+            "GYERÜNK MÁR! AZ IDŐ RELATÍV, DE A BUKÁS ABSZOLÚT!",
+            "400 ÉS 700 NANOMÉTER KÖZÖTT LÁTOK, DE MAGÁBAN CSAK A SÖTÉTSÉGET!",
+            "NE BÁMULJON, VÁLASZOLJON! A REZGÉSSZÁMA TÚL ALACSONY!",
+            "LEFAGYOTT?! MINT A VÍZ NULLA FOKON?!",
+            "KIS CSILLAG, A HANGSZÁLAI REZEGJENEK, NE A KEZE!",
+            "ALUSZIK? A TEHETETLENSÉG TÖRVÉNYE NEM MENTSÉG!",
+            "ÉBRESZTŐ! EZ FIZIKA, NEM EZOTÉRIA!",
+            "NE HÚZZA AZ IDŐMET! AZ ÓRA KETYEGÉSE BÁNTJA A FÜLEMET!",
+            "A FÖLD FOROG, DE MAGA ÁLL! A CENTRIFUGÁLIS ERŐ KIREPÍTI!",
+            "KETYEG AZ ÓRA, KISCSILLAG! TIK-TAK!",
+            "HALLÓ! FÖLD HÍVJA A VÁKUUMOT A FEJÉBEN!",
+            "NE A PLAFONT NÉZZE, A REPEDÉSEK NEM SEGÍTENEK!",
+            "AZ AGYSEJTEK INTERFERENCIA MINIMUMBAN VANNAK?!"
+        ];
+
+        const praises = [
+            "Hm. A rezonancia megfelelő. Leülhet.",
+            "Végre. Egy koherens hullámcsomag.",
+            "Na, ez nem volt kaotikus. Meglepő.",
+            "Helyes. A szimmetria helyreállt a lelkemben.",
+            "Jó válasz. A kozmikus háttérsugárzásnál kicsit jobb.",
+            "Na, csak van ott valami aktivitás a szinapszisokban.",
+            "Ez már döfi! A vektor iránya megfelelő.",
+            "Látom, nem csak hőtermelő egységként van jelen.",
+            "Meglepett. A statisztikai valószínűsége kicsi volt.",
+            "Ez igen. A rendszer entrópiája csökkent.",
+            "Na végre. A hangszíne is kellemesebb, ha jót mond.",
+            "Jól van, fiam. De a nyakkendője ferde. Igazítsa meg."
+        ];
+
+        const idleComments = [
+            "A harmadik padsor 2.8 fokkal eltér a párhuzamostól. Javítsák ki.",
+            "Írjuk fel a táblára... a kréta sercegése zene füleimnek.",
+            "Aki nem figyel, annak a gyorsulása negatív lesz kifelé!",
+            "Kovács, ne hintázzon! A súlypontja instabil!",
+            "A dolgozatok... zsírosak. Ki evett felette? Gusztustalan.",
+            "Kinyitom az ablakot. A szén-dioxid koncentráció túl magas.",
+            "Miért van ekkora csend? A csend nyomása a dobhártyámon... elviselhetetlen.",
+            "Vegye elő a függvénytáblát! A sárga színűt. Csak a sárga jó.",
+            "A fizika rend. A maguk feje káosz.",
+            "Ne rágózzon! A rágás periodikus zaja zavarja a gondolkodást.",
+            "A tábla tiszta. Mint a lelkem, mielőtt bejöttem ide.",
+            "Látom a szemén... a fókuszpont a végtelenben van.",
+            "Ne pislogjon olyan hangosan! Hallom a szempillák súrlódását.",
+            "Kovács, a szalámi illata diffundál a levegőben. Tegye el!",
+            "Aki a telefont nyomkodja, az indukál bennem egy nagy feszültséget!",
+            "Ma mindenki a bolygók együttállását tanulmányozza a plafonon?",
+            "A tábla sík. A Föld nem sík. Maguk laposak.",
+            "Zörög a papírral... zörög a csontjaimban a harag.",
+            "Milyen szép a fény törése az ablakon... maguk meg itt ülnek sötétben.",
+            "Ihajla, a vektorok nem adják ki az eredőt.",
+            "Na, ébredjünk fel. A potenciális energia nem elég, mozgási kell!",
+            "Ez nem a Rózsa Sándor, itt törvények vannak! Newton törvényei!"
+        ];
+
+        const singingLyrics = [
+            "Ihajla tyuhajla, az erő tömegszer gyorsulás!",
+            "Ihajla tyuhajla, ki nem tanul, az elhasal ma!",
+            "Hullámzik a Balaton, hullámzik az elektron...",
+            "Látom a szemében a vektorok hiányát, ihajla...",
+            "Erdő szélén, de nem a súrlódási határon...",
+            "Debrecenbe kéne menni, fizikát kéne venni...",
+            "Ég a gyertya ég, a tudás nálad még... nincs meg!",
+            "Húzzad csak kivilágos virradatig, amíg a kondenzátor kisül!"
+        ];
+
+        const questions = [
+            { q: "Mi a sebesség jele?", a: ["v", "s", "t", "F"], correct: 0 },
+            { q: "Newton II. törvénye?", a: ["F = m*a", "E = mc^2", "U = R*I", "p = m*v"], correct: 0 },
+            { q: "Az út jele?", a: ["s", "m", "h", "x"], correct: 0 },
+            { q: "Az erő mértékegysége?", a: ["Newton", "Watt", "Joule", "Pascal"], correct: 0 },
+            { q: "Teljesítmény egysége?", a: ["Watt", "Volt", "Amper", "Ohm"], correct: 0 },
+            { q: "Ohm törvénye?", a: ["R = U/I", "F = m*g", "v = s/t", "E = h*f"], correct: 0 },
+            { q: "Gravitációs gyorsulás?", a: ["9.81 m/s²", "100 km/h", "3.14", "0 m/s"], correct: 0 },
+            { q: "Mi az idő jele?", a: ["t", "T", "s", "i"], correct: 0 },
+            { q: "Sűrűség képlete?", a: ["ρ = m/V", "ρ = V/m", "ρ = m*V", "ρ = F/A"], correct: 0 },
+            { q: "Frekvencia egysége?", a: ["Hertz", "Pascal", "Tesla", "Weber"], correct: 0 },
+            { q: "Abszolút nulla fok?", a: ["-273.15 °C", "0 °C", "-100 °C", "273 K"], correct: 0 },
+            { q: "Mi a nyomás jele?", a: ["p", "P", "n", "N"], correct: 0 },
+            { q: "Fénysebesség?", a: ["300 000 km/s", "340 m/s", "9.81 m/s", "∞"], correct: 0 },
+            { q: "Mozgási energia?", a: ["1/2 * m * v²", "m * g * h", "F * s", "I * U"], correct: 0 },
+            { q: "Munkavégzés jele?", a: ["W", "P", "E", "Q"], correct: 0 },
+            { q: "Mi a töltés jele?", a: ["Q", "C", "I", "U"], correct: 0 },
+            { q: "Mivel mérjük az áramot?", a: ["Ampermérő", "Voltmérő", "Hőmérő", "Stopper"], correct: 0 },
+            { q: "A teljesítmény jele?", a: ["P", "W", "E", "T"], correct: 0 },
+            { q: "Mi az 'g' értéke?", a: ["9.81", "10", "3.14", "100"], correct: 0 },
+            { q: "Hőmérséklet jele?", a: ["T", "t", "Q", "C"], correct: 0 },
+            { q: "Feszültség mértékegysége?", a: ["Volt", "Watt", "Amper", "Joule"], correct: 0 },
+            { q: "Helyzeti energia?", a: ["m*g*h", "1/2*m*v^2", "F*s", "U*I"], correct: 0 },
+            { q: "Mi az 'm' a képletben?", a: ["Tömeg", "Méter", "Munka", "Motor"], correct: 0 },
+            { q: "Nyomás mértékegysége?", a: ["Pascal", "Newton", "Watt", "Joule"], correct: 0 },
+            { q: "Mi az atommagban van?", a: ["Proton", "Elektron", "Foton", "Ion"], correct: 0 }
+        ];
+
+        // --- Game Logic ---
+
+        class Game {
+            constructor() {
+                // Grading: 1.0 (Best) - 5.0 (Worst/Fail)
+                this.grade = 1.0;
+                this.timeRemaining = 45; 
+                this.timerInterval = null;
+                this.loopTimeout = null;
+                this.quizTimeout = null;
+                this.state = 'IDLE'; 
+            }
+
+            start() {
+                document.getElementById('start-screen').classList.add('hidden');
+                document.getElementById('game-over-screen').classList.add('hidden');
+                playSound('bell');
+                
+                this.grade = 1.0;
+                this.timeRemaining = 45;
+                this.state = 'IDLE';
+                this.updateUI();
+                
+                const startPhrases = ["Na, csapjunk a lecsóba! A füzetek sarka legyen derékszögű.", "Jó reggelt. Remélem a neuronjaik tüzelnek.", "Üljenek le. Aki mocorog, az növeli a hőmérsékletet."];
+                this.setDialogue(startPhrases[Math.floor(Math.random() * startPhrases.length)]);
+                
+                document.getElementById('controls-normal').classList.add('fade-in');
+                document.getElementById('controls-normal').classList.remove('fade-out');
+                document.getElementById('controls-quiz').classList.add('fade-out');
+                document.getElementById('controls-quiz').classList.remove('fade-in');
+
+                if (this.timerInterval) clearInterval(this.timerInterval);
+                this.timerInterval = setInterval(() => this.tick(), 1000);
+                
+                this.scheduleNextEvent(4000);
+            }
+
+            reset() {
+                this.start();
+            }
+
+            tick() {
+                this.timeRemaining--;
+                document.getElementById('timer-display').innerText = `00:${this.timeRemaining.toString().padStart(2, '0')}`;
+                
+                if (this.timeRemaining <= 0) {
+                    this.endGame(true);
+                }
+            }
+
+            endGame(success) {
+                clearInterval(this.timerInterval);
+                clearTimeout(this.loopTimeout);
+                clearTimeout(this.quizTimeout);
+                playSound('bell');
+                const screen = document.getElementById('game-over-screen');
+                screen.classList.remove('hidden');
+                
+                const finalGrade = this.grade.toFixed(1);
+                document.getElementById('final-score').innerText = finalGrade;
+                
+                const title = document.getElementById('end-title');
+                const reason = document.getElementById('end-reason');
+
+                if (success) {
+                    title.innerText = "Kicsöngettek!";
+                    title.style.color = "#107c10";
+                    // Grading logic: 1 is best, 5 is worst
+                    if (this.grade <= 2.4) {
+                        reason.innerText = "Kiváló munka! Ucník tanárnő nem kapott idegrohamot.";
+                    } else if (this.grade <= 3.9) {
+                        reason.innerText = "Megúsztad. De a tanárnő szerint a nyakkendőd ferde volt.";
+                    } else {
+                        reason.innerText = "Hát... épphogy nem buktál meg. Rezgett a léc.";
+                    }
+                } else {
+                    playSound('fail');
+                    title.innerText = "Megbuktál!";
+                    title.style.color = "#d13438";
+                    reason.innerText = "Ucník tanárnő: 'Ez ÖTÖS, fiam! Fizikai fájdalmat okozott!'";
+                }
+            }
+
+            scheduleNextEvent(delay = 4000) {
+                if (this.loopTimeout) clearTimeout(this.loopTimeout);
+                this.loopTimeout = setTimeout(() => this.gameLoop(), delay);
+            }
+
+            gameLoop() {
+                if (this.timeRemaining <= 0 || this.state === 'QUIZ') return;
+
+                const rand = Math.random();
+                
+                if (rand < 0.2) {
+                    this.triggerSinging();
+                } else if (rand < 0.5) {
+                    this.triggerQuiz();
+                } else {
+                    this.triggerIdle();
+                }
+            }
+
+            triggerSinging() {
+                this.state = 'SINGING';
+                const text = singingLyrics[Math.floor(Math.random() * singingLyrics.length)];
+                this.setDialogue("🎶 " + text + " 🎶");
+                
+                const avatar = document.getElementById('teacher');
+                avatar.innerText = "🎶";
+                avatar.classList.add('singing');
+                
+                playSound('sing');
+                document.getElementById('blackboard-text').innerText = "♪ ♫ ♩ ♬";
+
+                this.scheduleNextEvent(6000); 
+                setTimeout(() => {
+                    avatar.classList.remove('singing');
+                    avatar.innerText = "👩‍🏫";
+                    this.state = 'IDLE';
+                }, 5000);
+            }
+
+            triggerIdle() {
+                const text = idleComments[Math.floor(Math.random() * idleComments.length)];
+                this.setDialogue(text);
+                playSound('mumble');
+                
+                if (Math.random() > 0.5) {
+                    playSound('chalk');
+                    document.getElementById('blackboard-text').innerText = text.length > 25 ? "Fizika..." : text;
+                }
+                
+                this.scheduleNextEvent(Math.random() * 4000 + 5000);
+            }
+
+            triggerQuiz(isVoluntary = false) {
+                this.state = 'QUIZ';
+                
+                const normalControls = document.getElementById('controls-normal');
+                const quizControls = document.getElementById('controls-quiz');
+                
+                normalControls.classList.add('fade-out');
+                normalControls.classList.remove('fade-in');
+                quizControls.classList.remove('fade-out');
+                quizControls.classList.add('fade-in');
+                
+                const qIndex = Math.floor(Math.random() * questions.length);
+                this.currentQuestion = questions[qIndex];
+                
+                let intro = isVoluntary ? "Na lássuk a bátorságát! " : "Maga ott, a szimmetria nevében: ";
+                if (!isVoluntary && Math.random() > 0.8) intro = "Ihajla tyuhajla! Kérdés: ";
+                
+                this.setDialogue(intro + this.currentQuestion.q);
+                document.getElementById('blackboard-text').innerText = "? " + this.currentQuestion.q;
+                playSound('chalk');
+                
+                quizControls.innerHTML = '';
+                this.currentQuestion.a.forEach((ans, index) => {
+                    const btn = document.createElement('button');
+                    btn.innerText = ans;
+                    btn.onclick = () => this.handleAnswer(index, isVoluntary);
+                    quizControls.appendChild(btn);
+                });
+
+                const cheatBtn = document.createElement('button');
+                cheatBtn.innerHTML = "👀 Puskázás (Veszélyes!)";
+                cheatBtn.className = "btn-cheat";
+                cheatBtn.onclick = () => this.attemptCheat();
+                quizControls.appendChild(cheatBtn);
+
+                if (this.quizTimeout) clearTimeout(this.quizTimeout);
+                this.quizTimeout = setTimeout(() => {
+                    this.handleQuizTimeout(isVoluntary);
+                }, 15000);
+            }
+
+            attemptCheat() {
+                if (this.quizTimeout) clearTimeout(this.quizTimeout);
+                
+                // 35% chance of success (Risky)
+                const successChance = 0.35; 
+                const roll = Math.random();
+                
+                if (roll < successChance) {
+                    playSound('ding');
+                    this.setDialogue("Sikerült kilesni a helyes választ! (Megúsztad)");
+                    // Good: Decrease grade (towards 1)
+                    this.updateGrade(-0.4); 
+                    this.closeQuiz();
+                } else {
+                    playSound('fail');
+                    this.setDialogue("Kovács! A perifériás látásom kiváló! PUSKÁZIK?! ÖTÖS!");
+                    this.triggerAngryTeacher();
+                    // Bad: Increase grade (towards 5)
+                    this.updateGrade(1.5); 
+                    this.closeQuiz();
+                }
+            }
+
+            handleQuizTimeout(isVoluntary) {
+                const shout = shoutPhrases[Math.floor(Math.random() * shoutPhrases.length)];
+                this.setDialogue(shout);
+                this.triggerAngryTeacher();
+                // Bad: Increase grade
+                this.updateGrade(0.8); 
+
+                this.closeQuiz();
+            }
+
+            handleAnswer(index, isVoluntary) {
+                if (this.quizTimeout) clearTimeout(this.quizTimeout);
+
+                const isCorrect = index === this.currentQuestion.correct;
+
+                if (isCorrect) {
+                    playSound('ding');
+                    let praise = praises[Math.floor(Math.random() * praises.length)];
+                    this.setDialogue(praise);
+                    // Good: Decrease grade
+                    this.updateGrade(isVoluntary ? -0.5 : -0.3);
+                } else {
+                    playSound('fail');
+                    let insult = insults[Math.floor(Math.random() * insults.length)];
+                    if (isVoluntary) insult = "Minek jelentkezik, ha a tudása nulla Kelvin?!";
+                    
+                    this.setDialogue(insult);
+                    this.triggerAngryTeacher();
+                    // Bad: Increase grade
+                    this.updateGrade(isVoluntary ? 1.0 : 0.6);
+                }
+
+                this.closeQuiz();
+            }
+
+            closeQuiz() {
+                const normalControls = document.getElementById('controls-normal');
+                const quizControls = document.getElementById('controls-quiz');
+
+                quizControls.classList.add('fade-out');
+                quizControls.classList.remove('fade-in');
+                normalControls.classList.remove('fade-out');
+                normalControls.classList.add('fade-in');
+                
+                this.state = 'IDLE';
+                this.scheduleNextEvent(4000);
+            }
+
+            action(type) {
+                if (this.loopTimeout) clearTimeout(this.loopTimeout);
+
+                if (this.state === 'SINGING') {
+                    this.setDialogue("NE ZAVARJA A MŰVÉSZETET! Ez durva interferencia!");
+                    this.triggerAngryTeacher();
+                    // Bad: Increase grade
+                    this.updateGrade(0.4);
+                    this.scheduleNextEvent(4000);
+                    return;
+                }
+
+                if (type === 'volunteer') {
+                    this.triggerQuiz(true);
+                    return;
+                }
+
+                if (type === 'nod') {
+                    if (Math.random() > 0.7) {
+                        this.setDialogue("Mit bólogat? A feje nem metronóm! Zavar.");
+                        this.triggerAngryTeacher();
+                        this.updateGrade(0.1);
+                    } else {
+                        this.setDialogue("(A tanárnő elégedetten látja a harmonikus mozgást)");
+                        this.updateGrade(-0.1);
+                    }
+                } else if (type === 'write') {
+                    playSound('chalk');
+                    this.setDialogue("Helyes. A grafit rendezett rétegei nyomot hagynak.");
+                    this.updateGrade(-0.15);
+                } else if (type === 'sleep') {
+                    if (Math.random() > 0.6) {
+                        playSound('fail');
+                        this.setDialogue("KISCSILLAG! A REM-fázis nem itt van! ÉBRESZTŐ!");
+                        this.triggerAngryTeacher();
+                        this.updateGrade(0.8);
+                    } else {
+                        this.setDialogue("(Sikerült észrevétlenül csökkenteni az anyagcserét)");
+                        this.updateGrade(-0.05);
+                    }
+                }
+
+                this.scheduleNextEvent(4000);
+            }
+
+            updateGrade(amount) {
+                this.grade += amount;
+                
+                // Bounds: 1.0 (Best) - 5.0 (Fail)
+                if (this.grade < 1.0) this.grade = 1.0;
+                if (this.grade > 5.0) this.grade = 5.0;
+                
+                this.updateUI();
+
+                // Fail condition close to 5.0
+                if (this.grade >= 4.95) {
+                    setTimeout(() => {
+                        this.endGame(false);
+                    }, 800);
+                }
+            }
+
+            updateUI() {
+                const gradeEl = document.getElementById('grade-display');
+                gradeEl.innerText = this.grade.toFixed(1);
+                
+                gradeEl.className = '';
+                // 1.0 - 2.4 Good (Green)
+                if (this.grade <= 2.4) gradeEl.classList.add('grade-good');
+                // 2.5 - 3.9 Average (Orange)
+                else if (this.grade <= 3.9) gradeEl.classList.add('grade-avg');
+                // 4.0 - 5.0 Bad (Red)
+                else gradeEl.classList.add('grade-bad');
+            }
+
+            setDialogue(text) {
+                const box = document.getElementById('dialogue-box');
+                box.classList.remove('active');
+                void box.offsetWidth; 
+                box.classList.add('active');
+                
+                document.getElementById('dialogue-text').innerText = `"${text}"`;
+            }
+
+            triggerAngryTeacher() {
+                const avatar = document.getElementById('teacher');
+                avatar.classList.add('angry');
+                avatar.innerText = "👿";
+                playSound('fail');
+                setTimeout(() => {
+                    avatar.classList.remove('angry');
+                    if(this.state !== 'SINGING') avatar.innerText = "👩‍🏫";
+                }, 1500); 
+            }
+        }
+
+        const game = new Game();
+
+    </script>
+</body>
+</html>
