@@ -36,3 +36,7 @@ Keep everything, but add one more button for switching off half tones, when snap
 ---
 [2025. 12. 18. 22:05:24] v17:
 Add a settings button that opens a settings gui, put all settings here+ add a natural sound switch
+
+---
+[2025. 12. 18. 22:47:25] v18:
+Turn snap to scale on by default
