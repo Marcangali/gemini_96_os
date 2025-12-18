@@ -1,10 +1,10 @@
 {
-  "id": "Theremin96_1766001464862",
   "name": "Theremin 96",
-  "description": "Virtual theremin with push-to-swell volume, pitch control, and scale snapping.",
-  "category": "Custom",
   "icon": "https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/Theremin96_1766001464862/icon.png",
+  "category": "Custom",
+  "description": "Virtual theremin with push-to-swell volume, pitch control, and scale snapping.",
   "width": 400,
   "height": 500,
-  "version": "v6"
+  "id": "Theremin96_1766001464862",
+  "version": "1.16.0"
 }
