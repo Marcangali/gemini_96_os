@@ -1,10 +1,11 @@
 <!--
-APP_NAME: Theremin 96
-APP_DESCRIPTION: Virtual theremin with push-to-swell volume, pitch control, and scale snapping.
+APP_NAME: Theremin
+APP_DESCRIPTION: Virtual theremin with pitch correction, volume control, and multiple waveforms.
 APP_ICON: 
 APP_CATEGORY: Entertainment
 WINDOW_WIDTH: 400
 WINDOW_HEIGHT: 500
+VERSION_SUMMARY: Added Square waveform mode to settings
 STORE_ID: theremin-96
 -->
 <!DOCTYPE html>
@@ -12,19 +13,20 @@ STORE_ID: theremin-96
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Theremin 96</title>
+    <title>Theremin</title>
     <style>
         :root {
             --bg-color: #f3f3f3;
             --surface-color: #ffffff;
             --primary-color: #0078d4;
-            --accent-vol: #00cc6a; /* Green for Volume */
-            --accent-freq: #b146c2; /* Purple for Freq */
+            --accent-vol: #00cc6a;
+            --accent-freq: #b146c2;
             --text-color: #202020;
             --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --shadow-md: 0 8px 16px rgba(0,0,0,0.12);
             --radius: 12px;
             --active-scale: 0.98;
+            --overlay-bg: rgba(243, 243, 243, 0.8);
         }
 
         body {
@@ -41,6 +43,11 @@ STORE_ID: theremin-96
             -webkit-user-select: none;
         }
 
+        /* Mobile Mode Adjustments */
+        body.mobile-mode .control-panel {
+            border-radius: 16px;
+        }
+
         /* App Container */
         .app-container {
             flex: 1;
@@ -49,6 +56,7 @@ STORE_ID: theremin-96
             padding: 16px;
             gap: 16px;
             box-sizing: border-box;
+            position: relative;
         }
 
         /* Header / Visualizer Area */
@@ -98,6 +106,35 @@ STORE_ID: theremin-96
             font-variant-numeric: tabular-nums;
         }
 
+        /* Settings Button */
+        .settings-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0,0,0,0.05);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            transition: all 0.2s;
+            color: #555;
+        }
+
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transform: rotate(15deg);
+        }
+        
+        .settings-btn:active {
+            transform: scale(0.95);
+        }
+
         /* Controls Container */
         .controls-area {
             flex: 1;
@@ -144,7 +181,7 @@ STORE_ID: theremin-96
             border: 2px solid transparent;
         }
 
-        #volume-btn:active {
+        #volume-btn:not(.auto-mode):active {
             transform: scale(var(--active-scale));
         }
 
@@ -152,13 +189,18 @@ STORE_ID: theremin-96
             border-color: rgba(0, 204, 106, 0.3);
             box-shadow: 0 0 15px rgba(0, 204, 106, 0.2);
         }
+        
+        #volume-btn.auto-mode {
+            cursor: default;
+            border-color: rgba(0, 204, 106, 0.1);
+        }
 
         .btn-fill {
             width: 100%;
             background-color: var(--accent-vol);
             opacity: 0.3;
             height: 0%; /* Dynamic */
-            transition: none; /* Controlled by JS loop */
+            transition: none;
             pointer-events: none;
         }
 
@@ -183,7 +225,6 @@ STORE_ID: theremin-96
             cursor: ns-resize;
         }
 
-        /* Avoid scaling the whole panel when clicking internal toggle */
         #freq-slider.slider-active:active {
             transform: scale(var(--active-scale));
         }
@@ -225,78 +266,6 @@ STORE_ID: theremin-96
             height: 4px;
             background: rgba(0,0,0,0.1);
             border-radius: 2px;
-        }
-
-        /* Toggle Switches Container */
-        .toggle-group {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            z-index: 20;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: flex-end;
-        }
-
-        .control-toggle {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            background: rgba(255,255,255,0.85);
-            padding: 4px 8px;
-            border-radius: 20px;
-            backdrop-filter: blur(4px);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: opacity 0.2s, filter 0.2s;
-        }
-        
-        /* Disabled state for secondary toggle */
-        .control-toggle.disabled {
-            opacity: 0.5;
-            pointer-events: none;
-            filter: grayscale(1);
-        }
-
-        .control-toggle span {
-            font-size: 11px;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 28px;
-            height: 16px;
-            background: #ddd;
-            border-radius: 16px;
-            transition: background 0.2s;
-        }
-
-        .toggle-knob {
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 12px;
-            height: 12px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        }
-
-        input[type="checkbox"] {
-            display: none;
-        }
-
-        input[type="checkbox"]:checked + .toggle-switch {
-            background: var(--accent-freq);
-        }
-
-        input[type="checkbox"]:checked + .toggle-switch .toggle-knob {
-            transform: translateX(12px);
         }
 
         /* Note Markers */
@@ -360,6 +329,7 @@ STORE_ID: theremin-96
             justify-content: center;
             transition: all 0.2s ease;
             outline: none;
+            position: relative;
         }
 
         #power-btn svg {
@@ -370,7 +340,7 @@ STORE_ID: theremin-96
         }
 
         #power-btn.active {
-            box-shadow: 0 0 15px var(--primary-color), inset 0 0 10px rgba(0,0,0,0.05);
+            box-shadow: 0 0 20px rgba(0, 120, 212, 0.4), inset 0 0 10px rgba(0,0,0,0.05);
         }
 
         #power-btn.active svg {
@@ -390,6 +360,191 @@ STORE_ID: theremin-96
             margin-top: 4px;
         }
 
+        /* Settings Overlay */
+        .settings-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .settings-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .settings-card {
+            background: var(--surface-color);
+            width: 80%;
+            max-width: 320px;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transform: translateY(10px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .settings-overlay.visible .settings-card {
+            transform: translateY(0);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 12px;
+            margin-bottom: 4px;
+        }
+
+        .settings-header h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            line-height: 1;
+            color: #888;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .setting-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #444;
+        }
+        
+        .setting-label.disabled {
+            opacity: 0.5;
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        input:disabled + .slider {
+            background-color: #eee;
+            cursor: not-allowed;
+        }
+
+        /* Period Selector Styles */
+        .sub-setting {
+            margin-top: -8px;
+            padding-left: 0;
+            justify-content: flex-end;
+            transition: opacity 0.3s;
+        }
+        
+        .sub-setting.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .period-selector {
+            display: flex;
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .period-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 50px;
+        }
+
+        .period-btn:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        .period-btn.active {
+            background: var(--surface-color);
+            color: var(--primary-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        hr.divider {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 4px 0;
+            width: 100%;
+        }
+
     </style>
 </head>
 <body>
@@ -403,6 +558,12 @@ STORE_ID: theremin-96
                 <div class="status-text">OUTPUT</div>
                 <div class="status-value" id="freq-display">OFF</div>
             </div>
+            <!-- Settings Button -->
+            <button class="settings-btn" id="settings-toggle-btn" aria-label="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.14,12.94C19.14,12.78 19.14,12.61 19.14,12.45C19.14,12.29 19.14,12.12 19.14,11.96L21.41,10.19C21.61,10.03 21.67,9.75 21.54,9.5L19.38,5.78C19.25,5.55 18.96,5.46 18.73,5.54L16.06,6.62C15.5,6.19 14.9,5.84 14.25,5.57L13.84,2.73C13.8,2.46 13.57,2.27 13.3,2.27H8.97C8.7,2.27 8.47,2.46 8.43,2.73L8.03,5.57C7.37,5.84 6.77,6.19 6.22,6.62L3.54,5.54C3.31,5.46 3.02,5.55 2.89,5.78L0.73,9.5C0.6,9.75 0.66,10.03 0.86,10.19L3.13,11.96C3.13,12.12 3.13,12.29 3.13,12.45C3.13,12.61 3.13,12.78 3.13,12.94L0.86,14.71C0.66,14.87 0.6,15.15 0.73,15.4L2.89,19.12C3.02,19.35 3.31,19.44 3.54,19.36L6.22,18.28C6.77,18.71 7.37,19.06 8.03,19.33L8.43,22.17C8.47,22.44 8.7,22.63 8.97,22.63H13.3C13.57,22.63 13.8,22.44 13.84,22.17L14.25,19.33C14.9,19.06 15.5,18.71 16.06,18.28L18.73,19.36C18.96,19.44 19.25,19.35 19.38,19.12L21.54,15.4C21.67,15.15 21.61,14.87 21.41,14.71L19.14,12.94M11.14,15.29C9.46,15.29 8.1,13.93 8.1,12.25C8.1,10.57 9.46,9.21 11.14,9.21C12.82,9.21 14.18,10.57 14.18,12.25C14.18,13.93 12.82,15.29 11.14,15.29Z" />
+                </svg>
+            </button>
         </div>
 
         <!-- Controls -->
@@ -410,7 +571,7 @@ STORE_ID: theremin-96
             
             <!-- Volume Button (Left) -->
             <div class="control-panel" id="volume-btn">
-                <div class="control-label">Hold Vol</div>
+                <div class="control-label" id="volume-label">Hold Vol</div>
                 <!-- Icons for visual feedback -->
                 <div class="btn-icon">
                     <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
@@ -433,21 +594,6 @@ STORE_ID: theremin-96
             <!-- Frequency Slider (Right) -->
             <div class="control-panel slider-active" id="freq-slider">
                 <div class="control-label" style="text-align: left; left: 12px;">Pitch</div>
-                
-                <!-- Toggles Container -->
-                <div class="toggle-group">
-                    <label class="control-toggle" title="Snap to Scale">
-                        <span>Snap</span>
-                        <input type="checkbox" id="snap-check">
-                        <div class="toggle-switch"><div class="toggle-knob"></div></div>
-                    </label>
-                    <label class="control-toggle disabled" id="chromatic-toggle-label" title="Enable Half Tones">
-                        <span>½ Tones</span>
-                        <input type="checkbox" id="chromatic-check" checked>
-                        <div class="toggle-switch"><div class="toggle-knob"></div></div>
-                    </label>
-                </div>
-
                 <div class="slider-fill" id="freq-fill"></div>
                 <div id="note-markers"></div>
                 <div class="slider-handle" id="freq-handle"></div>
@@ -458,11 +604,65 @@ STORE_ID: theremin-96
             Power On • Hold Left for Vol • Slide Right for Pitch
         </div>
 
+        <!-- Settings GUI -->
+        <div class="settings-overlay" id="settings-overlay">
+            <div class="settings-card">
+                <div class="settings-header">
+                    <h2>Configuration</h2>
+                    <button class="close-btn" id="close-settings">&times;</button>
+                </div>
+                
+                <div class="setting-row">
+                    <span class="setting-label">Snap to Scale</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="snap-check" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row">
+                    <span class="setting-label" id="chromatic-label">½ Tones (Chromatic)</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="chromatic-check" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row" style="align-items:flex-start; flex-direction:column; gap:8px;">
+                    <span class="setting-label">Waveform</span>
+                    <div class="period-selector" style="width:100%">
+                        <button class="period-btn waveform-btn active" data-val="sine" style="flex:1">Sine</button>
+                        <button class="period-btn waveform-btn" data-val="triangle" style="flex:1">Tri</button>
+                        <button class="period-btn waveform-btn" data-val="square" style="flex:1">Square</button>
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <div class="setting-row">
+                    <span class="setting-label">Automatic Volume</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="autovol-check">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-row sub-setting disabled" id="autovol-periods">
+                    <div class="period-selector">
+                        <button class="period-btn active" data-val="0.5">0.5s</button>
+                        <button class="period-btn" data-val="1.0">1.0s</button>
+                        <button class="period-btn" data-val="1.5">1.5s</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
     </div>
 
     <script>
         /**
-         * Theremin 96 Logic
+         * Theremin Logic
          */
         
         // --- State ---
@@ -470,8 +670,11 @@ STORE_ID: theremin-96
             isOn: false,
             volume: 0.0, // Start at 0
             freq: 0.5,   // 0.0 to 1.0 (raw position)
-            snapToScale: false,
-            allowHalfTones: true, // New state for Chromatic vs Diatonic
+            snapToScale: true, 
+            allowHalfTones: true, 
+            waveform: 'sine', // 'sine', 'triangle', 'square'
+            autoVolume: false,
+            autoVolPeriod: 0.5,
             // Scale set to 2 Octaves (G4 to G6)
             minFreq: 392.00, 
             maxFreq: 1567.98 
@@ -481,17 +684,24 @@ STORE_ID: theremin-96
         let audioCtx;
         let masterGain;
         let oscillator;
+        let toneFilter;
         let lfo; 
         let lfoGain;
         let analyser;
         
+        // Sound Effect for UI
         const createBeep = (freq, type = 'sine', duration = 0.1) => {
-            if (!audioCtx) return;
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = type;
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
@@ -509,16 +719,30 @@ STORE_ID: theremin-96
             }
         }
 
+        function getFilterFrequencyForWaveform(type) {
+            switch(type) {
+                case 'triangle': return 1500;
+                case 'square': return 3000;
+                default: return 20000;
+            }
+        }
+
         function startTheremin() {
             if (!audioCtx) initAudio();
             
+            // Oscillator Setup
             oscillator = audioCtx.createOscillator();
-            oscillator.type = 'sine';
+            oscillator.type = state.waveform;
             
+            // Filter Setup
+            toneFilter = audioCtx.createBiquadFilter();
+            toneFilter.type = 'lowpass';
+            toneFilter.frequency.value = getFilterFrequencyForWaveform(state.waveform);
+
             masterGain = audioCtx.createGain();
             masterGain.gain.value = 0; 
 
-            // Vibrato
+            // Vibrato (LFO)
             lfo = audioCtx.createOscillator();
             lfo.frequency.value = 6; 
             lfoGain = audioCtx.createGain();
@@ -531,7 +755,8 @@ STORE_ID: theremin-96
             analyser.fftSize = 2048;
             const compressor = audioCtx.createDynamicsCompressor();
 
-            oscillator.connect(masterGain);
+            oscillator.connect(toneFilter);
+            toneFilter.connect(masterGain);
             masterGain.connect(compressor);
             compressor.connect(analyser);
             analyser.connect(audioCtx.destination);
@@ -539,10 +764,14 @@ STORE_ID: theremin-96
             oscillator.start();
             lfo.start();
 
-            // Set Initial Values
-            state.volume = 0; // Ensure 0 on start
-            updateVolumeVisuals();
-            updateAudioParams();
+            // Handle start state
+            state.volume = 0;
+            if (state.autoVolume) {
+                startAutoVolumeLoop();
+            } else {
+                updateVolumeVisuals();
+                updateAudioParams();
+            }
         }
 
         function stopTheremin() {
@@ -553,31 +782,26 @@ STORE_ID: theremin-96
                     if(lfo) lfo.stop();
                     oscillator = null;
                     lfo = null;
+                    toneFilter = null;
                 }, 100);
             }
+            cancelAnimationFrame(volumeRafId);
         }
 
         function getTargetFrequency() {
-            // Logarithmic mapping for natural pitch scaling
             const rawFreq = state.minFreq * Math.pow(state.maxFreq / state.minFreq, state.freq);
             
             if (state.snapToScale) {
-                // MIDI Note conversion: 69 is A4 (440Hz)
                 let midi = 69 + 12 * Math.log2(rawFreq / 440);
                 
                 if (state.allowHalfTones) {
-                    // Standard chromatic snap
                     midi = Math.round(midi);
                 } else {
-                    // Snap to C Major (White keys only)
-                    // C Major MIDI indices mod 12: 0, 2, 4, 5, 7, 9, 11
                     const allowedNotes = [0, 2, 4, 5, 7, 9, 11];
                     const octave = Math.floor(midi / 12);
-                    
                     let closestMidi = -1;
                     let minDiff = 999;
                     
-                    // Search in range of octaves to ensure we catch boundary notes
                     for (let o = octave - 1; o <= octave + 1; o++) {
                         for (let n of allowedNotes) {
                             const candidate = o * 12 + n;
@@ -590,11 +814,9 @@ STORE_ID: theremin-96
                     }
                     midi = closestMidi;
                 }
-                
                 const snappedFreq = 440 * Math.pow(2, (midi - 69) / 12);
                 return snappedFreq;
             }
-            
             return rawFreq;
         }
 
@@ -602,12 +824,21 @@ STORE_ID: theremin-96
             if (!oscillator || !masterGain) return;
             
             const targetFreq = getTargetFrequency();
-            // Faster slide if snapping to avoid "glissando" effect between notes, but keep small slide to avoid pops
             const rampTime = state.snapToScale ? 0.02 : 0.05; 
             oscillator.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, rampTime);
             
-            // Volume Mapping
             masterGain.gain.setTargetAtTime(state.volume, audioCtx.currentTime, 0.02);
+        }
+
+        function updateToneParams() {
+            if (!oscillator || !toneFilter) return;
+            
+            if (oscillator.type !== state.waveform) {
+                oscillator.type = state.waveform;
+            }
+            
+            const newCutoff = getFilterFrequencyForWaveform(state.waveform);
+            toneFilter.frequency.setTargetAtTime(newCutoff, audioCtx.currentTime, 0.1);
         }
 
         // --- UI Interactions ---
@@ -619,33 +850,164 @@ STORE_ID: theremin-96
         const freqFill = document.getElementById('freq-fill');
         const freqHandle = document.getElementById('freq-handle');
         
-        // Toggles
+        // Settings Elements
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const settingsBtn = document.getElementById('settings-toggle-btn');
+        const closeSettingsBtn = document.getElementById('close-settings');
         const snapCheck = document.getElementById('snap-check');
         const chromaticCheck = document.getElementById('chromatic-check');
-        const chromaticLabel = document.getElementById('chromatic-toggle-label');
+        const chromaticLabel = document.getElementById('chromatic-label');
+        const waveformBtns = document.querySelectorAll('.waveform-btn');
+        
+        // Auto Volume Elements
+        const autoVolCheck = document.getElementById('autovol-check');
+        const autoVolPeriods = document.getElementById('autovol-periods');
+        const periodBtns = document.querySelectorAll('#autovol-periods .period-btn');
         
         // Volume Elements
         const volBtn = document.getElementById('volume-btn');
         const volFill = document.getElementById('vol-fill');
+        const volLabel = document.getElementById('volume-label');
 
-        // --- Volume Button Logic ---
+        // --- Settings Modal Logic ---
+        function openSettings() {
+            settingsOverlay.classList.add('visible');
+            createBeep(600, 'sine', 0.05);
+        }
+
+        function closeSettings() {
+            settingsOverlay.classList.remove('visible');
+            createBeep(400, 'sine', 0.05);
+        }
+
+        settingsBtn.addEventListener('click', openSettings);
+        closeSettingsBtn.addEventListener('click', closeSettings);
+        settingsOverlay.addEventListener('click', (e) => {
+            if(e.target === settingsOverlay) closeSettings();
+        });
+
+        // --- Settings Toggles ---
+        snapCheck.addEventListener('change', (e) => {
+            state.snapToScale = e.target.checked;
+            if (state.snapToScale) {
+                chromaticLabel.classList.remove('disabled');
+                chromaticCheck.disabled = false;
+            } else {
+                chromaticLabel.classList.add('disabled');
+                chromaticCheck.disabled = true;
+            }
+            createBeep(state.snapToScale ? 800 : 600, 'sine', 0.05);
+            if (state.isOn) {
+                updateAudioParams();
+                updateFreqVisualsFromState();
+            }
+        });
+
+        chromaticCheck.addEventListener('change', (e) => {
+            state.allowHalfTones = e.target.checked;
+            createBeep(state.allowHalfTones ? 900 : 700, 'sine', 0.05);
+            if (state.isOn && state.snapToScale) {
+                updateAudioParams();
+                updateFreqVisualsFromState();
+            }
+        });
+
+        // Waveform Selector Logic
+        waveformBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                waveformBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.waveform = btn.dataset.val;
+                
+                // Audio feedback
+                let pitch = 800;
+                if(state.waveform === 'triangle') pitch = 600;
+                if(state.waveform === 'square') pitch = 400;
+                createBeep(pitch, state.waveform, 0.1);
+
+                if (state.isOn) updateToneParams();
+            });
+        });
+
+        // --- Auto Volume Logic ---
+        autoVolCheck.addEventListener('change', (e) => {
+            state.autoVolume = e.target.checked;
+            createBeep(state.autoVolume ? 800 : 600, 'square', 0.05);
+            
+            if (state.autoVolume) {
+                autoVolPeriods.classList.remove('disabled');
+                volBtn.classList.add('auto-mode');
+                volLabel.textContent = "AUTO VOL";
+                if (state.isOn) startAutoVolumeLoop();
+            } else {
+                autoVolPeriods.classList.add('disabled');
+                volBtn.classList.remove('auto-mode');
+                volLabel.textContent = "HOLD VOL";
+                // Reset loop and volume
+                cancelAnimationFrame(volumeRafId);
+                state.volume = 0;
+                updateAudioParams();
+                updateVolumeVisuals();
+            }
+        });
+
+        periodBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Update active state UI
+                periodBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Update State
+                state.autoVolPeriod = parseFloat(btn.dataset.val);
+                createBeep(1200, 'sine', 0.03);
+            });
+        });
+
+        // --- Volume Loop Logic ---
         let volumeRafId = null;
+        let lastTime = 0;
+        let phase = 0;
 
         function updateVolumeVisuals() {
-            // Update fill height percentage
             volFill.style.height = `${state.volume * 100}%`;
         }
 
-        function startVolumeIncrease() {
-            if (!state.isOn) return;
-            volBtn.classList.add('active-press');
+        function startAutoVolumeLoop() {
+            cancelAnimationFrame(volumeRafId);
+            lastTime = 0;
+            phase = 0; // Reset phase for clean start
             
-            // Cancel any existing loop
+            const loop = (timestamp) => {
+                if (!state.isOn || !state.autoVolume) return;
+
+                if (!lastTime) lastTime = timestamp;
+                const dt = (timestamp - lastTime) / 1000;
+                lastTime = timestamp;
+
+                // Increment phase
+                phase += dt / state.autoVolPeriod;
+                if (phase > 1) phase -= 1;
+
+                // Sine wave 0->1->0 based on phase
+                // -cos(2*pi*phase) goes -1 to 1.
+                // 0.5 - 0.5*cos... maps to 0 to 1.
+                state.volume = 0.5 - 0.5 * Math.cos(2 * Math.PI * phase);
+
+                updateAudioParams();
+                updateVolumeVisuals();
+                volumeRafId = requestAnimationFrame(loop);
+            };
+            volumeRafId = requestAnimationFrame(loop);
+        }
+
+        function startVolumeIncrease() {
+            if (!state.isOn || state.autoVolume) return; // Ignore in auto mode
+            
+            volBtn.classList.add('active-press');
             cancelAnimationFrame(volumeRafId);
 
             const ramp = () => {
                 if (state.volume < 1.0) {
-                    // Increase volume
                     state.volume += 0.015; 
                     if (state.volume > 1.0) state.volume = 1.0;
                     
@@ -661,10 +1023,10 @@ STORE_ID: theremin-96
         }
 
         function stopVolume() {
+            if (state.autoVolume) return; // Don't reset in auto mode
+            
             volBtn.classList.remove('active-press');
             cancelAnimationFrame(volumeRafId);
-            
-            // Drop to zero
             state.volume = 0;
             updateAudioParams();
             updateVolumeVisuals();
@@ -672,12 +1034,11 @@ STORE_ID: theremin-96
 
         // Add Listeners to Volume Button
         volBtn.addEventListener('mousedown', (e) => {
-            e.preventDefault();
+            if(e.button !== 0) return;
             startVolumeIncrease();
         });
-        volBtn.addEventListener('mouseup', stopVolume);
-        volBtn.addEventListener('mouseleave', stopVolume);
-
+        window.addEventListener('mouseup', stopVolume);
+        
         volBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             startVolumeIncrease();
@@ -692,55 +1053,13 @@ STORE_ID: theremin-96
 
         // --- Frequency Slider Logic ---
         
-        // Handle Snap Toggle
-        snapCheck.addEventListener('change', (e) => {
-            state.snapToScale = e.target.checked;
-            
-            // Toggle visibility of the chromatic setting
-            if (state.snapToScale) {
-                chromaticLabel.classList.remove('disabled');
-            } else {
-                chromaticLabel.classList.add('disabled');
-            }
-
-            // Play a small sound to confirm switch
-            if (audioCtx && audioCtx.state === 'running') {
-                createBeep(state.snapToScale ? 800 : 600, 'sine', 0.05);
-            }
-            
-            if (state.isOn) {
-                updateAudioParams();
-                updateFreqVisualsFromState();
-            }
-        });
-
-        // Handle Chromatic/Half-tone Toggle
-        chromaticCheck.addEventListener('change', (e) => {
-            state.allowHalfTones = e.target.checked;
-
-            if (audioCtx && audioCtx.state === 'running') {
-                createBeep(state.allowHalfTones ? 900 : 700, 'sine', 0.05);
-            }
-
-            if (state.isOn && state.snapToScale) {
-                updateAudioParams();
-                updateFreqVisualsFromState();
-            }
-        });
-
-        // Helper to visualize snap position
         function updateFreqVisualsFromState() {
             let displayVal = state.freq;
-
             if (state.snapToScale) {
-                // Reverse engineering visual position from snapped frequency
                 const snappedFreq = getTargetFrequency();
-                // log(f / min) / log(max / min)
                 displayVal = Math.log(snappedFreq / state.minFreq) / Math.log(state.maxFreq / state.minFreq);
-                // Clamp for visuals
                 displayVal = Math.max(0, Math.min(1, displayVal));
             }
-
             const percent = displayVal * 100;
             freqFill.style.height = `${percent}%`;
             freqHandle.style.bottom = `${percent}%`;
@@ -748,11 +1067,7 @@ STORE_ID: theremin-96
 
         function setupFreqSlider() {
             let rect; 
-
             const updateValue = (e) => {
-                // Don't drag if we touched the toggles
-                if (e.target.closest('.toggle-group')) return;
-
                 const clientY = e.clientY; 
                 let val = 1 - ((clientY - rect.top) / rect.height);
                 val = Math.max(0, Math.min(1, val));
@@ -764,8 +1079,7 @@ STORE_ID: theremin-96
             };
 
             const onPointerDown = (e) => {
-                if (e.target.closest('.toggle-group')) return;
-                
+                if (e.target.closest('.settings-overlay')) return;
                 e.preventDefault(); 
                 rect = freqSlider.getBoundingClientRect(); 
                 freqSlider.setPointerCapture(e.pointerId);
@@ -795,14 +1109,12 @@ STORE_ID: theremin-96
             const maxLog = Math.log(state.maxFreq);
             const rangeLog = maxLog - minLog;
 
-            // Loop Range for Octaves
             for (let midi = 48; midi <= 108; midi++) {
                 const freq = 440 * Math.pow(2, (midi - 69) / 12);
                 if (freq < state.minFreq - 1) continue; 
                 if (freq > state.maxFreq + 1) break;
 
                 const noteIndex = midi % 12;
-                // Only show markers for White Keys to avoid clutter
                 if (!noteNames[noteIndex].includes('#')) {
                     const val = (Math.log(freq) - minLog) / rangeLog;
                     const percent = val * 100;
@@ -815,11 +1127,8 @@ STORE_ID: theremin-96
             }
         }
 
-        // Run Setup
         setupFreqSlider();
         generateNoteMarkers();
-
-        // Initial Visual State
         updateFreqVisualsFromState();
 
         // Power Toggle
@@ -833,7 +1142,12 @@ STORE_ID: theremin-96
                 createBeep(880, 'sine', 0.1); 
             } else {
                 stopTheremin();
-                stopVolume(); // Reset volume UI
+                if(!state.autoVolume) stopVolume(); // Reset volume UI if not auto
+                else {
+                    // In auto mode, also visually reset
+                    state.volume = 0;
+                    updateVolumeVisuals();
+                }
                 powerBtn.classList.remove('active');
                 freqDisplay.textContent = "OFF";
                 createBeep(440, 'triangle', 0.1);
@@ -867,10 +1181,8 @@ STORE_ID: theremin-96
                 return;
             }
 
-            // Get the actual playing freq (snapped or raw)
             const targetFreq = getTargetFrequency();
             
-            // Note name display if snapped
             if (state.snapToScale && targetFreq > 0) {
                  const midi = Math.round(69 + 12 * Math.log2(targetFreq / 440));
                  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -887,8 +1199,6 @@ STORE_ID: theremin-96
                 analyser.getByteTimeDomainData(dataArray);
 
                 ctx.lineWidth = 2;
-                // Hue shifts with pitch, Saturation shifts with volume
-                // Adjust hue calc based on slider position (state.freq) not target freq for smoother gradient
                 const hue = 260 + (state.freq * 100); 
                 const sat = 30 + (state.volume * 70);
                 ctx.strokeStyle = `hsl(${hue}, ${sat}%, 50%)`;
@@ -908,7 +1218,6 @@ STORE_ID: theremin-96
                 ctx.stroke();
             }
         }
-
         drawVisualizer();
 
     </script>
