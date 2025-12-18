@@ -1,0 +1,456 @@
+<!--
+APP_NAME: Tükör
+APP_DESCRIPTION: A fast, simple mirror utility with freeze, flip, and ring light features.
+APP_ICON: 
+APP_CATEGORY: Utilities
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 580
+STORE_ID: mirror-sim-01
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirror Simulator</title>
+<style>
+    :root {
+        --bg-color: #f3f3f3;
+        --surface-color: #ffffff;
+        --accent-color: #0078d4;
+        --accent-hover: #005a9e;
+        --text-color: #202020;
+        --border-radius: 12px;
+        --shadow: 0 4px 12px rgba(0,0,0,0.1);
+        --ring-light-color: rgba(255, 255, 255, 0.9);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        user-select: none;
+    }
+
+    /* Header */
+    header {
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 16px;
+        background: var(--surface-color);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        z-index: 10;
+        position: relative;
+    }
+
+    /* Main Viewport */
+    main {
+        flex: 1;
+        position: relative;
+        background: #000;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    video, canvas {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.3s ease;
+    }
+
+    /* Mirror Logic */
+    .mirrored {
+        transform: scaleX(-1);
+    }
+
+    /* Ring Light Overlay */
+    .ring-light-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        border: 0px solid var(--ring-light-color);
+        pointer-events: none;
+        transition: border-width 0.3s ease;
+        z-index: 5;
+    }
+    .ring-light-active {
+        border-width: 20px;
+    }
+
+    /* Placeholder / Error State */
+    .state-message {
+        position: absolute;
+        color: white;
+        text-align: center;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        z-index: 2;
+    }
+    .hidden { display: none !important; }
+
+    button.primary-btn {
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    button.primary-btn:active { transform: scale(0.98); }
+
+    /* Controls Footer */
+    footer {
+        height: 80px;
+        background: var(--surface-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-evenly;
+        padding-bottom: env(safe-area-inset-bottom);
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        z-index: 10;
+    }
+
+    .control-btn {
+        background: transparent;
+        border: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: #555;
+        cursor: pointer;
+        width: 60px;
+        transition: color 0.2s, transform 0.1s;
+    }
+
+    .control-btn svg {
+        width: 24px;
+        height: 24px;
+        fill: currentColor;
+    }
+
+    .control-btn span {
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    .control-btn:hover { color: var(--accent-color); background: rgba(0,0,0,0.03); border-radius: 8px; }
+    .control-btn:active { transform: scale(0.9); }
+    
+    .control-btn.active { color: var(--accent-color); }
+    .control-btn.active svg { fill: var(--accent-color); }
+
+    /* Flash Animation */
+    .flash {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: white;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 20;
+    }
+    .flash.trigger {
+        animation: flashAnim 0.3s ease-out;
+    }
+
+    @keyframes flashAnim {
+        0% { opacity: 0.8; }
+        100% { opacity: 0; }
+    }
+
+    /* Mobile Mode Optimization */
+    body.mobile-mode footer {
+        height: 90px;
+    }
+    body.mobile-mode .control-btn {
+        width: 70px;
+        padding: 10px 0;
+    }
+    body.mobile-mode .control-btn svg {
+        width: 28px;
+        height: 28px;
+    }
+
+</style>
+</head>
+<body>
+
+    <header>
+        Tükör
+    </header>
+
+    <main>
+        <!-- The visual elements -->
+        <video id="videoFeed" autoplay playsinline muted class="mirrored"></video>
+        <canvas id="photoCanvas" class="hidden mirrored"></canvas>
+        
+        <!-- Overlays -->
+        <div id="ringLight" class="ring-light-overlay"></div>
+        <div id="flash" class="flash"></div>
+
+        <!-- Messages -->
+        <div id="permissionMsg" class="state-message">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="#888"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+            <p>Camera access is required.</p>
+            <button class="primary-btn" id="btnGrant">Allow Camera</button>
+        </div>
+        <div id="errorMsg" class="state-message hidden">
+            <p>Camera not found or blocked.</p>
+        </div>
+    </main>
+
+    <footer>
+        <button class="control-btn" id="btnFlip" title="Flip Horizontal">
+            <svg viewBox="0 0 24 24"><path d="M15,21H9V3H15V21M9,23C7.89,23 7,22.1 7,21V3C7,1.89 7.89,1 9,1H15C16.1,1 17,1.89 17,3V21C17,22.1 16.1,23 15,23H9M12,5V19H14V5H12M5,5H3V19H5V5M21,5H19V19H21V5Z"/></svg>
+            <span>Flip</span>
+        </button>
+
+        <button class="control-btn" id="btnLight" title="Toggle Ring Light">
+            <svg viewBox="0 0 24 24"><path d="M20,15.31L23.31,12L20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31M12,18A6,6 0 1,1 18,12A6,6 0 0,1 12,18M12,8A4,4 0 1,0 16,12A4,4 0 0,0 12,8Z"/></svg>
+            <span>Light</span>
+        </button>
+
+        <button class="control-btn" id="btnFreeze" title="Freeze Frame">
+            <svg viewBox="0 0 24 24"><path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M11,16H9V8H11V16M15,16H13V8H15V16Z"/></svg>
+            <span id="txtFreeze">Freeze</span>
+        </button>
+
+        <button class="control-btn" id="btnSave" title="Save Photo">
+            <svg viewBox="0 0 24 24"><path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 1,0 17,7A5,5 0 0,0 12,7M12,9A3,3 0 1,1 9,9A3,3 0 0,1 12,9Z"/></svg>
+            <span>Save</span>
+        </button>
+    </footer>
+
+<script>
+    /**
+     * Tükör (Mirror) Application
+     * Handles WebCam stream, freezing, mirroring, and simulated audio.
+     */
+
+    const video = document.getElementById('videoFeed');
+    const canvas = document.getElementById('photoCanvas');
+    const ctx = canvas.getContext('2d');
+    const permissionMsg = document.getElementById('permissionMsg');
+    const errorMsg = document.getElementById('errorMsg');
+    
+    // Controls
+    const btnGrant = document.getElementById('btnGrant');
+    const btnFlip = document.getElementById('btnFlip');
+    const btnLight = document.getElementById('btnLight');
+    const btnFreeze = document.getElementById('btnFreeze');
+    const txtFreeze = document.getElementById('txtFreeze');
+    const btnSave = document.getElementById('btnSave');
+    const ringLight = document.getElementById('ringLight');
+    const flash = document.getElementById('flash');
+
+    // State
+    let isMirrored = true;
+    let isFrozen = false;
+    let stream = null;
+    let audioCtx = null;
+
+    // --- Audio System (Web Audio API) ---
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playClickSound() {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+        
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function playShutterSound() {
+        if (!audioCtx) return;
+        
+        // Create noise buffer
+        const bufferSize = audioCtx.sampleRate * 0.2; // 200ms
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+
+        const gain = audioCtx.createGain();
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+
+        // Filter to make it sound mechanical
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(2000, audioCtx.currentTime);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        noise.start();
+    }
+
+    // --- Camera Logic ---
+    async function startCamera() {
+        initAudio();
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'user'
+                }, 
+                audio: false 
+            });
+            video.srcObject = stream;
+            permissionMsg.classList.add('hidden');
+            errorMsg.classList.add('hidden');
+        } catch (err) {
+            console.error(err);
+            permissionMsg.classList.add('hidden');
+            errorMsg.classList.remove('hidden');
+        }
+    }
+
+    // --- Interactions ---
+
+    btnGrant.addEventListener('click', startCamera);
+
+    btnFlip.addEventListener('click', () => {
+        initAudio();
+        playClickSound();
+        isMirrored = !isMirrored;
+        const transform = isMirrored ? 'scaleX(-1)' : 'scaleX(1)';
+        video.style.transform = transform;
+        canvas.style.transform = transform;
+        btnFlip.classList.toggle('active', !isMirrored); // Highlight if NOT mirrored (True View)
+    });
+
+    btnLight.addEventListener('click', () => {
+        initAudio();
+        playClickSound();
+        ringLight.classList.toggle('ring-light-active');
+        btnLight.classList.toggle('active');
+    });
+
+    btnFreeze.addEventListener('click', () => {
+        initAudio();
+        playClickSound();
+        
+        if (!isFrozen) {
+            // Freeze
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            video.classList.add('hidden');
+            canvas.classList.remove('hidden');
+            
+            txtFreeze.textContent = "Unfreeze";
+            isFrozen = true;
+            btnFreeze.classList.add('active');
+        } else {
+            // Unfreeze
+            canvas.classList.add('hidden');
+            video.classList.remove('hidden');
+            txtFreeze.textContent = "Freeze";
+            isFrozen = false;
+            btnFreeze.classList.remove('active');
+        }
+    });
+
+    btnSave.addEventListener('click', () => {
+        initAudio();
+        playShutterSound();
+
+        // Flash effect
+        flash.classList.remove('trigger');
+        void flash.offsetWidth; // Trigger reflow
+        flash.classList.add('trigger');
+
+        // Capture logic
+        // We always capture from the raw video or the frozen canvas.
+        // However, if mirrored, we need to flip the canvas context before saving.
+        
+        const saveCanvas = document.createElement('canvas');
+        saveCanvas.width = video.videoWidth;
+        saveCanvas.height = video.videoHeight;
+        const sCtx = saveCanvas.getContext('2d');
+
+        if (isMirrored) {
+            sCtx.translate(saveCanvas.width, 0);
+            sCtx.scale(-1, 1);
+        }
+
+        if (isFrozen) {
+            sCtx.drawImage(canvas, 0, 0);
+        } else {
+            sCtx.drawImage(video, 0, 0);
+        }
+
+        // Trigger download
+        const link = document.createElement('a');
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${now.getMonth()+1}${now.getDate()}_${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
+        link.download = `Tukor_${timestamp}.png`;
+        link.href = saveCanvas.toDataURL('image/png');
+        link.click();
+    });
+
+    // Check for responsive environment
+    const checkForMobile = () => {
+        if (document.body.classList.contains('mobile-mode') || window.innerWidth < 450) {
+            // Additional logic if needed for mobile layout adjustments via JS
+        }
+    };
+
+    // Auto-start if permission granted previously (browser dependent)
+    // We try immediately but might fail if no user interaction yet.
+    startCamera().catch(() => {
+        // Silent fail, wait for button click
+    });
+    
+    // Resize observer to ensure canvas matches video if window resizes
+    window.addEventListener('resize', checkForMobile);
+    checkForMobile();
+
+</script>
+</body>
+</html>
