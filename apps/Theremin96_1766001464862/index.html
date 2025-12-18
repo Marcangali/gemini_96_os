@@ -228,7 +228,7 @@ STORE_ID: theremin-96
         }
 
         /* Toggle Switches Container */
-        .toggle-group {
+        .pitch-controls {
             position: absolute;
             top: 12px;
             right: 12px;
@@ -239,7 +239,7 @@ STORE_ID: theremin-96
             align-items: flex-end;
         }
 
-        .control-toggle {
+        .toggle-row {
             display: flex;
             align-items: center;
             gap: 6px;
@@ -249,17 +249,14 @@ STORE_ID: theremin-96
             border-radius: 20px;
             backdrop-filter: blur(4px);
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: opacity 0.2s, filter 0.2s;
+            transition: background 0.2s;
         }
         
-        /* Disabled state for secondary toggle */
-        .control-toggle.disabled {
-            opacity: 0.5;
-            pointer-events: none;
-            filter: grayscale(1);
+        .toggle-row:hover {
+            background: rgba(255,255,255,0.95);
         }
 
-        .control-toggle span {
+        .toggle-row span {
             font-size: 11px;
             font-weight: 600;
             color: #666;
@@ -298,6 +295,11 @@ STORE_ID: theremin-96
         input[type="checkbox"]:checked + .toggle-switch .toggle-knob {
             transform: translateX(12px);
         }
+        
+        /* Secondary color for "No Half" toggle to distinguish */
+        #natural-check:checked + .toggle-switch {
+            background: #0078d4;
+        }
 
         /* Note Markers */
         #note-markers {
@@ -319,6 +321,7 @@ STORE_ID: theremin-96
             align-items: center;
             justify-content: flex-end;
             transform: translateY(50%);
+            transition: opacity 0.3s ease;
         }
 
         .note-tick::after {
@@ -328,11 +331,22 @@ STORE_ID: theremin-96
             background-color: #ccc;
             margin-left: 4px;
         }
+        
+        /* Highlight C notes */
+        .note-tick[data-note^="C"] .note-text {
+            color: var(--primary-color);
+            font-weight: 800;
+        }
+        
+        .note-tick.sharp-note .note-text {
+             color: #aaa;
+             font-size: 9px;
+        }
 
         .note-text {
             font-size: 10px;
             font-weight: 600;
-            color: #aaa;
+            color: #888;
             background: rgba(255, 255, 255, 0.85);
             padding: 0 2px;
             border-radius: 3px;
@@ -390,6 +404,15 @@ STORE_ID: theremin-96
             margin-top: 4px;
         }
 
+        /* Responsive Mobile Mode */
+        body.mobile-mode .controls-area {
+            flex-direction: column;
+        }
+        
+        body.mobile-mode .header {
+            flex: 0 0 80px;
+        }
+
     </style>
 </head>
 <body>
@@ -434,16 +457,19 @@ STORE_ID: theremin-96
             <div class="control-panel slider-active" id="freq-slider">
                 <div class="control-label" style="text-align: left; left: 12px;">Pitch</div>
                 
-                <!-- Toggles Container -->
-                <div class="toggle-group">
-                    <label class="control-toggle" title="Snap to Scale">
+                <!-- Settings Container -->
+                <div class="pitch-controls">
+                    <!-- Snap Toggle -->
+                    <label class="toggle-row" for="snap-check" title="Snap to nearest semitone">
                         <span>Snap</span>
                         <input type="checkbox" id="snap-check">
                         <div class="toggle-switch"><div class="toggle-knob"></div></div>
                     </label>
-                    <label class="control-toggle disabled" id="chromatic-toggle-label" title="Enable Half Tones">
-                        <span>½ Tones</span>
-                        <input type="checkbox" id="chromatic-check" checked>
+
+                    <!-- Natural Only Toggle (No Half Tones) -->
+                    <label class="toggle-row" for="natural-check" title="Scale: Natural (White keys only)">
+                        <span>Natural</span>
+                        <input type="checkbox" id="natural-check">
                         <div class="toggle-switch"><div class="toggle-knob"></div></div>
                     </label>
                 </div>
@@ -468,13 +494,12 @@ STORE_ID: theremin-96
         // --- State ---
         const state = {
             isOn: false,
-            volume: 0.0, // Start at 0
+            volume: 0.0,
             freq: 0.5,   // 0.0 to 1.0 (raw position)
             snapToScale: false,
-            allowHalfTones: true, // New state for Chromatic vs Diatonic
-            // Scale set to 2 Octaves (G4 to G6)
-            minFreq: 392.00, 
-            maxFreq: 1567.98 
+            noHalfTones: false, // New State: Restrict to Natural Scale
+            minFreq: 392.00, // G4
+            maxFreq: 1567.98 // G6
         };
 
         // --- Audio Context ---
@@ -539,8 +564,7 @@ STORE_ID: theremin-96
             oscillator.start();
             lfo.start();
 
-            // Set Initial Values
-            state.volume = 0; // Ensure 0 on start
+            state.volume = 0; 
             updateVolumeVisuals();
             updateAudioParams();
         }
@@ -557,42 +581,41 @@ STORE_ID: theremin-96
             }
         }
 
+        // --- Scale Logic ---
+        
+        // MIDI 69 = A4 (440Hz)
+        // C Major (Natural) keys in modulo 12: 0(C), 2(D), 4(E), 5(F), 7(G), 9(A), 11(B)
+        const NATURAL_KEYS = [0, 2, 4, 5, 7, 9, 11];
+
         function getTargetFrequency() {
-            // Logarithmic mapping for natural pitch scaling
             const rawFreq = state.minFreq * Math.pow(state.maxFreq / state.minFreq, state.freq);
             
-            if (state.snapToScale) {
-                // MIDI Note conversion: 69 is A4 (440Hz)
-                let midi = 69 + 12 * Math.log2(rawFreq / 440);
-                
-                if (state.allowHalfTones) {
-                    // Standard chromatic snap
-                    midi = Math.round(midi);
-                } else {
-                    // Snap to C Major (White keys only)
-                    // C Major MIDI indices mod 12: 0, 2, 4, 5, 7, 9, 11
-                    const allowedNotes = [0, 2, 4, 5, 7, 9, 11];
-                    const octave = Math.floor(midi / 12);
-                    
-                    let closestMidi = -1;
-                    let minDiff = 999;
-                    
-                    // Search in range of octaves to ensure we catch boundary notes
-                    for (let o = octave - 1; o <= octave + 1; o++) {
-                        for (let n of allowedNotes) {
-                            const candidate = o * 12 + n;
-                            const diff = Math.abs(candidate - midi);
-                            if (diff < minDiff) {
-                                minDiff = diff;
-                                closestMidi = candidate;
+            // If "Natural Only" is ON, we implicitly enable snap logic for the scale
+            if (state.snapToScale || state.noHalfTones) {
+                const midiFloat = 69 + 12 * Math.log2(rawFreq / 440);
+                let snappedMidi = Math.round(midiFloat);
+
+                if (state.noHalfTones) {
+                    // Snap to nearest Natural Note (White Key)
+                    let minDistance = Infinity;
+                    let bestMidi = snappedMidi;
+
+                    // Search neighborhood for nearest valid key
+                    for (let i = -2; i <= 2; i++) {
+                        const testMidi = snappedMidi + i;
+                        const noteIndex = (testMidi % 12 + 12) % 12; // Handle negatives safely
+                        if (NATURAL_KEYS.includes(noteIndex)) {
+                            const dist = Math.abs(testMidi - midiFloat);
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                bestMidi = testMidi;
                             }
                         }
                     }
-                    midi = closestMidi;
+                    snappedMidi = bestMidi;
                 }
-                
-                const snappedFreq = 440 * Math.pow(2, (midi - 69) / 12);
-                return snappedFreq;
+
+                return 440 * Math.pow(2, (snappedMidi - 69) / 12);
             }
             
             return rawFreq;
@@ -602,56 +625,44 @@ STORE_ID: theremin-96
             if (!oscillator || !masterGain) return;
             
             const targetFreq = getTargetFrequency();
-            // Faster slide if snapping to avoid "glissando" effect between notes, but keep small slide to avoid pops
-            const rampTime = state.snapToScale ? 0.02 : 0.05; 
+            // Faster slide if snapping to avoid "glissando" effect between notes
+            const rampTime = (state.snapToScale || state.noHalfTones) ? 0.02 : 0.05; 
             oscillator.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, rampTime);
             
-            // Volume Mapping
             masterGain.gain.setTargetAtTime(state.volume, audioCtx.currentTime, 0.02);
         }
 
         // --- UI Interactions ---
 
-        // DOM Elements
         const powerBtn = document.getElementById('power-btn');
         const freqDisplay = document.getElementById('freq-display');
         const freqSlider = document.getElementById('freq-slider');
         const freqFill = document.getElementById('freq-fill');
         const freqHandle = document.getElementById('freq-handle');
-        
-        // Toggles
         const snapCheck = document.getElementById('snap-check');
-        const chromaticCheck = document.getElementById('chromatic-check');
-        const chromaticLabel = document.getElementById('chromatic-toggle-label');
+        const naturalCheck = document.getElementById('natural-check'); // New Toggle
         
-        // Volume Elements
         const volBtn = document.getElementById('volume-btn');
         const volFill = document.getElementById('vol-fill');
 
-        // --- Volume Button Logic ---
+        // --- Volume Logic ---
         let volumeRafId = null;
 
         function updateVolumeVisuals() {
-            // Update fill height percentage
             volFill.style.height = `${state.volume * 100}%`;
         }
 
         function startVolumeIncrease() {
             if (!state.isOn) return;
             volBtn.classList.add('active-press');
-            
-            // Cancel any existing loop
             cancelAnimationFrame(volumeRafId);
 
             const ramp = () => {
                 if (state.volume < 1.0) {
-                    // Increase volume
                     state.volume += 0.015; 
                     if (state.volume > 1.0) state.volume = 1.0;
-                    
                     updateAudioParams();
                     updateVolumeVisuals();
-                    
                     if (state.volume < 1.0) {
                         volumeRafId = requestAnimationFrame(ramp);
                     }
@@ -663,81 +674,56 @@ STORE_ID: theremin-96
         function stopVolume() {
             volBtn.classList.remove('active-press');
             cancelAnimationFrame(volumeRafId);
-            
-            // Drop to zero
             state.volume = 0;
             updateAudioParams();
             updateVolumeVisuals();
         }
 
-        // Add Listeners to Volume Button
-        volBtn.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            startVolumeIncrease();
-        });
+        volBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startVolumeIncrease(); });
         volBtn.addEventListener('mouseup', stopVolume);
         volBtn.addEventListener('mouseleave', stopVolume);
-
-        volBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            startVolumeIncrease();
-        }, { passive: false });
-        
-        volBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            stopVolume();
-        });
+        volBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startVolumeIncrease(); }, { passive: false });
+        volBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopVolume(); });
         volBtn.addEventListener('touchcancel', stopVolume);
 
 
-        // --- Frequency Slider Logic ---
+        // --- Pitch Slider Logic ---
         
         // Handle Snap Toggle
         snapCheck.addEventListener('change', (e) => {
             state.snapToScale = e.target.checked;
-            
-            // Toggle visibility of the chromatic setting
-            if (state.snapToScale) {
-                chromaticLabel.classList.remove('disabled');
-            } else {
-                chromaticLabel.classList.add('disabled');
-            }
+            playToggleSound(state.snapToScale);
+            refreshState();
+        });
 
-            // Play a small sound to confirm switch
+        // Handle Natural Toggle (No Half Tones)
+        naturalCheck.addEventListener('change', (e) => {
+            state.noHalfTones = e.target.checked;
+            playToggleSound(state.noHalfTones);
+            updateMarkerVisibility();
+            refreshState();
+        });
+
+        function playToggleSound(isActive) {
             if (audioCtx && audioCtx.state === 'running') {
-                createBeep(state.snapToScale ? 800 : 600, 'sine', 0.05);
+                createBeep(isActive ? 800 : 600, 'sine', 0.05);
             }
-            
+        }
+
+        function refreshState() {
             if (state.isOn) {
                 updateAudioParams();
                 updateFreqVisualsFromState();
             }
-        });
+        }
 
-        // Handle Chromatic/Half-tone Toggle
-        chromaticCheck.addEventListener('change', (e) => {
-            state.allowHalfTones = e.target.checked;
-
-            if (audioCtx && audioCtx.state === 'running') {
-                createBeep(state.allowHalfTones ? 900 : 700, 'sine', 0.05);
-            }
-
-            if (state.isOn && state.snapToScale) {
-                updateAudioParams();
-                updateFreqVisualsFromState();
-            }
-        });
-
-        // Helper to visualize snap position
         function updateFreqVisualsFromState() {
             let displayVal = state.freq;
 
-            if (state.snapToScale) {
-                // Reverse engineering visual position from snapped frequency
+            if (state.snapToScale || state.noHalfTones) {
                 const snappedFreq = getTargetFrequency();
-                // log(f / min) / log(max / min)
+                // Reverse engineer slider pos from snapped freq
                 displayVal = Math.log(snappedFreq / state.minFreq) / Math.log(state.maxFreq / state.minFreq);
-                // Clamp for visuals
                 displayVal = Math.max(0, Math.min(1, displayVal));
             }
 
@@ -750,8 +736,7 @@ STORE_ID: theremin-96
             let rect; 
 
             const updateValue = (e) => {
-                // Don't drag if we touched the toggles
-                if (e.target.closest('.toggle-group')) return;
+                if (e.target.closest('.pitch-controls')) return;
 
                 const clientY = e.clientY; 
                 let val = 1 - ((clientY - rect.top) / rect.height);
@@ -764,7 +749,7 @@ STORE_ID: theremin-96
             };
 
             const onPointerDown = (e) => {
-                if (e.target.closest('.toggle-group')) return;
+                if (e.target.closest('.pitch-controls')) return;
                 
                 e.preventDefault(); 
                 rect = freqSlider.getBoundingClientRect(); 
@@ -785,7 +770,7 @@ STORE_ID: theremin-96
             freqSlider.addEventListener('pointerdown', onPointerDown);
         }
 
-        // --- Initialization ---
+        // --- Marker Logic ---
 
         function generateNoteMarkers() {
             const container = document.getElementById('note-markers');
@@ -795,37 +780,50 @@ STORE_ID: theremin-96
             const maxLog = Math.log(state.maxFreq);
             const rangeLog = maxLog - minLog;
 
-            // Loop Range for Octaves
             for (let midi = 48; midi <= 108; midi++) {
                 const freq = 440 * Math.pow(2, (midi - 69) / 12);
                 if (freq < state.minFreq - 1) continue; 
                 if (freq > state.maxFreq + 1) break;
 
                 const noteIndex = midi % 12;
-                // Only show markers for White Keys to avoid clutter
-                if (!noteNames[noteIndex].includes('#')) {
-                    const val = (Math.log(freq) - minLog) / rangeLog;
-                    const percent = val * 100;
-                    const marker = document.createElement('div');
-                    marker.className = 'note-tick';
-                    marker.style.bottom = `${percent}%`;
-                    marker.innerHTML = `<span class="note-text">${noteNames[noteIndex]}</span>`;
-                    container.appendChild(marker);
-                }
+                const noteName = noteNames[noteIndex];
+                const isSharp = noteName.includes('#');
+                
+                // Always create markers, but toggle visibility via class
+                const val = (Math.log(freq) - minLog) / rangeLog;
+                const percent = val * 100;
+                
+                const marker = document.createElement('div');
+                marker.className = `note-tick ${isSharp ? 'sharp-note' : 'natural-note'}`;
+                marker.dataset.note = noteName; // for styling C
+                marker.style.bottom = `${percent}%`;
+                marker.innerHTML = `<span class="note-text">${noteName}</span>`;
+                container.appendChild(marker);
             }
+            updateMarkerVisibility();
         }
 
-        // Run Setup
+        function updateMarkerVisibility() {
+            const sharps = document.querySelectorAll('.sharp-note');
+            sharps.forEach(el => {
+                // If "Natural Only" is on, hide sharps. Otherwise show them.
+                el.style.opacity = state.noHalfTones ? '0' : '1';
+            });
+        }
+
+        // --- Init ---
+        
+        // Detect Mobile Mode
+        if (document.body.classList.contains('mobile-mode') || window.innerWidth < 500) {
+           document.body.classList.add('mobile-mode');
+        }
+
         setupFreqSlider();
         generateNoteMarkers();
-
-        // Initial Visual State
         updateFreqVisualsFromState();
 
-        // Power Toggle
         powerBtn.addEventListener('click', () => {
             state.isOn = !state.isOn;
-            
             if (state.isOn) {
                 initAudio();
                 startTheremin();
@@ -833,14 +831,14 @@ STORE_ID: theremin-96
                 createBeep(880, 'sine', 0.1); 
             } else {
                 stopTheremin();
-                stopVolume(); // Reset volume UI
+                stopVolume(); 
                 powerBtn.classList.remove('active');
                 freqDisplay.textContent = "OFF";
                 createBeep(440, 'triangle', 0.1);
             }
         });
 
-        // --- Visualizer Loop ---
+        // --- Visualizer & Display ---
         const canvas = document.getElementById('visualizer');
         const ctx = canvas.getContext('2d');
         
@@ -867,11 +865,10 @@ STORE_ID: theremin-96
                 return;
             }
 
-            // Get the actual playing freq (snapped or raw)
             const targetFreq = getTargetFrequency();
             
-            // Note name display if snapped
-            if (state.snapToScale && targetFreq > 0) {
+            // Display Logic
+            if ((state.snapToScale || state.noHalfTones) && targetFreq > 0) {
                  const midi = Math.round(69 + 12 * Math.log2(targetFreq / 440));
                  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
                  const note = noteNames[midi % 12];
@@ -886,12 +883,10 @@ STORE_ID: theremin-96
                 const dataArray = new Uint8Array(bufferLength);
                 analyser.getByteTimeDomainData(dataArray);
 
-                ctx.lineWidth = 2;
-                // Hue shifts with pitch, Saturation shifts with volume
-                // Adjust hue calc based on slider position (state.freq) not target freq for smoother gradient
                 const hue = 260 + (state.freq * 100); 
                 const sat = 30 + (state.volume * 70);
                 ctx.strokeStyle = `hsl(${hue}, ${sat}%, 50%)`;
+                ctx.lineWidth = 2;
 
                 ctx.beginPath();
                 const sliceWidth = w * 1.0 / bufferLength;
