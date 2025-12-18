@@ -40,3 +40,7 @@ Add a settings button that opens a settings gui, put all settings here+ add a na
 ---
 [2025. 12. 18. 22:47:25] v18:
 Turn snap to scale on by default
+
+---
+[18. 12. 2025 23:04:07] v19:
+To the configuration menu add switch for automatic volume control with 0.5, 1, 1.5 sec peroods
