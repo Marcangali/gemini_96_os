@@ -227,24 +227,39 @@ STORE_ID: theremin-96
             border-radius: 2px;
         }
 
-        /* Snap Toggle Switch */
-        .snap-control {
+        /* Toggle Switches Container */
+        .toggle-group {
             position: absolute;
             top: 12px;
             right: 12px;
             z-index: 20;
             display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .control-toggle {
+            display: flex;
             align-items: center;
             gap: 6px;
             cursor: pointer;
-            background: rgba(255,255,255,0.8);
+            background: rgba(255,255,255,0.85);
             padding: 4px 8px;
             border-radius: 20px;
             backdrop-filter: blur(4px);
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: opacity 0.2s, filter 0.2s;
+        }
+        
+        /* Disabled state for secondary toggle */
+        .control-toggle.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(1);
         }
 
-        .snap-control span {
+        .control-toggle span {
             font-size: 11px;
             font-weight: 600;
             color: #666;
@@ -272,7 +287,7 @@ STORE_ID: theremin-96
             box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
 
-        input[type="checkbox"]#snap-check {
+        input[type="checkbox"] {
             display: none;
         }
 
@@ -419,12 +434,19 @@ STORE_ID: theremin-96
             <div class="control-panel slider-active" id="freq-slider">
                 <div class="control-label" style="text-align: left; left: 12px;">Pitch</div>
                 
-                <!-- Snap Switch -->
-                <label class="snap-control" for="snap-check">
-                    <span>Snap</span>
-                    <input type="checkbox" id="snap-check">
-                    <div class="toggle-switch"><div class="toggle-knob"></div></div>
-                </label>
+                <!-- Toggles Container -->
+                <div class="toggle-group">
+                    <label class="control-toggle" title="Snap to Scale">
+                        <span>Snap</span>
+                        <input type="checkbox" id="snap-check">
+                        <div class="toggle-switch"><div class="toggle-knob"></div></div>
+                    </label>
+                    <label class="control-toggle disabled" id="chromatic-toggle-label" title="Enable Half Tones">
+                        <span>½ Tones</span>
+                        <input type="checkbox" id="chromatic-check" checked>
+                        <div class="toggle-switch"><div class="toggle-knob"></div></div>
+                    </label>
+                </div>
 
                 <div class="slider-fill" id="freq-fill"></div>
                 <div id="note-markers"></div>
@@ -449,8 +471,10 @@ STORE_ID: theremin-96
             volume: 0.0, // Start at 0
             freq: 0.5,   // 0.0 to 1.0 (raw position)
             snapToScale: false,
-            minFreq: 261.63, // C4
-            maxFreq: 1480    // Approx 2.5 octaves
+            allowHalfTones: true, // New state for Chromatic vs Diatonic
+            // Scale set to 2 Octaves (G4 to G6)
+            minFreq: 392.00, 
+            maxFreq: 1567.98 
         };
 
         // --- Audio Context ---
@@ -539,9 +563,35 @@ STORE_ID: theremin-96
             
             if (state.snapToScale) {
                 // MIDI Note conversion: 69 is A4 (440Hz)
-                const midi = 69 + 12 * Math.log2(rawFreq / 440);
-                const snappedMidi = Math.round(midi);
-                const snappedFreq = 440 * Math.pow(2, (snappedMidi - 69) / 12);
+                let midi = 69 + 12 * Math.log2(rawFreq / 440);
+                
+                if (state.allowHalfTones) {
+                    // Standard chromatic snap
+                    midi = Math.round(midi);
+                } else {
+                    // Snap to C Major (White keys only)
+                    // C Major MIDI indices mod 12: 0, 2, 4, 5, 7, 9, 11
+                    const allowedNotes = [0, 2, 4, 5, 7, 9, 11];
+                    const octave = Math.floor(midi / 12);
+                    
+                    let closestMidi = -1;
+                    let minDiff = 999;
+                    
+                    // Search in range of octaves to ensure we catch boundary notes
+                    for (let o = octave - 1; o <= octave + 1; o++) {
+                        for (let n of allowedNotes) {
+                            const candidate = o * 12 + n;
+                            const diff = Math.abs(candidate - midi);
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                closestMidi = candidate;
+                            }
+                        }
+                    }
+                    midi = closestMidi;
+                }
+                
+                const snappedFreq = 440 * Math.pow(2, (midi - 69) / 12);
                 return snappedFreq;
             }
             
@@ -568,7 +618,11 @@ STORE_ID: theremin-96
         const freqSlider = document.getElementById('freq-slider');
         const freqFill = document.getElementById('freq-fill');
         const freqHandle = document.getElementById('freq-handle');
+        
+        // Toggles
         const snapCheck = document.getElementById('snap-check');
+        const chromaticCheck = document.getElementById('chromatic-check');
+        const chromaticLabel = document.getElementById('chromatic-toggle-label');
         
         // Volume Elements
         const volBtn = document.getElementById('volume-btn');
@@ -641,12 +695,34 @@ STORE_ID: theremin-96
         // Handle Snap Toggle
         snapCheck.addEventListener('change', (e) => {
             state.snapToScale = e.target.checked;
+            
+            // Toggle visibility of the chromatic setting
+            if (state.snapToScale) {
+                chromaticLabel.classList.remove('disabled');
+            } else {
+                chromaticLabel.classList.add('disabled');
+            }
+
             // Play a small sound to confirm switch
             if (audioCtx && audioCtx.state === 'running') {
                 createBeep(state.snapToScale ? 800 : 600, 'sine', 0.05);
             }
-            // If already playing, update immediate frequency and visuals
+            
             if (state.isOn) {
+                updateAudioParams();
+                updateFreqVisualsFromState();
+            }
+        });
+
+        // Handle Chromatic/Half-tone Toggle
+        chromaticCheck.addEventListener('change', (e) => {
+            state.allowHalfTones = e.target.checked;
+
+            if (audioCtx && audioCtx.state === 'running') {
+                createBeep(state.allowHalfTones ? 900 : 700, 'sine', 0.05);
+            }
+
+            if (state.isOn && state.snapToScale) {
                 updateAudioParams();
                 updateFreqVisualsFromState();
             }
@@ -674,8 +750,8 @@ STORE_ID: theremin-96
             let rect; 
 
             const updateValue = (e) => {
-                // Don't drag if we touched the checkbox
-                if (e.target.closest('.snap-control')) return;
+                // Don't drag if we touched the toggles
+                if (e.target.closest('.toggle-group')) return;
 
                 const clientY = e.clientY; 
                 let val = 1 - ((clientY - rect.top) / rect.height);
@@ -688,7 +764,7 @@ STORE_ID: theremin-96
             };
 
             const onPointerDown = (e) => {
-                if (e.target.closest('.snap-control')) return;
+                if (e.target.closest('.toggle-group')) return;
                 
                 e.preventDefault(); 
                 rect = freqSlider.getBoundingClientRect(); 
@@ -719,12 +795,14 @@ STORE_ID: theremin-96
             const maxLog = Math.log(state.maxFreq);
             const rangeLog = maxLog - minLog;
 
-            for (let midi = 48; midi <= 96; midi++) {
+            // Loop Range for Octaves
+            for (let midi = 48; midi <= 108; midi++) {
                 const freq = 440 * Math.pow(2, (midi - 69) / 12);
-                if (freq < state.minFreq) continue;
-                if (freq > state.maxFreq) break;
+                if (freq < state.minFreq - 1) continue; 
+                if (freq > state.maxFreq + 1) break;
 
                 const noteIndex = midi % 12;
+                // Only show markers for White Keys to avoid clutter
                 if (!noteNames[noteIndex].includes('#')) {
                     const val = (Math.log(freq) - minLog) / rangeLog;
                     const percent = val * 100;
