@@ -1,2 +1,6 @@
 [2025. 12. 19. 13:39:37] v5:
 Add more fun
+
+---
+[2025. 12. 19. 13:42:28] v6:
+Add skins, buyable with coins
