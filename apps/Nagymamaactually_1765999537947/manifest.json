@@ -1,10 +1,10 @@
 {
-  "id": "Nagymamaactually_1765999537947",
   "name": "Grandma's Theremin",
-  "description": "Play music as a grandma! Unlock wacky upgrades by playing to customize your sound.",
+  "icon": "https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/Nagymamaactually_1765999537947/icon.png",
   "category": "Custom",
-  "icon": "icon.png",
+  "description": "Play music as a grandma! Unlock 12 wacky instruments and effects.",
   "width": 380,
   "height": 640,
-  "version": "v4"
+  "id": "Nagymamaactually_1765999537947",
+  "version": "v5"
 }
