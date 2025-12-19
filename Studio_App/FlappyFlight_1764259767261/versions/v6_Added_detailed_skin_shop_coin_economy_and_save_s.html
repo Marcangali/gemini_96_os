@@ -1,0 +1,1169 @@
+<!--
+APP_NAME: Flappy Flight
+APP_DESCRIPTION: Fly, collect coins, and buy new skins in the shop! Avoid the pipes.
+APP_ICON: https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/FlappyFlight_1764259767261/icon.png
+APP_CATEGORY: Games
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Added detailed skin shop, coin economy, and save system.
+STORE_ID: FlappyFlight
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Flight</title>
+    <style>
+        :root {
+            --primary-color: #0078d4;
+            --primary-hover: #106ebe;
+            --gold-color: #FFD700;
+            --danger-color: #e81123;
+            --success-color: #107c10;
+            --bg-color: #ffffff;
+            --text-color: #202020;
+            --overlay-bg: rgba(255, 255, 255, 0.85);
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: #222;
+            font-family: var(--font-family);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #4fc3f7, #e1f5fe);
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* UI Overlays */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            transition: opacity 0.3s ease, backdrop-filter 0.3s ease;
+            z-index: 100;
+        }
+
+        .ui-layer.active {
+            pointer-events: auto;
+            background-color: var(--overlay-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Score HUD */
+        #score-hud {
+            position: absolute;
+            top: 10%;
+            width: 100%;
+            text-align: center;
+            font-size: 64px;
+            font-weight: 800;
+            color: white;
+            text-shadow: 2px 2px 0 #000;
+            pointer-events: none;
+            z-index: 10;
+            font-family: 'Segoe UI Black', Impact, sans-serif;
+        }
+
+        /* Coin HUD */
+        .coin-display {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.6);
+            padding: 6px 14px;
+            border-radius: 20px;
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        #hud-coins {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 11;
+        }
+
+        .coin-icon {
+            width: 16px;
+            height: 16px;
+            background: #FFD700;
+            border-radius: 50%;
+            border: 2px solid #DAA520;
+            display: inline-block;
+            box-shadow: inset -2px -2px rgba(0,0,0,0.2);
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            width: 85%;
+            max-width: 320px;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            color: var(--text-color);
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        p {
+            margin: 0 0 20px 0;
+            color: #666;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        /* Shop / Skin Selector */
+        .shop-container {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #eee;
+        }
+
+        .skin-viewer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: #999;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+        .nav-btn:hover { color: var(--primary-color); transform: scale(1.2); }
+
+        .skin-preview-area {
+            width: 80px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        /* Dynamic Bird Preview uses CSS to simulate the canvas drawing slightly for UI */
+        .bird-preview {
+            width: 30px;
+            height: 30px;
+            background: var(--preview-color, #FFD700);
+            border-radius: 50%;
+            border: 2px solid #000;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: background 0.3s;
+        }
+        .bird-preview::after { /* Eye */
+            content: ''; position: absolute; top: 6px; right: 6px;
+            width: 8px; height: 8px; background: white; border-radius: 50%; border: 1px solid #000;
+        }
+        .bird-preview::before { /* Wing */
+            content: ''; position: absolute; top: 16px; left: 4px;
+            width: 12px; height: 8px; background: rgba(255,255,255,0.4); border-radius: 50%;
+        }
+
+        .skin-info {
+            font-size: 14px;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 8px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-buy {
+            background: #fff;
+            border: 2px solid var(--success-color);
+            color: var(--success-color);
+        }
+        .btn-buy:hover { background: var(--success-color); color: #fff; }
+        
+        .btn-equip {
+            background: var(--primary-color);
+            color: white;
+            border: 2px solid var(--primary-color);
+        }
+        .btn-equip:hover { background: var(--primary-hover); }
+
+        .btn-equipped {
+            background: #eee;
+            color: #888;
+            cursor: default;
+            border: 2px solid #ddd;
+        }
+
+        .btn-locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #ccc;
+            background: #eee;
+            color: #999;
+        }
+
+        /* Main Game Buttons */
+        .play-btn {
+            background: linear-gradient(135deg, var(--primary-color), #005a9e);
+            color: white;
+            border: none;
+            padding: 16px 0;
+            width: 100%;
+            font-size: 20px;
+            font-weight: 800;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(0, 120, 212, 0.4);
+            font-family: var(--font-family);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .play-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px rgba(0, 120, 212, 0.5);
+        }
+
+        .play-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid #eee;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #333;
+        }
+
+        /* Floating Text */
+        .floating-text {
+            position: absolute;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 1px 1px 0 #000;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+            font-size: 20px;
+            z-index: 20;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-40px) scale(1.2); opacity: 0; }
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Flash Effect */
+        #flash-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+        #flash-overlay.flash {
+            animation: flashAnim 0.3s ease-out;
+        }
+        @keyframes flashAnim {
+            0% { opacity: 0.6; }
+            100% { opacity: 0; }
+        }
+
+        /* Mobile Optimization */
+        body.mobile-mode .card {
+            padding: 20px;
+            width: 90%;
+        }
+        body.mobile-mode h1 { font-size: 26px; }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="flash-overlay"></div>
+        
+        <!-- Persistent HUD -->
+        <div id="score-hud">0</div>
+        <div id="hud-coins" class="coin-display">
+            <span class="coin-icon"></span>
+            <span id="total-coins">0</span>
+        </div>
+
+        <!-- Start Screen / Shop -->
+        <div id="start-screen" class="ui-layer active">
+            <div class="card">
+                <h1>Flappy Flight</h1>
+                <p>Avoid pipes. Collect coins.<br>Buy skins!</p>
+                
+                <div class="shop-container">
+                    <div class="skin-viewer">
+                        <button class="nav-btn" id="prev-skin">&#10094;</button>
+                        <div class="skin-preview-area">
+                            <div class="bird-preview" id="preview-bird"></div>
+                        </div>
+                        <button class="nav-btn" id="next-skin">&#10095;</button>
+                    </div>
+                    <div class="skin-info" id="skin-name">Yellow Classic</div>
+                    <button class="action-btn btn-equipped" id="skin-action-btn">Equipped</button>
+                </div>
+
+                <button id="start-btn" class="play-btn">PLAY</button>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="ui-layer hidden">
+            <div class="card">
+                <h1>CRASHED!</h1>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Score</div>
+                        <div class="stat-value" id="final-score">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Coins Earned</div>
+                        <div class="stat-value" id="session-coins" style="color: #DAA520;">0</div>
+                    </div>
+                </div>
+                
+                <div class="coin-display" style="display: inline-flex; margin-bottom: 20px;">
+                    <span class="coin-icon"></span>
+                    <span id="end-total-coins">Total: 0</span>
+                </div>
+
+                <button id="restart-btn" class="play-btn">TRY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Flappy Flight - Shop Update
+         * Features: Coin Economy, Shop System, Skins, Persistence
+         */
+
+        // --- Configuration & State ---
+        const config = {
+            gravity: 0.25,
+            jumpStrength: -5.2,
+            gameSpeed: 3,
+            pipeSpawnRate: 100,
+            pipeGap: 150,
+            pipeWidth: 60,
+            coinChance: 0.6
+        };
+
+        // Initialize Data from Storage
+        let savedData = JSON.parse(localStorage.getItem('flappyFlightSave_v1')) || {
+            highScore: 0,
+            coins: 0,
+            ownedSkins: [0], // Array of IDs owned
+            equippedSkin: 0
+        };
+
+        const skins = [
+            { id: 0, name: "Classic Yellow", color: "#FFD700", cost: 0, accessory: 'none' },
+            { id: 1, name: "Blue Jay", color: "#4fc3f7", cost: 50, accessory: 'none' },
+            { id: 2, name: "Forest Finch", color: "#4CAF50", cost: 100, accessory: 'leaf' },
+            { id: 3, name: "Cyber Bird", color: "#C0C0C0", cost: 250, accessory: 'visor' },
+            { id: 4, name: "Demon Wing", color: "#d32f2f", cost: 500, accessory: 'horns' },
+            { id: 5, name: "Golden God", color: "#FFD700", cost: 1000, accessory: 'crown' },
+            { id: 6, name: "Ghost", color: "rgba(255,255,255,0.4)", cost: 1500, accessory: 'none' }
+        ];
+
+        let state = {
+            status: 'MENU', // MENU, PLAYING, GAMEOVER
+            frames: 0,
+            score: 0,
+            sessionCoins: 0,
+            gameSpeed: 3,
+            shopIndex: savedData.equippedSkin // Current viewed skin in shop
+        };
+
+        // Mobile Mode Check
+        if (document.body.classList.contains('mobile-mode') || window.innerWidth < 450) {
+            document.body.classList.add('mobile-mode');
+        }
+
+        // --- Audio System ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            switch (type) {
+                case 'jump':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, t);
+                    osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+                    osc.start(t);
+                    osc.stop(t + 0.15);
+                    break;
+                case 'score':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(800, t);
+                    osc.frequency.setValueAtTime(1200, t + 0.05);
+                    gain.gain.setValueAtTime(0.1, t);
+                    gain.gain.linearRampToValueAtTime(0, t + 0.1);
+                    osc.start(t);
+                    osc.stop(t + 0.1);
+                    break;
+                case 'coin':
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(1200, t);
+                    osc.frequency.exponentialRampToValueAtTime(1800, t + 0.1);
+                    gain.gain.setValueAtTime(0.05, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+                    osc.start(t);
+                    osc.stop(t + 0.2);
+                    break;
+                case 'hit':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, t);
+                    osc.frequency.exponentialRampToValueAtTime(40, t + 0.3);
+                    gain.gain.setValueAtTime(0.3, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                    osc.start(t);
+                    osc.stop(t + 0.3);
+                    break;
+                case 'buy':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(500, t);
+                    osc.frequency.linearRampToValueAtTime(1000, t + 0.1);
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.linearRampToValueAtTime(0, t + 0.3);
+                    osc.start(t);
+                    osc.stop(t + 0.3);
+                    break;
+                case 'error':
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, t);
+                    osc.frequency.linearRampToValueAtTime(100, t + 0.15);
+                    gain.gain.setValueAtTime(0.2, t);
+                    gain.gain.linearRampToValueAtTime(0, t + 0.15);
+                    osc.start(t);
+                    osc.stop(t + 0.15);
+                    break;
+            }
+        }
+
+        // --- DOM Elements ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const els = {
+            scoreHud: document.getElementById('score-hud'),
+            totalCoins: document.getElementById('total-coins'),
+            startScreen: document.getElementById('start-screen'),
+            gameOverScreen: document.getElementById('game-over-screen'),
+            finalScore: document.getElementById('final-score'),
+            sessionCoins: document.getElementById('session-coins'),
+            endTotalCoins: document.getElementById('end-total-coins'),
+            flash: document.getElementById('flash-overlay'),
+            container: document.getElementById('game-container'),
+            
+            // Shop Elements
+            previewBird: document.getElementById('preview-bird'),
+            skinName: document.getElementById('skin-name'),
+            actionBtn: document.getElementById('skin-action-btn'),
+            prevBtn: document.getElementById('prev-skin'),
+            nextBtn: document.getElementById('next-skin')
+        };
+
+        // --- Game Logic ---
+
+        function saveData() {
+            localStorage.setItem('flappyFlightSave_v1', JSON.stringify(savedData));
+            updateUI();
+        }
+
+        function updateUI() {
+            els.totalCoins.innerText = savedData.coins;
+            els.endTotalCoins.innerText = `Total: ${savedData.coins}`;
+            updateShopUI();
+        }
+
+        function updateShopUI() {
+            const skin = skins[state.shopIndex];
+            els.skinName.innerText = skin.name;
+            els.previewBird.style.setProperty('--preview-color', skin.color);
+            
+            const isOwned = savedData.ownedSkins.includes(skin.id);
+            const isEquipped = savedData.equippedSkin === skin.id;
+
+            els.actionBtn.className = 'action-btn';
+            
+            if (isEquipped) {
+                els.actionBtn.innerText = "Equipped";
+                els.actionBtn.classList.add('btn-equipped');
+            } else if (isOwned) {
+                els.actionBtn.innerText = "Equip";
+                els.actionBtn.classList.add('btn-equip');
+            } else {
+                els.actionBtn.innerText = `Buy ${skin.cost}`;
+                els.actionBtn.innerHTML += ' <span class="coin-icon" style="width:10px;height:10px;border-width:1px"></span>';
+                
+                if (savedData.coins >= skin.cost) {
+                    els.actionBtn.classList.add('btn-buy');
+                } else {
+                    els.actionBtn.classList.add('btn-locked');
+                }
+            }
+        }
+
+        function handleShopAction() {
+            const skin = skins[state.shopIndex];
+            const isOwned = savedData.ownedSkins.includes(skin.id);
+
+            if (isOwned) {
+                // Equip
+                savedData.equippedSkin = skin.id;
+                playSound('buy'); // Positive feedback
+                saveData();
+            } else {
+                // Buy
+                if (savedData.coins >= skin.cost) {
+                    savedData.coins -= skin.cost;
+                    savedData.ownedSkins.push(skin.id);
+                    savedData.equippedSkin = skin.id;
+                    playSound('buy');
+                    
+                    // Celebration particles
+                    for(let i=0; i<20; i++) {
+                        particles.push({
+                            x: canvas.width/2, y: canvas.height/2,
+                            vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+                            life: 40, color: '#FFD700', size: 4
+                        });
+                    }
+                    saveData();
+                } else {
+                    playSound('error');
+                    els.actionBtn.animate([
+                        { transform: 'translateX(0)' },
+                        { transform: 'translateX(-5px)' },
+                        { transform: 'translateX(5px)' },
+                        { transform: 'translateX(0)' }
+                    ], { duration: 200 });
+                }
+            }
+        }
+
+        // --- Game Objects ---
+        
+        const bg = {
+            clouds: [],
+            buildings: [],
+            groundOffset: 0,
+            
+            init() {
+                this.clouds = [];
+                for(let i=0; i<5; i++) {
+                    this.clouds.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * (canvas.height * 0.4),
+                        speed: 0.2 + Math.random() * 0.3,
+                        scale: 0.5 + Math.random() * 0.5
+                    });
+                }
+                this.buildings = [];
+                for(let i=0; i<10; i++) {
+                    this.buildings.push({
+                        x: i * 60,
+                        w: 40 + Math.random() * 30,
+                        h: 50 + Math.random() * 150,
+                        color: `rgba(150, 200, 255, ${0.3 + Math.random()*0.2})`
+                    });
+                }
+            },
+
+            update() {
+                this.clouds.forEach(c => {
+                    c.x -= c.speed;
+                    if(c.x < -100) {
+                        c.x = canvas.width + 100;
+                        c.y = Math.random() * (canvas.height * 0.4);
+                    }
+                });
+
+                if(state.status === 'PLAYING') {
+                    this.buildings.forEach(b => {
+                        b.x -= state.gameSpeed * 0.2;
+                    });
+                    if (this.buildings[0].x + this.buildings[0].w < -10) {
+                        const first = this.buildings.shift();
+                        first.x = this.buildings[this.buildings.length-1].x + this.buildings[this.buildings.length-1].w + 5;
+                        first.h = 50 + Math.random() * 150;
+                        this.buildings.push(first);
+                    }
+                    this.groundOffset = (this.groundOffset + state.gameSpeed) % 20;
+                }
+            },
+
+            draw() {
+                ctx.fillStyle = 'transparent';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                this.buildings.forEach(b => {
+                    ctx.fillStyle = b.color;
+                    ctx.fillRect(b.x, canvas.height - 20 - b.h, b.w, b.h);
+                });
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                this.clouds.forEach(c => {
+                    ctx.beginPath();
+                    ctx.arc(c.x, c.y, 30 * c.scale, 0, Math.PI * 2);
+                    ctx.arc(c.x + 25 * c.scale, c.y - 10 * c.scale, 35 * c.scale, 0, Math.PI * 2);
+                    ctx.arc(c.x + 50 * c.scale, c.y, 30 * c.scale, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Ground
+                ctx.fillStyle = '#ded895';
+                ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+                ctx.fillStyle = '#73bf2e';
+                ctx.fillRect(0, canvas.height - 22, canvas.width, 4);
+
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                for(let i = -this.groundOffset; i < canvas.width; i+=20) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, canvas.height - 20);
+                    ctx.lineTo(i + 10, canvas.height);
+                    ctx.lineTo(i - 5, canvas.height);
+                    ctx.fill();
+                }
+            }
+        };
+
+        const bird = {
+            x: 60,
+            y: 150,
+            radius: 14,
+            velocity: 0,
+            rotation: 0,
+
+            reset() {
+                this.y = canvas.height / 2;
+                this.velocity = 0;
+                this.rotation = 0;
+            },
+
+            draw() {
+                const skin = skins.find(s => s.id === savedData.equippedSkin) || skins[0];
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                ctx.fillStyle = skin.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#000';
+                ctx.stroke();
+
+                // Eye
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(6, -6, 6, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(8, -6, 2, 0, Math.PI*2);
+                ctx.fill();
+
+                // Beak
+                ctx.fillStyle = '#ff8a65';
+                ctx.beginPath();
+                ctx.moveTo(8, 2);
+                ctx.lineTo(20, 6);
+                ctx.lineTo(8, 10);
+                ctx.fill();
+                ctx.stroke();
+
+                // Wing
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.beginPath();
+                ctx.ellipse(-4, 4, 8, 5, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Accessories
+                if (skin.accessory === 'visor') {
+                    ctx.fillStyle = '#d81b60';
+                    ctx.fillRect(2, -8, 12, 4);
+                } else if (skin.accessory === 'horns') {
+                    ctx.fillStyle = '#d32f2f';
+                    ctx.beginPath();
+                    ctx.moveTo(-5, -12);
+                    ctx.lineTo(0, -5);
+                    ctx.lineTo(5, -12);
+                    ctx.fill();
+                } else if (skin.accessory === 'crown') {
+                    ctx.fillStyle = '#ffd700';
+                    ctx.strokeStyle = '#b8860b';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(-8, -10);
+                    ctx.lineTo(-4, -18);
+                    ctx.lineTo(0, -10);
+                    ctx.lineTo(4, -18);
+                    ctx.lineTo(8, -10);
+                    ctx.lineTo(8, -5);
+                    ctx.lineTo(-8, -5);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (skin.accessory === 'leaf') {
+                    ctx.fillStyle = '#388E3C';
+                    ctx.beginPath();
+                    ctx.ellipse(0, -15, 6, 3, Math.PI/4, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            },
+
+            update() {
+                this.velocity += config.gravity;
+                this.y += this.velocity;
+                this.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.1)));
+
+                if (this.y + this.radius >= canvas.height - 20) {
+                    this.y = canvas.height - 20 - this.radius;
+                    gameOver();
+                }
+                if (this.y - this.radius <= 0) {
+                    this.y = this.radius;
+                    this.velocity = 0;
+                }
+            },
+
+            jump() {
+                this.velocity = config.jumpStrength;
+                playSound('jump');
+                for(let i=0; i<3; i++) {
+                    particles.push({
+                        x: this.x,
+                        y: this.y + 10,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: Math.random() * 3,
+                        life: 20,
+                        color: '#fff',
+                        size: Math.random() * 4
+                    });
+                }
+            }
+        };
+
+        const manager = {
+            pipes: [],
+            coins: [],
+            
+            reset() {
+                this.pipes = [];
+                this.coins = [];
+            },
+
+            update() {
+                if (state.frames % config.pipeSpawnRate === 0) {
+                    const minPipe = 40;
+                    const maxPos = canvas.height - 20 - config.pipeGap - minPipe;
+                    const topHeight = Math.floor(Math.random() * (maxPos - minPipe + 1)) + minPipe;
+                    
+                    this.pipes.push({
+                        x: canvas.width,
+                        y: topHeight,
+                        passed: false
+                    });
+
+                    if (Math.random() < config.coinChance) {
+                        this.coins.push({
+                            x: canvas.width + config.pipeWidth / 2,
+                            y: topHeight + config.pipeGap / 2,
+                            collected: false,
+                            wobbleOffset: Math.random() * Math.PI * 2
+                        });
+                    }
+                }
+
+                // Move Pipes
+                for (let i = 0; i < this.pipes.length; i++) {
+                    let p = this.pipes[i];
+                    p.x -= state.gameSpeed;
+
+                    if (bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + config.pipeWidth) {
+                        if (bird.y - bird.radius < p.y || bird.y + bird.radius > p.y + config.pipeGap) {
+                            gameOver();
+                        }
+                    }
+
+                    if (p.x + config.pipeWidth < bird.x && !p.passed) {
+                        state.score++;
+                        els.scoreHud.innerText = state.score;
+                        playSound('score');
+                        p.passed = true;
+                        if(state.score % 5 === 0) state.gameSpeed += 0.2;
+                    }
+
+                    if (p.x < -config.pipeWidth) {
+                        this.pipes.shift();
+                        i--;
+                    }
+                }
+
+                // Move Coins
+                for (let i = 0; i < this.coins.length; i++) {
+                    let c = this.coins[i];
+                    c.x -= state.gameSpeed;
+                    c.y += Math.sin(state.frames * 0.1 + c.wobbleOffset) * 0.5;
+
+                    if (!c.collected) {
+                        const dx = bird.x - c.x;
+                        const dy = bird.y - c.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < bird.radius + 15) {
+                            collectCoin(c);
+                        }
+                    }
+
+                    if (c.x < -50) {
+                        this.coins.shift();
+                        i--;
+                    }
+                }
+            },
+
+            draw() {
+                this.pipes.forEach(p => {
+                    ctx.fillStyle = '#75c05d';
+                    ctx.strokeStyle = '#548c41';
+                    ctx.lineWidth = 2;
+
+                    // Top
+                    ctx.fillRect(p.x, 0, config.pipeWidth, p.y);
+                    ctx.strokeRect(p.x, -2, config.pipeWidth, p.y+2);
+                    ctx.fillRect(p.x-2, p.y-20, config.pipeWidth+4, 20);
+                    ctx.strokeRect(p.x-2, p.y-20, config.pipeWidth+4, 20);
+
+                    // Bottom
+                    const by = p.y + config.pipeGap;
+                    const bh = canvas.height - by - 20;
+                    ctx.fillRect(p.x, by, config.pipeWidth, bh);
+                    ctx.strokeRect(p.x, by, config.pipeWidth, bh+2);
+                    ctx.fillRect(p.x-2, by, config.pipeWidth+4, 20);
+                    ctx.strokeRect(p.x-2, by, config.pipeWidth+4, 20);
+                });
+
+                this.coins.forEach(c => {
+                    if (c.collected) return;
+                    ctx.save();
+                    ctx.translate(c.x, c.y);
+                    const scaleX = Math.abs(Math.sin(state.frames * 0.1));
+                    ctx.scale(scaleX, 1);
+                    
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fill();
+                    ctx.strokeStyle = '#DAA520';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#FFF';
+                    ctx.font = 'bold 12px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('$', 0, 1);
+                    ctx.restore();
+                });
+            }
+        };
+
+        // Particles
+        let particles = [];
+        function updateParticles() {
+            for(let i=0; i<particles.length; i++) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                p.vy += 0.1;
+                if(p.life <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life / 20;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        // --- Core Functions ---
+
+        function resize() {
+            canvas.width = els.container.clientWidth;
+            canvas.height = els.container.clientHeight;
+            bg.init();
+        }
+
+        function collectCoin(c) {
+            c.collected = true;
+            state.sessionCoins++;
+            savedData.coins++;
+            saveData(); // Save immediately to prevent loss
+            
+            playSound('coin');
+            
+            // Float +1 Text
+            const floatEl = document.createElement('div');
+            floatEl.className = 'floating-text';
+            floatEl.innerText = "+1";
+            floatEl.style.left = (c.x / canvas.width * 100) + '%';
+            floatEl.style.top = (c.y / canvas.height * 100) + '%';
+            els.container.appendChild(floatEl);
+            setTimeout(() => floatEl.remove(), 1000);
+
+            // Particles
+            for(let i=0; i<6; i++) {
+                particles.push({
+                    x: c.x, y: c.y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    life: 30,
+                    color: '#FFD700',
+                    size: 2 + Math.random() * 3
+                });
+            }
+        }
+
+        function gameOver() {
+            state.status = 'GAMEOVER';
+            playSound('hit');
+            
+            els.flash.classList.add('flash');
+            setTimeout(() => els.flash.classList.remove('flash'), 300);
+
+            els.finalScore.innerText = state.score;
+            els.sessionCoins.innerText = state.sessionCoins;
+            updateUI();
+            
+            els.gameOverScreen.classList.remove('hidden');
+            els.gameOverScreen.classList.add('active');
+        }
+
+        function startGame() {
+            state.status = 'PLAYING';
+            state.score = 0;
+            state.sessionCoins = 0;
+            state.frames = 0;
+            state.gameSpeed = config.gameSpeed;
+            
+            els.scoreHud.innerText = '0';
+            els.startScreen.classList.add('hidden');
+            els.startScreen.classList.remove('active');
+            els.gameOverScreen.classList.add('hidden');
+            els.gameOverScreen.classList.remove('active');
+
+            bird.reset();
+            manager.reset();
+            bird.jump();
+        }
+
+        function loop() {
+            requestAnimationFrame(loop);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            bg.update();
+            bg.draw();
+
+            if (state.status === 'PLAYING') {
+                bird.update();
+                manager.update();
+                updateParticles();
+                state.frames++;
+            } else if (state.status === 'MENU') {
+                bird.y = canvas.height/2 + Math.sin(Date.now() / 300) * 10;
+                updateParticles();
+                state.frames++;
+            }
+
+            manager.draw();
+            drawParticles();
+            bird.draw();
+        }
+
+        // --- Inputs ---
+        function handleInput(e) {
+            if (e.type === 'keydown' && (e.code === 'Space' || e.code === 'ArrowUp')) {
+                e.preventDefault();
+            }
+
+            // Shop Interactions
+            if (state.status === 'MENU') {
+                if (e.target.closest('.shop-container')) return;
+                if (e.target.tagName === 'BUTTON') return;
+                
+                if (e.type === 'click' || e.code === 'Space' || e.type === 'touchstart') {
+                    startGame();
+                }
+            } else if (state.status === 'PLAYING') {
+                if (e.type === 'click' || e.code === 'Space' || e.code === 'ArrowUp' || e.type === 'touchstart') {
+                    bird.jump();
+                }
+            } else if (state.status === 'GAMEOVER') {
+                if (e.target.tagName === 'BUTTON') return;
+                if (e.code === 'Space') {
+                    startGame();
+                }
+            }
+        }
+
+        // UI Event Listeners
+        els.prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            state.shopIndex = (state.shopIndex - 1 + skins.length) % skins.length;
+            updateShopUI();
+            playSound('jump'); // Click sound
+        });
+
+        els.nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            state.shopIndex = (state.shopIndex + 1) % skins.length;
+            updateShopUI();
+            playSound('jump'); // Click sound
+        });
+
+        els.actionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleShopAction();
+        });
+
+        window.addEventListener('resize', resize);
+        window.addEventListener('keydown', handleInput);
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e); }, {passive: false});
+        
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+
+        // Initialization
+        resize();
+        updateUI();
+        loop();
+
+    </script>
+</body>
+</html>
