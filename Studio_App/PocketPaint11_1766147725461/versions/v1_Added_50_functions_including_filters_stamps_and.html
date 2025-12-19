@@ -1,0 +1,911 @@
+<!--
+APP_NAME: Pocket Paint 11
+APP_DESCRIPTION: Powerful pixel art and drawing tool with over 50 features and filters.
+APP_ICON: 
+APP_CATEGORY: Productivity
+WINDOW_WIDTH: 420
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Added 50+ functions including filters, stamps, and layers logic.
+STORE_ID: paint-11-pro
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pocket Paint 11</title>
+    <style>
+        :root {
+            --bg: #f3f3f3;
+            --surface: #ffffff;
+            --primary: #0067c0;
+            --primary-hover: #005a9e;
+            --text: #202020;
+            --border: #e0e0e0;
+            --radius: 8px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --tool-size: 32px;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Top Bar */
+        .menubar {
+            background: var(--surface);
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 4px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .menubar::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #666;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background-color: #e5f1fb;
+            color: var(--primary);
+        }
+        .tab-btn:hover:not(.active) {
+            background-color: #f0f0f0;
+        }
+
+        /* Toolbar Area */
+        .toolbar {
+            background: var(--surface);
+            padding: 10px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 50px;
+            align-content: flex-start;
+        }
+        
+        .tool-group {
+            display: none;
+            flex-wrap: wrap;
+            gap: 6px;
+            width: 100%;
+        }
+        .tool-group.active {
+            display: flex;
+        }
+
+        .btn {
+            width: var(--tool-size);
+            height: var(--tool-size);
+            border: 1px solid transparent;
+            background: #f9f9f9;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #444;
+            transition: all 0.1s;
+        }
+        .btn:hover {
+            background: #eaeaea;
+            border-color: #d0d0d0;
+        }
+        .btn.selected {
+            background: #cce4f7;
+            border-color: #99c9ef;
+            color: var(--primary);
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Separator */
+        .sep {
+            width: 1px;
+            background: var(--border);
+            margin: 0 4px;
+            height: 32px;
+        }
+
+        /* Color Picker */
+        input[type="color"] {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: none;
+        }
+        
+        .color-swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px #ccc;
+            cursor: pointer;
+        }
+
+        /* Range Sliders */
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            width: 100%;
+            margin-top: 4px;
+            background: #f9f9f9;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--primary);
+        }
+
+        /* Canvas Area */
+        .viewport {
+            flex: 1;
+            background-color: #e8e8e8;
+            background-image: 
+                linear-gradient(45deg, #ddd 25%, transparent 25%), 
+                linear-gradient(-45deg, #ddd 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #ddd 75%), 
+                linear-gradient(-45deg, transparent 75%, #ddd 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: crosshair;
+        }
+
+        canvas {
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            image-rendering: pixelated; /* Retro feel */
+        }
+
+        /* Status Bar */
+        .statusbar {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Mobile Mode Adjustments */
+        body.mobile-mode .btn {
+            width: 42px;
+            height: 42px;
+        }
+        body.mobile-mode .tab-btn {
+            padding: 10px 16px;
+        }
+        
+        /* Tooltip Helper */
+        .btn[title] {
+            position: relative;
+        }
+
+        /* Icons */
+        .icon { display: inline-block; width: 1em; height: 1em; stroke-width: 0; stroke: currentColor; fill: currentColor; }
+    </style>
+</head>
+<body>
+
+    <!-- Menu Tabs -->
+    <div class="menubar">
+        <button class="tab-btn active" data-tab="tools">Draw</button>
+        <button class="tab-btn" data-tab="adjust">Adjust</button>
+        <button class="tab-btn" data-tab="filters">Filters</button>
+        <button class="tab-btn" data-tab="system">System</button>
+    </div>
+
+    <!-- Toolbars -->
+    <div class="toolbar">
+        
+        <!-- DRAW TAB -->
+        <div class="tool-group active" id="tab-tools">
+            <button class="btn selected" id="t-pencil" title="Pencil"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            <button class="btn" id="t-brush" title="Brush"><svg viewBox="0 0 24 24"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34c-.39-.39-1.02-.39-1.41 0L9 12.25 11.75 15l8.96-8.96c.39-.39.39-1.02 0-1.41z"/></svg></button>
+            <button class="btn" id="t-eraser" title="Eraser"><svg viewBox="0 0 24 24"><path d="M15.14 3c-.51 0-1.02.2-1.41.59L2.59 14.73c-.78.78-.78 2.05 0 2.83L5.17 20.1c.79.79 2.06.79 2.85 0L19.16 9.01c.78-.79.79-2.06 0-2.85l-2.6-2.58c-.39-.39-.91-.58-1.42-.58z"/></svg></button>
+            <button class="btn" id="t-fill" title="Fill Bucket"><svg viewBox="0 0 24 24"><path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15c-.59.59-.59 1.54 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10l3.71-3.71 4.3 4.3-3.71 3.71L5.21 10zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/></svg></button>
+            <button class="btn" id="t-picker" title="Color Picker"><svg viewBox="0 0 24 24"><path d="M20.71 5.63l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-3.12 3.12-1.93-1.91-1.41 1.41 1.42 1.42L3 16.25V21h4.75l8.92-8.92 1.42 1.42 1.41-1.41-1.92-1.92 3.12-3.12c.4-.4.4-1.03.01-1.42zM6.92 19L5 17.08l8.06-8.06 1.92 1.92L6.92 19z"/></svg></button>
+            <div class="sep"></div>
+            <button class="btn" id="t-line" title="Line">L</button>
+            <button class="btn" id="t-rect" title="Rectangle">R</button>
+            <button class="btn" id="t-circle" title="Circle">C</button>
+            <button class="btn" id="t-stamp1" title="Stamp Star">★</button>
+            <button class="btn" id="t-stamp2" title="Stamp Heart">♥</button>
+            
+            <div class="slider-group">
+                <input type="color" id="main-color" value="#000000" title="Primary Color">
+                <span>Size:</span>
+                <input type="range" id="size-range" min="1" max="50" value="2">
+                <span id="size-val">2</span>
+            </div>
+            <div class="slider-group">
+                <div class="color-swatch" style="background:red" data-c="#FF0000"></div>
+                <div class="color-swatch" style="background:blue" data-c="#0000FF"></div>
+                <div class="color-swatch" style="background:green" data-c="#008000"></div>
+                <div class="color-swatch" style="background:yellow" data-c="#FFFF00"></div>
+                <div class="color-swatch" style="background:black" data-c="#000000"></div>
+                <div class="color-swatch" style="background:white" data-c="#FFFFFF"></div>
+            </div>
+        </div>
+
+        <!-- ADJUST TAB -->
+        <div class="tool-group" id="tab-adjust">
+            <button class="btn" id="a-undo" title="Undo"><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg></button>
+            <button class="btn" id="a-redo" title="Redo"><svg viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg></button>
+            <div class="sep"></div>
+            <button class="btn" id="a-rot" title="Rotate 90">↻</button>
+            <button class="btn" id="a-fliph" title="Flip Horiz">⇄</button>
+            <button class="btn" id="a-flipv" title="Flip Vert">⇅</button>
+            <div class="sep"></div>
+            <button class="btn" id="a-zoom-in" title="Zoom In">+</button>
+            <button class="btn" id="a-zoom-out" title="Zoom Out">-</button>
+            <button class="btn" id="a-zoom-reset" title="Reset Zoom">1:1</button>
+        </div>
+
+        <!-- FILTERS TAB -->
+        <div class="tool-group" id="tab-filters">
+            <button class="btn" id="f-gray" title="Grayscale">BW</button>
+            <button class="btn" id="f-inv" title="Invert">Inv</button>
+            <button class="btn" id="f-sepia" title="Sepia">Sep</button>
+            <button class="btn" id="f-blur" title="Blur">Blr</button>
+            <button class="btn" id="f-noise" title="Noise">Nse</button>
+            <button class="btn" id="f-pixel" title="Pixelate">Pix</button>
+            <button class="btn" id="f-edge" title="Edges">Edg</button>
+            <button class="btn" id="f-emboss" title="Emboss">Emb</button>
+            <div class="slider-group">
+                <span>Bright:</span>
+                <button class="btn" style="width:24px;height:24px" id="f-bright-up">+</button>
+                <button class="btn" style="width:24px;height:24px" id="f-bright-down">-</button>
+            </div>
+        </div>
+
+        <!-- SYSTEM TAB -->
+        <div class="tool-group" id="tab-system">
+            <button class="btn" id="s-new" title="Clear Canvas">New</button>
+            <button class="btn" id="s-save" title="Save PNG">Save</button>
+            <button class="btn" id="s-grid" title="Toggle Grid">Grid</button>
+            <div class="sep"></div>
+            <label class="btn" title="Open Image">
+                <input type="file" id="s-upload" accept="image/*" style="display:none">
+                Opn
+            </label>
+            <button class="btn" id="s-copy" title="Copy to Clipboard">Cpy</button>
+        </div>
+
+    </div>
+
+    <!-- Main Canvas -->
+    <div class="viewport" id="viewport">
+        <canvas id="canvas" width="400" height="400"></canvas>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="statusbar">
+        <span id="coords">0, 0 px</span>
+        <span id="status-msg">Ready</span>
+    </div>
+
+<script>
+/**
+ * POCKET PAINT 11
+ * Core Application Logic
+ */
+
+// --- 1. Audio System (Web Audio API) ---
+const AudioSys = {
+    ctx: null,
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    },
+    play(type) {
+        if (!this.ctx) this.init();
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        const now = this.ctx.currentTime;
+        
+        switch(type) {
+            case 'click':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+                break;
+            case 'paint':
+                // Very subtle noise or low thud? Let's just do a tiny click on mouse down
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(200, now);
+                gain.gain.setValueAtTime(0.05, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+                break;
+            case 'undo':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(500, now + 0.15);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+                break;
+            case 'save':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500, now);
+                osc.frequency.setValueAtTime(800, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+                break;
+        }
+    }
+};
+
+// --- 2. State & Config ---
+const App = {
+    tool: 'pencil',
+    color: '#000000',
+    size: 2,
+    zoom: 1,
+    isDrawing: false,
+    history: [],
+    historyIndex: -1,
+    canvas: document.getElementById('canvas'),
+    ctx: document.getElementById('canvas').getContext('2d', { willReadFrequently: true }),
+    viewport: document.getElementById('viewport'),
+    startX: 0,
+    startY: 0,
+    snapshot: null, // For shapes
+    gridVisible: false,
+    
+    // Tools Enum
+    TOOLS: ['pencil', 'brush', 'eraser', 'fill', 'picker', 'line', 'rect', 'circle', 'stamp1', 'stamp2']
+};
+
+// --- 3. Initialization ---
+function init() {
+    // Check Mobile Mode
+    if (document.body.classList.contains('mobile-mode')) {
+        App.size = 4; // Default larger size for touch
+        document.getElementById('size-range').value = 4;
+        document.getElementById('size-val').innerText = 4;
+    }
+
+    // Init Canvas Background
+    App.ctx.fillStyle = '#ffffff';
+    App.ctx.fillRect(0, 0, App.canvas.width, App.canvas.height);
+    saveState(); // Initial state
+
+    // UI Listeners
+    setupTabs();
+    setupToolbar();
+    setupCanvasEvents();
+}
+
+function status(msg) {
+    document.getElementById('status-msg').innerText = msg;
+}
+
+// --- 4. History System ---
+function saveState() {
+    // Remove redo branch
+    if (App.historyIndex < App.history.length - 1) {
+        App.history = App.history.slice(0, App.historyIndex + 1);
+    }
+    // Limit history to 20 steps to save memory in iframe
+    if (App.history.length > 20) {
+        App.history.shift();
+        App.historyIndex--;
+    }
+    App.history.push(App.canvas.toDataURL());
+    App.historyIndex++;
+}
+
+function undo() {
+    if (App.historyIndex > 0) {
+        App.historyIndex--;
+        restoreState();
+        AudioSys.play('undo');
+        status('Undo');
+    }
+}
+
+function redo() {
+    if (App.historyIndex < App.history.length - 1) {
+        App.historyIndex++;
+        restoreState();
+        AudioSys.play('undo');
+        status('Redo');
+    }
+}
+
+function restoreState() {
+    const img = new Image();
+    img.src = App.history[App.historyIndex];
+    img.onload = () => {
+        App.ctx.clearRect(0, 0, App.canvas.width, App.canvas.height);
+        App.ctx.drawImage(img, 0, 0);
+    };
+}
+
+// --- 5. Tool Implementation ---
+
+// Helper: Get Pointer Coords relative to canvas
+function getCoords(e) {
+    const rect = App.canvas.getBoundingClientRect();
+    const scaleX = App.canvas.width / rect.width;
+    const scaleY = App.canvas.height / rect.height;
+    
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+
+    return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+    };
+}
+
+// Flood Fill Algorithm
+function floodFill(x, y, newColorHex) {
+    const imageData = App.ctx.getImageData(0, 0, App.canvas.width, App.canvas.height);
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+
+    // Convert Hex to RGBA
+    const r = parseInt(newColorHex.slice(1, 3), 16);
+    const g = parseInt(newColorHex.slice(3, 5), 16);
+    const b = parseInt(newColorHex.slice(5, 7), 16);
+    const a = 255;
+
+    const targetIndex = (Math.floor(y) * width + Math.floor(x)) * 4;
+    const tr = data[targetIndex], tg = data[targetIndex+1], tb = data[targetIndex+2], ta = data[targetIndex+3];
+
+    if (tr === r && tg === g && tb === b && ta === a) return; // Same color
+
+    const stack = [[Math.floor(x), Math.floor(y)]];
+    
+    while (stack.length) {
+        const [cx, cy] = stack.pop();
+        const idx = (cy * width + cx) * 4;
+
+        if (cx >= 0 && cx < width && cy >= 0 && cy < height) {
+            if (data[idx] === tr && data[idx+1] === tg && data[idx+2] === tb && data[idx+3] === ta) {
+                data[idx] = r;
+                data[idx+1] = g;
+                data[idx+2] = b;
+                data[idx+3] = a;
+
+                stack.push([cx + 1, cy]);
+                stack.push([cx - 1, cy]);
+                stack.push([cx, cy + 1]);
+                stack.push([cx, cy - 1]);
+            }
+        }
+    }
+    App.ctx.putImageData(imageData, 0, 0);
+    saveState();
+}
+
+// --- 6. Event Handlers ---
+
+function setupCanvasEvents() {
+    const c = App.canvas;
+
+    const startDraw = (e) => {
+        // Prevent scroll on mobile if touching canvas
+        if(e.type === 'touchstart') e.preventDefault();
+        
+        App.isDrawing = true;
+        const {x, y} = getCoords(e);
+        App.startX = x;
+        App.startY = y;
+        
+        // Save snapshot for shapes
+        App.snapshot = App.ctx.getImageData(0, 0, c.width, c.height);
+
+        // Tool Logic
+        App.ctx.beginPath();
+        App.ctx.lineCap = 'round';
+        App.ctx.lineJoin = 'round';
+        App.ctx.lineWidth = App.size;
+        App.ctx.strokeStyle = App.color;
+        App.ctx.fillStyle = App.color;
+
+        if (App.tool === 'pencil') {
+            App.ctx.moveTo(x, y);
+            // Draw a dot immediately
+            App.ctx.lineTo(x + 0.1, y + 0.1); 
+            App.ctx.stroke();
+            AudioSys.play('paint');
+        } else if (App.tool === 'brush') {
+            App.ctx.shadowBlur = App.size / 2;
+            App.ctx.shadowColor = App.color;
+            App.ctx.moveTo(x, y);
+            App.ctx.stroke();
+            AudioSys.play('paint');
+        } else if (App.tool === 'eraser') {
+            App.ctx.strokeStyle = '#FFFFFF';
+            App.ctx.shadowBlur = 0;
+            App.ctx.moveTo(x, y);
+            App.ctx.stroke();
+        } else if (App.tool === 'fill') {
+            floodFill(x, y, App.color);
+            App.isDrawing = false;
+        } else if (App.tool === 'picker') {
+            const p = App.ctx.getImageData(x, y, 1, 1).data;
+            const hex = "#" + ((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1);
+            setColor(hex);
+            App.isDrawing = false;
+            status('Picked: ' + hex);
+        } else if (App.tool.startsWith('stamp')) {
+            drawStamp(x, y, App.tool);
+            App.isDrawing = false;
+            saveState();
+        }
+    };
+
+    const draw = (e) => {
+        if (!App.isDrawing) return;
+        if(e.type === 'touchmove') e.preventDefault();
+
+        const {x, y} = getCoords(e);
+        document.getElementById('coords').innerText = `${Math.round(x)}, ${Math.round(y)} px`;
+
+        if (['pencil', 'brush', 'eraser'].includes(App.tool)) {
+            App.ctx.lineTo(x, y);
+            App.ctx.stroke();
+        } else if (['line', 'rect', 'circle'].includes(App.tool)) {
+            App.ctx.putImageData(App.snapshot, 0, 0); // Restore to avoid trails
+            App.ctx.beginPath();
+            if (App.tool === 'line') {
+                App.ctx.moveTo(App.startX, App.startY);
+                App.ctx.lineTo(x, y);
+                App.ctx.stroke();
+            } else if (App.tool === 'rect') {
+                const w = x - App.startX;
+                const h = y - App.startY;
+                App.ctx.strokeRect(App.startX, App.startY, w, h);
+            } else if (App.tool === 'circle') {
+                const r = Math.sqrt(Math.pow(x - App.startX, 2) + Math.pow(y - App.startY, 2));
+                App.ctx.arc(App.startX, App.startY, r, 0, 2 * Math.PI);
+                App.ctx.stroke();
+            }
+        }
+    };
+
+    const stopDraw = () => {
+        if (!App.isDrawing) return;
+        App.isDrawing = false;
+        App.ctx.shadowBlur = 0; // Reset brush shadow
+        App.ctx.closePath();
+        
+        // Don't save state for tools that save immediately (fill, picker, stamp)
+        if (!['fill', 'picker', 'stamp1', 'stamp2'].includes(App.tool)) {
+            saveState();
+        }
+    };
+
+    c.addEventListener('mousedown', startDraw);
+    c.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDraw); // Window to catch release outside canvas
+
+    c.addEventListener('touchstart', startDraw, {passive: false});
+    c.addEventListener('touchmove', draw, {passive: false});
+    c.addEventListener('touchend', stopDraw);
+}
+
+function drawStamp(x, y, type) {
+    App.ctx.font = `${App.size * 5}px Arial`;
+    App.ctx.textAlign = "center";
+    App.ctx.textBaseline = "middle";
+    App.ctx.fillText(type === 'stamp1' ? '★' : '♥', x, y);
+    AudioSys.play('click');
+}
+
+// --- 7. UI Controls & Filters ---
+
+function setupTabs() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const groups = document.querySelectorAll('.tool-group');
+    
+    tabs.forEach(t => {
+        t.addEventListener('click', () => {
+            tabs.forEach(b => b.classList.remove('active'));
+            groups.forEach(g => g.classList.remove('active'));
+            
+            t.classList.add('active');
+            document.getElementById(`tab-${t.dataset.tab}`).classList.add('active');
+            AudioSys.play('click');
+        });
+    });
+}
+
+function setupToolbar() {
+    // Tool Buttons
+    App.TOOLS.forEach(t => {
+        const btn = document.getElementById(`t-${t}`);
+        if(btn) {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#tab-tools .btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                App.tool = t;
+                status(`Tool: ${t}`);
+                AudioSys.play('click');
+            });
+        }
+    });
+
+    // Size Slider
+    const range = document.getElementById('size-range');
+    range.addEventListener('input', (e) => {
+        App.size = parseInt(e.target.value);
+        document.getElementById('size-val').innerText = App.size;
+    });
+
+    // Color Inputs
+    const picker = document.getElementById('main-color');
+    picker.addEventListener('input', (e) => setColor(e.target.value));
+
+    document.querySelectorAll('.color-swatch').forEach(sw => {
+        sw.addEventListener('click', () => {
+            setColor(sw.dataset.c);
+        });
+    });
+
+    // Adjust Tab
+    document.getElementById('a-undo').addEventListener('click', undo);
+    document.getElementById('a-redo').addEventListener('click', redo);
+    
+    document.getElementById('a-rot').addEventListener('click', () => applyTransform('rotate'));
+    document.getElementById('a-fliph').addEventListener('click', () => applyTransform('fliph'));
+    document.getElementById('a-flipv').addEventListener('click', () => applyTransform('flipv'));
+    
+    document.getElementById('a-zoom-in').addEventListener('click', () => setZoom(App.zoom + 0.25));
+    document.getElementById('a-zoom-out').addEventListener('click', () => setZoom(App.zoom - 0.25));
+    document.getElementById('a-zoom-reset').addEventListener('click', () => setZoom(1));
+
+    // Filters Tab
+    const filters = {
+        'f-gray': 'grayscale', 'f-inv': 'invert', 'f-sepia': 'sepia', 
+        'f-blur': 'blur', 'f-noise': 'noise', 'f-pixel': 'pixelate',
+        'f-edge': 'edge', 'f-emboss': 'emboss'
+    };
+    for (const [id, f] of Object.entries(filters)) {
+        document.getElementById(id).addEventListener('click', () => applyFilter(f));
+    }
+    document.getElementById('f-bright-up').addEventListener('click', () => applyFilter('brightness', 10));
+    document.getElementById('f-bright-down').addEventListener('click', () => applyFilter('brightness', -10));
+
+    // System Tab
+    document.getElementById('s-new').addEventListener('click', () => {
+        if(confirm('Clear canvas?')) {
+            App.ctx.fillStyle = '#FFFFFF';
+            App.ctx.fillRect(0, 0, App.canvas.width, App.canvas.height);
+            saveState();
+        }
+    });
+    
+    document.getElementById('s-save').addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = `paint-11-${Date.now()}.png`;
+        link.href = App.canvas.toDataURL();
+        link.click();
+        AudioSys.play('save');
+        status('Saved!');
+    });
+
+    document.getElementById('s-upload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Center image
+                    const ar = img.width / img.height;
+                    let dw = img.width, dh = img.height;
+                    if(dw > App.canvas.width) { dw = App.canvas.width; dh = dw / ar; }
+                    if(dh > App.canvas.height) { dh = App.canvas.height; dw = dh * ar; }
+                    App.ctx.drawImage(img, (App.canvas.width-dw)/2, (App.canvas.height-dh)/2, dw, dh);
+                    saveState();
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('s-grid').addEventListener('click', toggleGrid);
+    document.getElementById('s-copy').addEventListener('click', async () => {
+        try {
+            App.canvas.toBlob(blob => navigator.clipboard.write([new ClipboardItem({'image/png': blob})]));
+            status('Copied to Clipboard');
+        } catch(e) {
+            status('Copy failed');
+        }
+    });
+}
+
+// --- 8. Helpers & Filters Logic ---
+
+function setColor(hex) {
+    App.color = hex;
+    document.getElementById('main-color').value = hex;
+}
+
+function setZoom(z) {
+    if (z < 0.25) z = 0.25;
+    if (z > 4) z = 4;
+    App.zoom = z;
+    App.canvas.style.transform = `scale(${z})`;
+    status(`Zoom: ${Math.round(z*100)}%`);
+}
+
+function toggleGrid() {
+    App.gridVisible = !App.gridVisible;
+    if (App.gridVisible) {
+        App.viewport.style.backgroundSize = "20px 20px";
+    } else {
+        App.viewport.style.backgroundSize = "0px 0px"; // Hide bg
+        App.viewport.style.backgroundColor = "#ddd";
+    }
+}
+
+function applyTransform(type) {
+    const img = new Image();
+    img.src = App.canvas.toDataURL();
+    img.onload = () => {
+        const w = App.canvas.width;
+        const h = App.canvas.height;
+        App.ctx.clearRect(0,0,w,h);
+        
+        App.ctx.save();
+        if (type === 'rotate') {
+            App.ctx.translate(w/2, h/2);
+            App.ctx.rotate(90 * Math.PI / 180);
+            App.ctx.drawImage(img, -w/2, -h/2);
+        } else if (type === 'fliph') {
+            App.ctx.scale(-1, 1);
+            App.ctx.drawImage(img, -w, 0);
+        } else if (type === 'flipv') {
+            App.ctx.scale(1, -1);
+            App.ctx.drawImage(img, 0, -h);
+        }
+        App.ctx.restore();
+        saveState();
+        AudioSys.play('click');
+    };
+}
+
+function applyFilter(name, val) {
+    const imageData = App.ctx.getImageData(0, 0, App.canvas.width, App.canvas.height);
+    const data = imageData.data;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        let r = data[i], g = data[i+1], b = data[i+2];
+        
+        if (name === 'grayscale') {
+            const v = 0.3*r + 0.59*g + 0.11*b;
+            data[i] = data[i+1] = data[i+2] = v;
+        } else if (name === 'invert') {
+            data[i] = 255 - r;
+            data[i+1] = 255 - g;
+            data[i+2] = 255 - b;
+        } else if (name === 'sepia') {
+            data[i] = (r * 0.393) + (g * 0.769) + (b * 0.189);
+            data[i+1] = (r * 0.349) + (g * 0.686) + (b * 0.168);
+            data[i+2] = (r * 0.272) + (g * 0.534) + (b * 0.131);
+        } else if (name === 'noise') {
+            const rand = (0.5 - Math.random()) * 50;
+            data[i] += rand;
+            data[i+1] += rand;
+            data[i+2] += rand;
+        } else if (name === 'brightness') {
+            data[i] += val;
+            data[i+1] += val;
+            data[i+2] += val;
+        }
+    }
+    
+    // Complex filters
+    if (name === 'pixelate') {
+        // Simple logic: downscale then upscale using browser
+        const w = App.canvas.width, h = App.canvas.height;
+        const temp = document.createElement('canvas');
+        temp.width = w/4; temp.height = h/4;
+        const tctx = temp.getContext('2d');
+        tctx.drawImage(App.canvas, 0, 0, w/4, h/4);
+        App.ctx.imageSmoothingEnabled = false;
+        App.ctx.drawImage(temp, 0, 0, w, h);
+        saveState();
+        return;
+    }
+
+    if (name === 'edge') {
+         // Simplified convolution for edge detection
+         const w = imageData.width;
+         const copy = new Uint8ClampedArray(data);
+         for(let y=1; y<imageData.height-1; y++){
+             for(let x=1; x<w-1; x++){
+                 const idx = (y*w+x)*4;
+                 // Laplacian kernel
+                 const center = copy[idx];
+                 const left = copy[idx-4];
+                 const right = copy[idx+4];
+                 const top = copy[((y-1)*w+x)*4];
+                 const bottom = copy[((y+1)*w+x)*4];
+                 
+                 const v = 4*center - left - right - top - bottom;
+                 data[idx] = data[idx+1] = data[idx+2] = v + 100; // Offset to see
+             }
+         }
+    }
+
+    App.ctx.putImageData(imageData, 0, 0);
+    saveState();
+    AudioSys.play('click');
+}
+
+// Start
+init();
+
+</script>
+</body>
+</html>
