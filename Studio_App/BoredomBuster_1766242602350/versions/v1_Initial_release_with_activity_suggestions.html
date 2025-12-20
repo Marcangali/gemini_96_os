@@ -1,0 +1,328 @@
+<!--
+APP_NAME: Boredom Buster
+APP_DESCRIPTION: Discover fun activities when boredom strikes.
+APP_ICON:
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 300
+VERSION_SUMMARY: Initial release with activity suggestions.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boredom Buster</title>
+    <style>
+        :root {
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --primary-color: #0078d4; /* Windows 11 accent blue */
+            --primary-hover-color: #005ea6;
+            --button-text-color: #fff;
+            --border-color: #ccc;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --spacing: 15px;
+            --font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Ensure full viewport height for centering */
+            box-sizing: border-box;
+            overflow: hidden; /* Prevent scrollbars if content fits */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            background-color: #fff;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            padding: var(--spacing);
+            margin: var(--spacing); /* Ensure some margin on smaller screens */
+            width: calc(100% - (2 * var(--spacing)));
+            max-width: 360px; /* Constrain width for utility app */
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 1.5em;
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+
+        .activity-display {
+            background-color: #e9f5fe; /* Light blue background for activity */
+            border: 1px solid var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: var(--spacing);
+            min-height: 80px; /* Ensure consistent height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.3s ease-in-out;
+            word-break: break-word; /* Ensure long words break */
+            line-height: 1.4;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--button-text-color);
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 12px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 2px 5px var(--shadow-color);
+            outline: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            -webkit-appearance: none; /* Reset Safari button styles */
+            -moz-appearance: none; /* Reset Firefox button styles */
+            appearance: none;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover-color);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px var(--shadow-color);
+        }
+
+        button:disabled {
+            background-color: #a0a0a0;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Mobile mode adjustments */
+        body.mobile-mode .container {
+            margin: 10px;
+            padding: 12px;
+            gap: 12px;
+        }
+
+        body.mobile-mode h1 {
+            font-size: 1.3em;
+        }
+
+        body.mobile-mode .activity-display {
+            min-height: 90px;
+            font-size: 1.1em;
+            padding: 10px;
+        }
+
+        body.mobile-mode button {
+            padding: 14px 18px;
+            font-size: 1.1em;
+        }
+
+        /* SVG icon styling for button */
+        button svg {
+            fill: currentColor; /* Inherit color from button text */
+            width: 1.2em;
+            height: 1.2em;
+            flex-shrink: 0; /* Prevent icon from shrinking */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Boredom Buster</h1>
+        <div id="activityDisplay" class="activity-display">
+            Press the button for an idea!
+        </div>
+        <button id="getActivityButton">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            </svg>
+            Give me something to do!
+        </button>
+    </div>
+
+    <script>
+        const activities = [
+            "Read a chapter of a book",
+            "Listen to a new music album",
+            "Learn a new word (and its definition)",
+            "Take a 10-minute walk outside",
+            "Do 5 minutes of stretching or light exercise",
+            "Meditate for 3 minutes",
+            "Write down 3 things you're grateful for",
+            "Call a friend or family member you haven't spoken to recently",
+            "Draw or doodle something random",
+            "Tidy up your workspace for 5 minutes",
+            "Watch a short educational video (e.g., a TED-Ed talk)",
+            "Plan a small treat for yourself later today or this week",
+            "Do a quick brain teaser or puzzle",
+            "Organize your digital files for 10 minutes",
+            "Learn 'hello' and 'thank you' in a new language",
+            "Write a short, fictional story prompt",
+            "Do a few planks or push-ups",
+            "Look out the window and observe for 2 minutes",
+            "Brew a cup of tea or coffee mindfully",
+            "Explore a new genre of music",
+            "Write a short journal entry",
+            "Stretch your neck and shoulders",
+            "Water your plants (if you have any)",
+            "List 5 things you want to achieve this week",
+            "Close your eyes and focus on your breath for 60 seconds",
+            "Brainstorm ideas for a personal project",
+            "Listen to a podcast episode",
+            "Do a 5-minute wall sit",
+            "Write a thank you note (digital or physical)",
+            "Practice mindful breathing for 2 minutes",
+            "Review your to-do list and prioritize one task"
+        ];
+
+        let lastActivityIndex = -1;
+        const activityDisplay = document.getElementById('activityDisplay');
+        const getActivityButton = document.getElementById('getActivityButton');
+
+        // --- Web Audio API for sounds ---
+        let audioContext;
+
+        function initAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.error("Web Audio API not supported:", e);
+                    audioContext = null; // Disable audio features
+                }
+            }
+            // Attempt to resume context if it's suspended (common on page load in some browsers)
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(e => console.warn("AudioContext resume failed:", e));
+            }
+        }
+
+        function playSound(frequencyStart, frequencyEnd, type, duration, volume, decayRate) {
+            initAudioContext();
+            if (!audioContext) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequencyStart, audioContext.currentTime);
+            if (frequencyEnd) {
+                oscillator.frequency.exponentialRampToValueAtTime(frequencyEnd, audioContext.currentTime + (duration * decayRate));
+            }
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playClickSound() {
+            playSound(440, 380, 'sine', 0.15, 0.3, 0.5); // A click sound
+        }
+
+        function playSuccessSound() {
+            playSound(523.25, 659.25, 'triangle', 0.3, 0.2, 0.5); // A rising pleasant tone
+        }
+
+        // --- Core Logic ---
+        function getRandomActivity() {
+            playClickSound();
+            getActivityButton.disabled = true; // Disable button briefly to prevent rapid clicks
+            activityDisplay.style.transform = 'scale(0.95)';
+            activityDisplay.style.opacity = '0.5';
+
+            setTimeout(() => {
+                let randomIndex;
+                // Loop to ensure a different activity is chosen, unless there's only one option
+                if (activities.length > 1) {
+                    do {
+                        randomIndex = Math.floor(Math.random() * activities.length);
+                    } while (randomIndex === lastActivityIndex);
+                } else {
+                    randomIndex = 0; // If only one activity, just show that one
+                }
+
+                lastActivityIndex = randomIndex;
+                activityDisplay.textContent = activities[randomIndex];
+                playSuccessSound();
+
+                activityDisplay.style.transform = 'scale(1)';
+                activityDisplay.style.opacity = '1';
+                getActivityButton.disabled = false;
+            }, 250); // Short delay for visual feedback and sound playback
+        }
+
+        // --- Event Listener ---
+        getActivityButton.addEventListener('click', getRandomActivity);
+
+        // --- Check for mobile-mode on body ---
+        function applyMobileModeClass() {
+            // Check if running inside an iframe (common for Gemini 11 apps)
+            if (window.self !== window.top) {
+                try {
+                    const parentBody = window.parent.document.body;
+                    if (parentBody && parentBody.classList.contains('mobile-mode')) {
+                        document.body.classList.add('mobile-mode');
+                    } else {
+                        document.body.classList.remove('mobile-mode');
+                    }
+                } catch (e) {
+                    console.warn("Could not access parent body class for mobile-mode, falling back to viewport width:", e);
+                    // Fallback if parent access is blocked (e.g., cross-origin or security settings)
+                    if (window.innerWidth < 400) {
+                        document.body.classList.add('mobile-mode');
+                    } else {
+                        document.body.classList.remove('mobile-mode');
+                    }
+                }
+            } else { // Not in iframe, or testing standalone
+                if (window.innerWidth < 400) {
+                    document.body.classList.add('mobile-mode');
+                } else {
+                    document.body.classList.remove('mobile-mode');
+                }
+            }
+        }
+
+        // Apply mobile mode on load and resize
+        applyMobileModeClass();
+        window.addEventListener('resize', applyMobileModeClass);
+
+        // Ensure audio context is resumed on first user gesture for browser autoplay policies
+        // Add passive event listeners for better performance, especially on touch devices
+        document.body.addEventListener('click', initAudioContext, { once: true, passive: true });
+        document.body.addEventListener('touchend', initAudioContext, { once: true, passive: true });
+
+    </script>
+</body>
+</html>
