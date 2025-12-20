@@ -1,0 +1,3 @@
+[2025. 12. 20. 15:56:44] v1:
+An app that helps you do something when you bored
+You should press a button to give you something to do
