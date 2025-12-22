@@ -1,2 +1,2 @@
-[2025. 12. 22. 21:53:14] v1:
-Very scary jumpscare app
+[2025. 12. 22. 22:02:15] v2:
+Fix that when you restart it is not showing the creature just plays the sound
