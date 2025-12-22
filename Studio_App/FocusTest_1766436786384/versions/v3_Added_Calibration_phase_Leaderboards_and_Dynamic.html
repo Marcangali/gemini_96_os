@@ -1,0 +1,522 @@
+<!--
+APP_NAME: Focus Test
+APP_DESCRIPTION: A high-precision cognitive and reaction training utility.
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 500
+VERSION_SUMMARY: Added Calibration phase, Leaderboards, and Dynamic Path Narrowing.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Test</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --surface-color: #ffffff;
+            --accent-color: #0078d4;
+            --text-color: #202020;
+            --border-radius: 8px;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+            --danger: #d13438;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        body.mobile-mode {
+            --border-radius: 12px;
+        }
+
+        #app-container {
+            position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: background 0.3s;
+        }
+
+        /* --- Screens --- */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .screen.active {
+            display: flex !important;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- UI Elements --- */
+        h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; margin-top: 0; }
+        h2 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+        p { font-size: 13px; color: #555; margin-bottom: 20px; line-height: 1.4; }
+
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+        }
+
+        .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+
+        .card {
+            background: var(--surface-color);
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 340px;
+        }
+
+        /* --- Leaderboard --- */
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        .leaderboard-table tr { border-bottom: 1px solid #eee; }
+        .leaderboard-table td { padding: 8px 4px; text-align: left; }
+        .leaderboard-table .time { text-align: right; font-family: monospace; font-weight: bold; color: var(--accent-color); }
+        .user-rank { background: #eef7ff; font-weight: bold; }
+
+        /* --- Calibration --- */
+        #calibration-zone {
+            width: 300px;
+            height: 200px;
+            background: #000;
+            border-radius: 8px;
+            position: relative;
+            margin-bottom: 15px;
+            overflow: hidden;
+            border: 2px solid #444;
+        }
+        #calibration-dot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #00ff00;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #00ff00;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .calibration-status { font-size: 11px; font-weight: bold; color: #0078d4; margin-top: 5px; }
+
+        /* --- Game Elements --- */
+        #game-canvas-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            cursor: crosshair;
+            border: 3px solid #333;
+        }
+
+        .dot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #00ff00;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px #00ff00;
+            z-index: 10;
+        }
+
+        #goal-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #00ff00;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .level-indicator {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: #777;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        /* --- Jumpscare --- */
+        #jumpscare-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        #jumpscare-overlay.active { display: flex !important; animation: shake 0.04s infinite; }
+        @keyframes shake {
+            0% { transform: translate(3px, 3px); }
+            25% { transform: translate(-3px, -3px); }
+            50% { transform: translate(-3px, 3px); }
+            75% { transform: translate(3px, -3px); }
+        }
+        .scary-svg { width: 130%; height: 130%; filter: contrast(1.5) brightness(1.2); }
+
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- Start Screen -->
+        <div id="screen-start" class="screen active">
+            <div class="card">
+                <h1>Focus Test</h1>
+                <p>Advanced diagnostic tool for motor-function precision and visual concentration.</p>
+                <div style="text-align:left; font-size: 12px; margin-bottom: 20px; color: #666;">
+                    • Maintain steady movement<br>
+                    • Avoid boundary contact<br>
+                    • Success required to unlock Level 3
+                </div>
+                <button class="btn" id="btn-start">Begin Assessment</button>
+            </div>
+        </div>
+
+        <!-- Leaderboard Screen -->
+        <div id="screen-leaderboard" class="screen">
+            <div class="card">
+                <h2>Global Rankings</h2>
+                <p>Regional Level 2 completion times.</p>
+                <table class="leaderboard-table">
+                    <tr><td>1. Mikhail V.</td><td class="time">01.12s</td></tr>
+                    <tr><td>2. Sarah J.</td><td class="time">01.24s</td></tr>
+                    <tr><td>3. Lee Chen</td><td class="time">01.38s</td></tr>
+                    <tr class="user-rank"><td>4. YOU (Current)</td><td class="time" id="user-time">02.84s</td></tr>
+                    <tr><td>5. Alex P.</td><td class="time">03.10s</td></tr>
+                </table>
+                <button class="btn" id="btn-to-calibration">Continue to Final Level</button>
+            </div>
+        </div>
+
+        <!-- Calibration Screen -->
+        <div id="screen-calibration" class="screen">
+            <div class="card">
+                <h2>Precision Check</h2>
+                <p>Please lean closer to the screen (approx. 20-30cm) and track the target to sync eye-tracking sensors.</p>
+                <div id="calibration-zone">
+                    <div id="calibration-dot"></div>
+                </div>
+                <div class="calibration-status" id="cal-status">INITIALIZING SENSORS...</div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="screen-game" class="screen">
+            <div class="level-indicator" id="level-display">LEVEL 1</div>
+            <div id="game-canvas-container">
+                <svg width="320" height="320" id="maze-svg">
+                    <path id="maze-bg" d="" fill="none" stroke="#222" stroke-width="24" stroke-linecap="round" />
+                    <path id="maze-path" d="" fill="none" stroke="#444" stroke-width="20" stroke-linecap="round" />
+                </svg>
+                <div id="player-dot" class="dot"></div>
+                <div id="goal-marker"></div>
+            </div>
+            <p id="game-tip" style="font-weight: 500;">Steer carefully to the target.</p>
+        </div>
+    </div>
+
+    <!-- Jumpscare -->
+    <div id="jumpscare-overlay">
+        <svg viewBox="0 0 200 200" class="scary-svg">
+            <circle cx="100" cy="100" r="90" fill="#050505" />
+            <path d="M 40 130 Q 100 190 160 130" stroke="#ff0000" stroke-width="8" fill="none" />
+            <circle cx="65" cy="75" r="22" fill="#fff" />
+            <circle cx="135" cy="75" r="22" fill="#fff" />
+            <circle cx="65" cy="75" r="8" fill="#ff0000">
+                <animate attributeName="r" values="8;12;8" dur="0.1s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="135" cy="75" r="8" fill="#ff0000">
+                <animate attributeName="r" values="8;12;8" dur="0.1s" repeatCount="indefinite" />
+            </circle>
+            <path d="M 0 0 L 200 200 M 200 0 L 0 200" stroke="#f00" stroke-width="1" opacity="0.3" />
+        </svg>
+    </div>
+
+    <script>
+        const AudioEngine = (() => {
+            let ctx = null;
+            const initCtx = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); };
+            const play = (f, t, d, v) => {
+                initCtx(); const o = ctx.createOscillator(); const g = ctx.createGain();
+                o.type = t; o.frequency.setValueAtTime(f, ctx.currentTime);
+                g.gain.setValueAtTime(v, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + d);
+                o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + d);
+            };
+            return {
+                click: () => play(600, 'sine', 0.1, 0.2),
+                fail: () => play(150, 'sawtooth', 0.3, 0.2),
+                beep: () => play(880, 'sine', 0.05, 0.1),
+                success: () => { play(500, 'sine', 0.1, 0.2); setTimeout(() => play(800, 'sine', 0.2, 0.2), 100); },
+                scream: () => {
+                    initCtx();
+                    for(let i=0; i<8; i++) {
+                        const o = ctx.createOscillator(); const g = ctx.createGain();
+                        o.type = i%2==0 ? 'sawtooth':'square';
+                        o.frequency.setValueAtTime(100 + Math.random()*2000, ctx.currentTime);
+                        o.frequency.exponentialRampToValueAtTime(50, ctx.currentTime + 3);
+                        g.gain.setValueAtTime(0.7, ctx.currentTime);
+                        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 3);
+                        o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 3);
+                    }
+                },
+                resume: initCtx
+            };
+        })();
+
+        const App = {
+            level: 1,
+            gameActive: false,
+            currentPathWidth: 20,
+            startTime: 0,
+            
+            screens: {
+                start: document.getElementById('screen-start'),
+                leaderboard: document.getElementById('screen-leaderboard'),
+                calibration: document.getElementById('screen-calibration'),
+                game: document.getElementById('screen-game'),
+                jumpscare: document.getElementById('jumpscare-overlay')
+            },
+
+            levels: [
+                { path: "M 40 40 L 280 40 L 280 280 L 40 280", start: {x:40, y:40}, goal: {x:40, y:280} },
+                { path: "M 30 30 L 290 30 L 30 160 L 290 160 L 30 290", start: {x:30, y:30}, goal: {x:30, y:290} },
+                { path: "M 160 20 L 160 100 L 40 100 L 40 240 L 280 240 L 280 100 L 165 100", start: {x:160, y:20}, goal: {x:165, y:100}, narrowing: true }
+            ],
+
+            init() {
+                document.getElementById('btn-start').onclick = () => this.startTest();
+                document.getElementById('btn-to-calibration').onclick = () => this.showCalibration();
+                this.screens.jumpscare.onclick = () => location.reload();
+
+                const container = document.getElementById('game-canvas-container');
+                container.addEventListener('mousemove', (e) => this.handleMove(e));
+                container.addEventListener('touchmove', (e) => { e.preventDefault(); this.handleMove(e.touches[0]); }, {passive: false});
+
+                if (window.innerWidth < 450) document.body.classList.add('mobile-mode');
+            },
+
+            switchScreen(name) {
+                Object.values(this.screens).forEach(s => s.classList.remove('active'));
+                this.screens[name].classList.add('active');
+            },
+
+            startTest() {
+                AudioEngine.click();
+                this.switchScreen('game');
+                this.startLevel(1);
+            },
+
+            startLevel(lvl) {
+                this.level = lvl;
+                this.gameActive = true;
+                this.currentPathWidth = 20;
+                const config = this.levels[lvl - 1];
+                
+                document.getElementById('level-display').innerText = `LEVEL ${lvl}`;
+                document.getElementById('maze-bg').setAttribute('d', config.path);
+                document.getElementById('maze-path').setAttribute('d', config.path);
+                document.getElementById('maze-path').setAttribute('stroke-width', this.currentPathWidth);
+                document.getElementById('maze-bg').setAttribute('stroke-width', this.currentPathWidth + 4);
+
+                const gm = document.getElementById('goal-marker');
+                gm.style.left = config.goal.x + 'px';
+                gm.style.top = config.goal.y + 'px';
+
+                this.updatePlayer(config.start.x, config.start.y);
+                this.startTime = Date.now();
+
+                if (lvl === 3) {
+                    document.getElementById('game-tip').innerText = "CALIBRATION APPLIED. PRECISION MODE ACTIVE.";
+                }
+            },
+
+            handleMove(e) {
+                if (!this.gameActive) return;
+
+                const rect = document.getElementById('game-canvas-container').getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                this.updatePlayer(x, y);
+
+                const config = this.levels[this.level - 1];
+                
+                // Narrowing Logic
+                if (config.narrowing) {
+                    const totalLen = document.getElementById('maze-path').getTotalLength();
+                    const point = this.getNearestPoint(x, y);
+                    const progress = point.len / totalLen;
+                    // Shrink from 20 to 6
+                    this.currentPathWidth = 20 - (progress * 14);
+                    document.getElementById('maze-path').setAttribute('stroke-width', this.currentPathWidth);
+                    document.getElementById('maze-bg').setAttribute('stroke-width', this.currentPathWidth + 4);
+                }
+
+                // Collision
+                const proximity = this.getProximity(x, y);
+                if (proximity > (this.currentPathWidth / 2 + 3)) {
+                    this.fail();
+                    return;
+                }
+
+                // Goal check
+                const distToGoal = Math.hypot(x - config.goal.x, y - config.goal.y);
+                if (distToGoal < 10) {
+                    this.win();
+                }
+            },
+
+            updatePlayer(x, y) {
+                const p = document.getElementById('player-dot');
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+            },
+
+            getNearestPoint(x, y) {
+                const path = document.getElementById('maze-path');
+                const len = path.getTotalLength();
+                let minD = Infinity;
+                let bestLen = 0;
+                for (let i = 0; i <= len; i += 4) {
+                    const pt = path.getPointAtLength(i);
+                    const d = Math.hypot(pt.x - x, pt.y - y);
+                    if (d < minD) { minD = d; bestLen = i; }
+                }
+                return { dist: minD, len: bestLen };
+            },
+
+            getProximity(x, y) {
+                return this.getNearestPoint(x, y).dist;
+            },
+
+            fail() {
+                this.gameActive = false;
+                AudioEngine.fail();
+                setTimeout(() => this.startLevel(this.level), 500);
+            },
+
+            win() {
+                this.gameActive = false;
+                AudioEngine.success();
+                if (this.level === 1) {
+                    this.startLevel(2);
+                } else if (this.level === 2) {
+                    this.showLeaderboard();
+                } else {
+                    this.triggerScare();
+                }
+            },
+
+            showLeaderboard() {
+                const time = ((Date.now() - this.startTime) / 1000).toFixed(2);
+                document.getElementById('user-time').innerText = time + "s";
+                this.switchScreen('leaderboard');
+            },
+
+            showCalibration() {
+                AudioEngine.click();
+                this.switchScreen('calibration');
+                const dot = document.getElementById('calibration-dot');
+                const status = document.getElementById('cal-status');
+                let progress = 0;
+
+                const animate = () => {
+                    if (progress > 100) {
+                        status.innerText = "CALIBRATION COMPLETE. SYNCED.";
+                        AudioEngine.success();
+                        setTimeout(() => {
+                            this.switchScreen('game');
+                            this.startLevel(3);
+                        }, 1000);
+                        return;
+                    }
+                    const angle = Date.now() / 400;
+                    const radius = 60;
+                    dot.style.left = (150 + Math.cos(angle) * radius) + 'px';
+                    dot.style.top = (100 + Math.sin(angle) * radius) + 'px';
+                    
+                    progress += 0.5;
+                    status.innerText = `SYNCING: ${Math.floor(progress)}% - DO NOT BLINK`;
+                    if (Math.floor(progress) % 20 === 0) AudioEngine.beep();
+                    requestAnimationFrame(animate);
+                };
+                setTimeout(animate, 1000);
+            },
+
+            triggerScare() {
+                this.switchScreen('jumpscare');
+                AudioEngine.scream();
+                if ("vibrate" in navigator) navigator.vibrate([100, 50, 100, 50, 500]);
+                
+                let count = 0;
+                const flash = setInterval(() => {
+                    this.screens.jumpscare.style.backgroundColor = count % 2 === 0 ? '#f00' : '#000';
+                    count++;
+                    if (count > 50) clearInterval(flash);
+                }, 40);
+            }
+        };
+
+        App.init();
+    </script>
+</body>
+</html>
