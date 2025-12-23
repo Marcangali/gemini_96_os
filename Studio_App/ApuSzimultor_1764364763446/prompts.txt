@@ -1,6 +1,2 @@
-[2025. 12. 23. 13:37:43] v38:
-Add more ending and make the dad revival much better animation and epic and scary
-
----
-[2025. 12. 23. 13:41:33] v38:
-Add more ending and make the dad revival much better animation and epic and scary, but do not change anythinh else!!!!! Do not change existing mechanics
+[2025. 12. 23. 13:51:09] v39:
+Make the revive animation much better, it is good, but it is not a bit scary
