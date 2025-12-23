@@ -1,0 +1,567 @@
+<!--
+APP_NAME: ApuSzimulátor
+APP_DESCRIPTION: Gondoskodj Apuról ebben a vicces tamagotchi játékban! Figyelj az egészségére!
+APP_ICON: https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/ApuSzimultor_1764364763446/icon.png
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 650
+VERSION_SUMMARY: Epic scary revival, new multiple endings, and glitch effects.
+STORE_ID: dad-sim-01
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ApuSzimulátor</title>
+    <style>
+        :root {
+            --bg-color: #f3f3f3;
+            --card-bg: #ffffff;
+            --primary: #0078d4;
+            --primary-hover: #006cc1;
+            --text-main: #202020;
+            --text-sub: #606060;
+            --success: #107c10;
+            --warning: #d83b01;
+            --danger: #e81123;
+            --radius: 12px;
+            --shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+            --horror-red: #8b0000;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            user-select: none;
+            color: var(--text-main);
+            transition: background 0.5s ease;
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: var(--card-bg);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        /* --- Header --- */
+        header {
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e5e5;
+            background: #fff;
+            z-index: 100;
+            flex: 0 0 auto;
+            height: 50px;
+        }
+
+        .header-left { display: flex; flex-direction: column; overflow: hidden; }
+        .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+        h1 { margin: 0; font-size: 1rem; font-weight: 600; }
+        .clock-display { font-size: 0.75rem; color: var(--text-sub); }
+
+        .money-badge {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .icon-btn {
+            background: transparent; border: none; font-size: 1.2rem; cursor: pointer;
+            padding: 4px; border-radius: 50%; width: 32px; height: 32px;
+        }
+
+        /* --- Game Area --- */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-evenly;
+            position: relative;
+            padding: 10px;
+            background: linear-gradient(180deg, #fff 0%, #f8f9fa 100%);
+            width: 100%;
+            z-index: 10;
+        }
+        
+        .game-area.night-mode-bg { background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); }
+
+        /* --- Avatar --- */
+        .avatar-container {
+            position: relative;
+            width: 130px;
+            height: 130px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eef4f9;
+            border-radius: 50%;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 0 10px 20px rgba(0,0,0,0.05);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 20;
+        }
+
+        .avatar {
+            font-size: 80px;
+            line-height: 1;
+            cursor: pointer;
+            transition: transform 0.2s, filter 0.2s;
+            user-select: none;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* --- Stats --- */
+        .stats-container {
+            width: 90%;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(255,255,255,0.7);
+            padding: 10px;
+            border-radius: var(--radius);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .stat-row { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+        .progress-bar-bg { flex: 1; height: 6px; background: #efefef; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; width: 100%; transition: width 0.5s ease; }
+
+        .weight-display { font-size: 0.75rem; color: var(--text-sub); text-align: right; }
+
+        /* --- UI Elements --- */
+        .message-box {
+            width: 90%;
+            background: #1a1a1a;
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-size: 0.85rem;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 30;
+        }
+
+        .controls {
+            width: 100%;
+            max-width: 320px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            padding: 5px;
+            z-index: 50;
+        }
+
+        button.action-btn {
+            border: 1px solid #eee;
+            background: #fff;
+            padding: 8px 4px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        button.action-btn .btn-icon { font-size: 1.4rem; margin-bottom: 2px; }
+        button.action-btn:active { transform: scale(0.95); }
+        button.action-btn:disabled { opacity: 0.5; filter: grayscale(1); }
+
+        /* --- Special Effects --- */
+        @keyframes shake {
+            0%, 100% { transform: translate(0,0); }
+            10%, 30%, 50%, 70%, 90% { transform: translate(-5px, -2px) rotate(-1deg); }
+            20%, 40%, 60%, 80% { transform: translate(5px, 2px) rotate(1deg); }
+        }
+        .shake { animation: shake 0.3s infinite; }
+
+        @keyframes glitch {
+            0% { clip-path: inset(10% 0 30% 0); transform: translate(-2px, 2px); }
+            20% { clip-path: inset(40% 0 10% 0); transform: translate(2px, -2px); }
+            40% { clip-path: inset(20% 0 50% 0); transform: translate(-2px, -2px); }
+            60% { clip-path: inset(60% 0 20% 0); transform: translate(2px, 2px); }
+            80% { clip-path: inset(30% 0 40% 0); transform: translate(-2px, 2px); }
+            100% { clip-path: inset(10% 0 30% 0); transform: translate(2px, -2px); }
+        }
+        .glitch { animation: glitch 0.2s infinite; filter: hue-rotate(90deg) contrast(150%); }
+
+        .night-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,10,0.7);
+            z-index: 90; display: none; align-items: center; justify-content: center;
+            color: white; pointer-events: none;
+        }
+        body.sleeping .night-overlay { display: flex; pointer-events: auto; }
+
+        /* --- Epic Revival Overlay --- */
+        #revival-overlay {
+            position: fixed; inset: 0; background: black; z-index: 1000;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            color: var(--horror-red); font-family: 'Courier New', monospace;
+        }
+
+        .ritual-circle {
+            width: 200px; height: 200px; border: 2px dashed var(--horror-red);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            animation: rotate 10s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .blood-text { font-size: 1.5rem; text-shadow: 0 0 10px red; letter-spacing: 4px; }
+
+        /* --- Ending Overlays --- */
+        .ending-overlay {
+            position: fixed; inset: 0; z-index: 2000; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            background: white; padding: 20px; text-align: center;
+        }
+        .ending-overlay.show { display: flex; }
+        .ending-overlay h2 { font-size: 2rem; margin-bottom: 10px; }
+        .ending-overlay button { margin-top: 20px; padding: 12px 24px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: bold; }
+
+        #flash-white { position: fixed; inset: 0; background: white; z-index: 3000; display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <header>
+            <div class="header-left">
+                <h1 id="app-title">ApuSzimulátor</h1>
+                <div class="clock-display" id="clock-display">⏰ 08:00</div>
+            </div>
+            <div class="header-right">
+                <div class="money-badge"><span id="money-display">3000 Ft</span></div>
+                <button class="icon-btn" onclick="game.toggleSettings()">⚙️</button>
+            </div>
+        </header>
+
+        <div class="game-area" id="game-area">
+            <div class="avatar-container" id="avatar-container">
+                <div class="avatar" id="avatar">👨</div>
+            </div>
+
+            <div class="stats-container">
+                <div class="stat-row">❤️ <div class="progress-bar-bg"><div id="bar-health" class="progress-bar-fill" style="background: var(--danger)"></div></div></div>
+                <div class="stat-row">🍗 <div class="progress-bar-bg"><div id="bar-hunger" class="progress-bar-fill" style="background: var(--success)"></div></div></div>
+                <div class="stat-row">⚡ <div class="progress-bar-bg"><div id="bar-energy" class="progress-bar-fill" style="background: #ffb900"></div></div></div>
+                <div class="stat-row">😊 <div class="progress-bar-bg"><div id="bar-mood" class="progress-bar-fill" style="background: var(--primary)"></div></div></div>
+                <div class="weight-display"><span id="weight-val">85.0</span> kg ⚖️</div>
+            </div>
+
+            <button id="btn-sleep" onclick="game.toggleSleep()" style="background:#2b3a42; color:white; border:none; padding:10px 20px; border-radius:20px; font-weight:700; cursor:pointer;">😴 Alvás</button>
+
+            <div class="message-box" id="msg-box">Szia! Gondoskodj Apuról!</div>
+
+            <div class="controls">
+                <button class="action-btn" onclick="game.work()"><span class="btn-icon">💼</span>Munka</button>
+                <button class="action-btn" onclick="game.feed()"><span class="btn-icon">🍔</span>Evés</button>
+                <button class="action-btn" onclick="game.drink()"><span class="btn-icon">🍺</span>Ivás</button>
+                <button class="action-btn" onclick="game.sport()"><span class="btn-icon">🏋️</span>Edzés</button>
+                <button class="action-btn" onclick="game.tv()"><span class="btn-icon">📺</span>Tévé</button>
+                <button class="action-btn" onclick="game.diy()"><span class="btn-icon">🛠️</span>Barkács</button>
+                <button class="action-btn" onclick="game.friends()"><span class="btn-icon">🍻</span>Haverok</button>
+                <button class="action-btn" onclick="game.car()"><span class="btn-icon">🚗</span>Autó</button>
+                <button class="action-btn" onclick="game.lottery()"><span class="btn-icon">🎫</span>Lottó</button>
+            </div>
+        </div>
+
+        <div class="night-overlay" onclick="game.wakeUp()">💤 ALVÁS...</div>
+    </div>
+
+    <!-- Revival Overlay -->
+    <div id="revival-overlay">
+        <div class="ritual-circle">
+            <div id="ritual-avatar" style="font-size: 80px; transform: rotate(0deg);">💀</div>
+        </div>
+        <div class="blood-text" id="revival-text">KATTINTS AZ ÉLETÉRT</div>
+        <div style="margin-top:20px; font-size: 0.8rem; color: #500;">Még <span id="revival-count">20</span> érintés...</div>
+    </div>
+
+    <!-- Endings -->
+    <div id="ending-rich" class="ending-overlay">
+        <h2>💰 MÁGNÁS APU</h2>
+        <p>Apu annyi pénzt keresett, hogy megvette a kerületet. Mostantól arany kanállal eszi a pörköltet.</p>
+        <button onclick="location.reload()">Újrakezdés</button>
+    </div>
+    <div id="ending-fat" class="ending-overlay">
+        <h2>🍔 A VÉGSŐ DAD BOD</h2>
+        <p>Apu akkora lett, hogy saját gravitációs mezeje van. Boldogan él a hűtő mellett az idők végezetéig.</p>
+        <button onclick="location.reload()">Újrakezdés</button>
+    </div>
+    <div id="ending-glitch" class="ending-overlay" style="background: black; color: lime;">
+        <h2>📟 RENDSZERHIBA: APU.EXE</h2>
+        <p>Túl sokszor ráncigáltad vissza a halálból. Apu most már a kód része. Figyel téged...</p>
+        <button onclick="location.reload()" style="background: lime; color: black;">REBOOT</button>
+    </div>
+
+    <div id="flash-white"></div>
+
+    <script>
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (AC) this.ctx = new AC();
+                }
+            }
+            play(type) {
+                if (!this.enabled) return;
+                this.init();
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.connect(g); g.connect(this.ctx.destination);
+
+                if (type === 'click') {
+                    osc.frequency.setValueAtTime(800, t);
+                    g.gain.setValueAtTime(0.1, t);
+                    g.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                    osc.start(); osc.stop(t + 0.1);
+                } else if (type === 'death') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, t);
+                    osc.frequency.linearRampToValueAtTime(30, t + 2);
+                    g.gain.setValueAtTime(0.2, t);
+                    g.gain.linearRampToValueAtTime(0, t + 2);
+                    osc.start(); osc.stop(t + 2);
+                } else if (type === 'heartbeat') {
+                    osc.frequency.setValueAtTime(60, t);
+                    g.gain.setValueAtTime(0.5, t);
+                    g.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                    osc.start(); osc.stop(t + 0.2);
+                } else if (type === 'glitch') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(Math.random()*1000, t);
+                    g.gain.setValueAtTime(0.1, t);
+                    osc.start(); osc.stop(t + 0.05);
+                }
+            }
+        }
+
+        class DadGame {
+            constructor() {
+                this.stats = { health: 100, hunger: 80, energy: 80, mood: 80, weight: 85.0, money: 3000 };
+                this.sfx = new SoundFX();
+                this.isSleeping = false;
+                this.isDead = false;
+                this.revivalClicks = 0;
+                this.deathCount = 0;
+                this.gameHour = 8;
+                this.tickCount = 0;
+                
+                this.ui = {
+                    health: document.getElementById('bar-health'),
+                    hunger: document.getElementById('bar-hunger'),
+                    energy: document.getElementById('bar-energy'),
+                    mood: document.getElementById('bar-mood'),
+                    weight: document.getElementById('weight-val'),
+                    money: document.getElementById('money-display'),
+                    clock: document.getElementById('clock-display'),
+                    avatar: document.getElementById('avatar'),
+                    msg: document.getElementById('msg-box'),
+                    revivalOverlay: document.getElementById('revival-overlay'),
+                    revivalCount: document.getElementById('revival-count'),
+                    revivalAvatar: document.getElementById('ritual-avatar'),
+                    flash: document.getElementById('flash-white')
+                };
+
+                this.init();
+            }
+
+            init() {
+                setInterval(() => this.tick(), 1000);
+                this.updateUI();
+                this.ui.revivalOverlay.addEventListener('click', () => this.handleRevivalClick());
+            }
+
+            tick() {
+                if (this.isDead) return;
+
+                this.tickCount++;
+                if (this.tickCount >= 5) {
+                    this.tickCount = 0;
+                    this.gameHour = (this.gameHour + 1) % 24;
+                }
+
+                if (this.isSleeping) {
+                    this.stats.energy = Math.min(100, this.stats.energy + 5);
+                    this.stats.health = Math.min(100, this.stats.health + 0.5);
+                    this.stats.hunger -= 0.2;
+                    if (this.stats.energy >= 100) this.wakeUp();
+                } else {
+                    this.stats.hunger -= 0.5;
+                    this.stats.energy -= 0.3;
+                    this.stats.mood -= 0.2;
+                    
+                    if (this.stats.hunger < 20 || this.stats.energy < 20) this.stats.health -= 0.5;
+                }
+
+                if (this.stats.health <= 0) this.die();
+                this.checkEndings();
+                this.updateUI();
+            }
+
+            checkEndings() {
+                if (this.stats.money >= 100000) this.triggerEnding('rich');
+                if (this.stats.weight >= 180) this.triggerEnding('fat');
+                if (this.deathCount >= 4) this.triggerEnding('glitch');
+            }
+
+            triggerEnding(type) {
+                this.isDead = true;
+                document.getElementById('ending-' + type).classList.add('show');
+            }
+
+            die() {
+                if (this.isDead) return;
+                this.isDead = true;
+                this.sfx.play('death');
+                this.deathCount++;
+                this.ui.avatar.innerText = "💀";
+                this.ui.msg.innerText = "Apu elment a nagy kocsmába az égben...";
+                
+                setTimeout(() => {
+                    this.ui.revivalOverlay.style.display = 'flex';
+                    this.revivalClicks = 20 + (this.deathCount * 5);
+                    this.ui.revivalCount.innerText = this.revivalClicks;
+                }, 2000);
+            }
+
+            handleRevivalClick() {
+                if (this.revivalClicks <= 0) return;
+                
+                this.revivalClicks--;
+                this.ui.revivalCount.innerText = this.revivalClicks;
+                this.sfx.play('heartbeat');
+                
+                // Visual feedback
+                this.ui.revivalAvatar.style.transform = `scale(${1.1 + (20/this.revivalClicks)})`;
+                document.body.style.backgroundColor = '#200';
+                setTimeout(() => document.body.style.backgroundColor = '#000', 50);
+
+                if (this.revivalClicks <= 0) {
+                    this.resurrect();
+                }
+            }
+
+            resurrect() {
+                this.ui.flash.style.display = 'block';
+                this.sfx.play('glitch');
+                
+                // Scary sequence
+                const ritualText = document.getElementById('revival-text');
+                ritualText.innerText = "NEM VOLT MÉG ITT AZ IDŐ";
+                
+                let i = 0;
+                const glitchInt = setInterval(() => {
+                    this.sfx.play('glitch');
+                    this.ui.revivalAvatar.innerText = i % 2 === 0 ? "👹" : "👨";
+                    i++;
+                    if(i > 20) clearInterval(glitchInt);
+                }, 100);
+
+                setTimeout(() => {
+                    this.ui.flash.style.display = 'none';
+                    this.ui.revivalOverlay.style.display = 'none';
+                    this.isDead = false;
+                    this.stats = { health: 50, hunger: 50, energy: 50, mood: 50, weight: 85, money: this.stats.money };
+                    this.ui.msg.innerText = "Apu visszatért... de valahogy más.";
+                    this.applyScaryState();
+                    this.updateUI();
+                }, 2500);
+            }
+
+            applyScaryState() {
+                this.ui.avatar.classList.add('glitch');
+                setTimeout(() => this.ui.avatar.classList.remove('glitch'), 5000);
+            }
+
+            updateUI() {
+                this.ui.health.style.width = this.stats.health + "%";
+                this.ui.hunger.style.width = this.stats.hunger + "%";
+                this.ui.energy.style.width = this.stats.energy + "%";
+                this.ui.mood.style.width = this.stats.mood + "%";
+                this.ui.weight.innerText = this.stats.weight.toFixed(1);
+                this.ui.money.innerText = this.stats.money + " Ft";
+                this.ui.clock.innerText = `⏰ ${this.gameHour < 10 ? '0'+this.gameHour : this.gameHour}:00`;
+                
+                if (!this.isDead) {
+                    if (this.stats.health < 30) this.ui.avatar.innerText = "🤒";
+                    else if (this.stats.mood < 30) this.ui.avatar.innerText = "😠";
+                    else if (this.stats.energy < 30) this.ui.avatar.innerText = "🥱";
+                    else if (this.stats.mood > 80) this.ui.avatar.innerText = "😎";
+                    else this.ui.avatar.innerText = "👨";
+                }
+            }
+
+            // Actions
+            work() { this.doAction(() => { this.stats.money += 2000; this.stats.energy -= 20; this.stats.mood -= 10; this.ui.msg.innerText = "Apu keményen melózik a gyárban."; }, 'click'); }
+            feed() { this.doAction(() => { this.stats.hunger = Math.min(100, this.stats.hunger + 30); this.stats.weight += 0.5; this.stats.money -= 500; this.ui.msg.innerText = "Pörkölt nokedlivel, ez az igazi!"; }, 'click'); }
+            drink() { this.doAction(() => { this.stats.mood = Math.min(100, this.stats.mood + 20); this.stats.health -= 2; this.stats.money -= 300; this.ui.msg.innerText = "Csak egy kis gyógysör."; }, 'click'); }
+            sport() { this.doAction(() => { this.stats.weight -= 0.8; this.stats.energy -= 30; this.stats.health = Math.min(100, this.stats.health + 5); this.ui.msg.innerText = "Apu kocog a parkban (vagy legalábbis próbál)."; }, 'click'); }
+            tv() { this.doAction(() => { this.stats.mood = Math.min(100, this.stats.mood + 10); this.stats.energy -= 5; this.ui.msg.innerText = "Hajrá magyarok! Nézzük a meccset!"; }, 'click'); }
+            diy() { this.doAction(() => { if(Math.random() > 0.8) { this.stats.health -= 15; this.ui.msg.innerText = "A francba! Ráütöttem az ujjamra!"; } else { this.stats.mood += 15; this.ui.msg.innerText = "Megjavítottam a csapot, nem kell szerelő!"; } }, 'click'); }
+            friends() { this.doAction(() => { this.stats.money -= 2000; this.stats.mood = 100; this.stats.energy -= 40; this.ui.msg.innerText = "A haverokkal megváltottuk a világot a restiben."; }, 'click'); }
+            car() { this.doAction(() => { this.stats.money -= 1000; this.stats.mood += 20; this.ui.msg.innerText = "Apu lemosta a kocsit, csillog-villog a verda."; }, 'click'); }
+            lottery() { this.doAction(() => { this.stats.money -= 500; if(Math.random() > 0.98) { this.stats.money += 50000; this.ui.msg.innerText = "TELITALÁLAT! Milliomosok vagyunk!"; } else { this.ui.msg.innerText = "Nem nyert... majd legközelebb."; } }, 'click'); }
+
+            doAction(fn, sound) {
+                if (this.isDead || this.isSleeping) return;
+                this.sfx.play(sound);
+                fn();
+                this.updateUI();
+                this.ui.avatar.classList.add('shake');
+                setTimeout(() => this.ui.avatar.classList.remove('shake'), 300);
+            }
+
+            toggleSleep() { if (this.isDead) return; this.isSleeping ? this.wakeUp() : this.sleep(); }
+            sleep() { this.isSleeping = true; document.body.classList.add('sleeping'); this.ui.msg.innerText = "Apu húzza a lóbőrt..."; }
+            wakeUp() { this.isSleeping = false; document.body.classList.remove('sleeping'); this.ui.msg.innerText = "Jó reggelt!"; this.updateUI(); }
+            toggleSettings() { this.sfx.enabled = !this.sfx.enabled; this.ui.msg.innerText = this.sfx.enabled ? "Hangok bekapcsolva." : "Hangok kikapcsolva."; }
+        }
+
+        const game = new DadGame();
+    </script>
+</body>
+</html>
