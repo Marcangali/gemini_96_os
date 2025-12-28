@@ -1,0 +1,2 @@
+[2025. 12. 28. 11:01:54] v1:
+Block blast játék teljes logikával és néha a játék segít
