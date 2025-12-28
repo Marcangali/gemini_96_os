@@ -1,0 +1,866 @@
+<!--
+APP_NAME: Gemini League
+APP_DESCRIPTION: Fast-paced 3v3 arcade soccer. Dribble, shoot, and score!
+APP_ICON: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Improved AI positioning, reduced corner sticking, smoother collisions
+STORE_ID: gemini-league-soccer
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini League Soccer</title>
+    <style>
+        :root {
+            --pitch-green: #4caf50;
+            --pitch-line: rgba(255, 255, 255, 0.6);
+            --ui-bg: rgba(255, 255, 255, 0.9);
+            --primary: #0078d4;
+            --danger: #e81123;
+            --text: #202020;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: #222; /* Dark framing for the game */
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Game Container */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #333;
+        }
+
+        canvas {
+            background: var(--pitch-green);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            max-width: 100%;
+            max-height: 100%;
+            cursor: none; /* Hide cursor during gameplay */
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(243, 243, 243, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            text-align: center;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            background: #006cc1;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            gap: 15px;
+            z-index: 5;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .team-score {
+            width: 30px;
+            text-align: center;
+        }
+
+        .timer {
+            color: #ffd700;
+        }
+
+        /* Controls Tip */
+        .controls-tip {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #888;
+            background: rgba(255,255,255,0.5);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            display: none; /* Hidden by default */
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            height: 120px;
+            pointer-events: none; /* Allow clicks through empty space */
+            z-index: 20;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        body.mobile-mode #mobile-controls {
+            display: flex;
+        }
+
+        .dpad {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            pointer-events: auto;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .dpad-btn {
+            position: absolute;
+            width: 33%;
+            height: 33%;
+            background: rgba(255, 255, 255, 0.3);
+            border: none;
+            border-radius: 4px;
+        }
+        .dpad-btn:active { background: rgba(255,255,255,0.6); }
+        .dpad-up { top: 0; left: 33%; }
+        .dpad-down { bottom: 0; left: 33%; }
+        .dpad-left { top: 33%; left: 0; }
+        .dpad-right { top: 33%; right: 0; }
+
+        .action-btn {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 60, 60, 0.4);
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.4);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+        .action-btn:active { background: rgba(255, 60, 60, 0.7); }
+
+    </style>
+</head>
+<body class="">
+
+    <div id="game-container">
+        <!-- Canvas -->
+        <canvas id="pitch"></canvas>
+
+        <!-- HUD -->
+        <div id="hud">
+            <span class="team-score" style="color: #4fc3f7">0</span>
+            <span class="timer">00:00</span>
+            <span class="team-score" style="color: #ef5350">0</span>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="overlay">
+            <h1>Gemini League</h1>
+            <p>3 vs 3 Arcade Soccer</p>
+            <button class="btn" id="start-btn">KICK OFF</button>
+            <div class="controls-tip">
+                Desktop: Arrows to Move, SPACE to Shoot/Tackle<br>
+                Mobile: On-screen controls
+            </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over" class="overlay hidden">
+            <h1 id="result-title">FULL TIME</h1>
+            <h2 id="final-score">0 - 0</h2>
+            <button class="btn" id="restart-btn">PLAY AGAIN</button>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div id="mobile-controls">
+            <div class="dpad" id="dpad">
+                <div class="dpad-btn dpad-up" data-dir="up"></div>
+                <div class="dpad-btn dpad-down" data-dir="down"></div>
+                <div class="dpad-btn dpad-left" data-dir="left"></div>
+                <div class="dpad-btn dpad-right" data-dir="right"></div>
+            </div>
+            <button class="action-btn" id="action-btn">SHOOT</button>
+        </div>
+    </div>
+
+<script>
+/**
+ * AUDIO SYSTEM using Web Audio API
+ */
+const AudioSys = {
+    ctx: null,
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    },
+    playTone(freq, type, duration, vol = 0.1) {
+        if (!this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+        } catch(e) { console.error(e); }
+    },
+    kick() {
+        this.playTone(150, 'square', 0.1, 0.2);
+    },
+    goal() {
+        if (!this.ctx) return;
+        [440, 554, 659, 880].forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 'triangle', 0.4, 0.2), i * 100);
+        });
+    },
+    whistle() {
+        if (!this.ctx) return;
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(3000, this.ctx.currentTime);
+            const lfo = this.ctx.createOscillator();
+            lfo.frequency.value = 50;
+            const lfoGain = this.ctx.createGain();
+            lfoGain.gain.value = 500;
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            lfo.start();
+            gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.5);
+            lfo.stop(this.ctx.currentTime + 0.5);
+        } catch(e) { console.error(e); }
+    }
+};
+
+/**
+ * GAME ENGINE
+ */
+const canvas = document.getElementById('pitch');
+const ctx = canvas.getContext('2d');
+
+// Game Constants
+const PITCH_WIDTH = 320;
+const PITCH_HEIGHT = 500;
+const GOAL_WIDTH = 100;
+const PLAYER_RADIUS = 12;
+const BALL_RADIUS = 5;
+
+const PLAYER_SPEED = 3.0; 
+const BALL_FRICTION = 0.98;
+const SHOOT_POWER = 8;
+const MATCH_DURATION = 90;
+
+canvas.width = PITCH_WIDTH;
+canvas.height = PITCH_HEIGHT;
+
+const keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, " ": false, w:false, a:false, s:false, d:false };
+
+let gameState = 'MENU';
+let timeLeft = MATCH_DURATION;
+let score = [0, 0];
+
+class Entity {
+    constructor(x, y, radius, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = radius;
+        this.color = color;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+    }
+
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.closePath();
+    }
+}
+
+class Ball extends Entity {
+    constructor() {
+        super(PITCH_WIDTH/2, PITCH_HEIGHT/2, BALL_RADIUS, '#fff');
+    }
+
+    update() {
+        super.update();
+        this.vx *= BALL_FRICTION;
+        this.vy *= BALL_FRICTION;
+
+        // Wall Bounce
+        if (this.x - this.radius < 0) { this.x = this.radius; this.vx *= -0.8; }
+        if (this.x + this.radius > PITCH_WIDTH) { this.x = PITCH_WIDTH - this.radius; this.vx *= -0.8; }
+        
+        // Goal / End Line Logic
+        if (this.y - this.radius < 0) {
+            if (this.x > (PITCH_WIDTH - GOAL_WIDTH)/2 && this.x < (PITCH_WIDTH + GOAL_WIDTH)/2) {
+                game.goalScored(0); 
+            } else {
+                this.y = this.radius; this.vy *= -0.8;
+            }
+        }
+        if (this.y + this.radius > PITCH_HEIGHT) {
+            if (this.x > (PITCH_WIDTH - GOAL_WIDTH)/2 && this.x < (PITCH_WIDTH + GOAL_WIDTH)/2) {
+                game.goalScored(1); 
+            } else {
+                this.y = PITCH_HEIGHT - this.radius; this.vy *= -0.8;
+            }
+        }
+    }
+}
+
+class Player extends Entity {
+    constructor(x, y, team, isHuman = false, role = 'field') {
+        super(x, y, PLAYER_RADIUS, team === 0 ? '#4fc3f7' : '#ef5350');
+        this.team = team;
+        this.isHuman = isHuman;
+        this.role = role;
+        this.homeX = x;
+        this.homeY = y;
+    }
+
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y + 2, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fill();
+        
+        super.draw();
+
+        if (this.isHuman) {
+            ctx.beginPath();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.arc(this.x, this.y, this.radius - 4, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        // Boundaries
+        if (this.x - this.radius < 0) this.x = this.radius;
+        if (this.x + this.radius > PITCH_WIDTH) this.x = PITCH_WIDTH - this.radius;
+        if (this.y - this.radius < 0) this.y = this.radius;
+        if (this.y + this.radius > PITCH_HEIGHT) this.y = PITCH_HEIGHT - this.radius;
+    }
+}
+
+const game = {
+    ball: null,
+    players: [],
+    
+    init() {
+        this.ball = new Ball();
+        this.players = [];
+
+        // Team 0 (Blue)
+        this.players.push(new Player(PITCH_WIDTH/2, PITCH_HEIGHT - 80, 0, true, 'field'));
+        this.players.push(new Player(PITCH_WIDTH/2 - 80, PITCH_HEIGHT - 120, 0, false, 'field'));
+        this.players.push(new Player(PITCH_WIDTH/2, PITCH_HEIGHT - 30, 0, false, 'goalie'));
+
+        // Team 1 (Red)
+        this.players.push(new Player(PITCH_WIDTH/2, 80, 1, false, 'field'));
+        this.players.push(new Player(PITCH_WIDTH/2 + 80, 120, 1, false, 'field'));
+        this.players.push(new Player(PITCH_WIDTH/2, 30, 1, false, 'goalie'));
+    },
+
+    startMatch() {
+        AudioSys.init();
+        AudioSys.whistle();
+        this.init();
+        score = [0, 0];
+        timeLeft = MATCH_DURATION;
+        document.querySelector('.team-score:nth-child(1)').textContent = score[0];
+        document.querySelector('.team-score:nth-child(3)').textContent = score[1];
+        gameState = 'PLAYING';
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('game-over').classList.add('hidden');
+        this.loop();
+    },
+
+    resetPositions() {
+        this.ball.x = PITCH_WIDTH/2;
+        this.ball.y = PITCH_HEIGHT/2;
+        this.ball.vx = 0;
+        this.ball.vy = 0;
+        
+        this.players.forEach(p => {
+            p.x = p.homeX;
+            p.y = p.homeY;
+            p.vx = 0;
+            p.vy = 0;
+        });
+    },
+
+    goalScored(scoringTeam) {
+        if (gameState === 'GOAL') return;
+        gameState = 'GOAL';
+        score[scoringTeam]++;
+        AudioSys.goal();
+        document.querySelector('.team-score:nth-child(1)').textContent = score[0];
+        document.querySelector('.team-score:nth-child(3)').textContent = score[1];
+
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0,0,PITCH_WIDTH,PITCH_HEIGHT);
+        ctx.font = 'bold 40px Segoe UI';
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText("GOAL!", PITCH_WIDTH/2, PITCH_HEIGHT/2);
+
+        setTimeout(() => {
+            if (timeLeft > 0) {
+                this.resetPositions();
+                gameState = 'PLAYING';
+                AudioSys.whistle();
+                this.loop();
+            }
+        }, 2000);
+    },
+
+    handleInput() {
+        const human = this.players[0];
+        human.vx = 0;
+        human.vy = 0;
+        
+        if (keys.ArrowUp || keys.w || keys['up']) human.vy = -PLAYER_SPEED;
+        if (keys.ArrowDown || keys.s || keys['down']) human.vy = PLAYER_SPEED;
+        if (keys.ArrowLeft || keys.a || keys['left']) human.vx = -PLAYER_SPEED;
+        if (keys.ArrowRight || keys.d || keys['right']) human.vx = PLAYER_SPEED;
+
+        if (human.vx !== 0 && human.vy !== 0) {
+            human.vx *= 0.707;
+            human.vy *= 0.707;
+        }
+
+        if (keys[' '] || keys['shoot']) {
+            this.tryShoot(human);
+            keys[' '] = false;
+            keys['shoot'] = false;
+        }
+    },
+
+    tryShoot(player) {
+        const dist = Math.hypot(this.ball.x - player.x, this.ball.y - player.y);
+        if (dist < player.radius + this.ball.radius + 8) {
+            AudioSys.kick();
+            let dx = this.ball.x - player.x;
+            let dy = this.ball.y - player.y;
+            
+            const len = Math.hypot(dx, dy);
+            if (len > 0) { dx /= len; dy /= len; }
+
+            if (len < 1) {
+                dy = player.team === 0 ? -1 : 1;
+                dx = 0;
+            }
+            
+            this.ball.vx = dx * SHOOT_POWER;
+            this.ball.vy = dy * SHOOT_POWER;
+        }
+    },
+
+    updateAI() {
+        this.players.forEach((p, index) => {
+            if (index === 0) return; // Skip human
+
+            let targetX = p.x;
+            let targetY = p.y;
+            
+            const goalY = p.team === 0 ? 0 : PITCH_HEIGHT; 
+            const ballOwner = this.getBallOwner();
+            const distToBall = Math.hypot(this.ball.x - p.x, this.ball.y - p.y);
+
+            if (p.role === 'goalie') {
+                targetX = Math.max(PITCH_WIDTH/2 - 40, Math.min(PITCH_WIDTH/2 + 40, this.ball.x));
+                targetY = p.homeY;
+                
+                // Rush out only if safe
+                if (distToBall < 60 && (p.team === 0 ? this.ball.y > PITCH_HEIGHT - 100 : this.ball.y < 100)) {
+                    targetX = this.ball.x;
+                    targetY = this.ball.y;
+                }
+            } else {
+                // Field Player
+                // Strategy: Smart positioning
+                const isAttacking = (!ballOwner || ballOwner.team !== p.team);
+                
+                if (isAttacking) {
+                    // Calculate "Approach Point" to hit ball towards goal
+                    // Instead of running AT ball, run to a point behind it relative to goal
+                    let dx = (PITCH_WIDTH/2) - this.ball.x; 
+                    let dy = goalY - this.ball.y;
+                    let len = Math.hypot(dx, dy);
+                    if (len > 0) { dx /= len; dy /= len; }
+                    
+                    // Default approach is behind ball
+                    let approachDist = 12;
+                    
+                    // Anti-Stuck Logic: If ball is near wall, approach from open side
+                    const wallMargin = 25;
+                    if (this.ball.x < wallMargin || this.ball.x > PITCH_WIDTH - wallMargin) {
+                        const wallDir = this.ball.x < PITCH_WIDTH/2 ? 1 : -1; // 1 if left wall, -1 if right
+                        targetX = this.ball.x + (wallDir * 8); // Offset to open side
+                        // Offset Y slightly to encourage angling it out
+                        targetY = this.ball.y + (p.team === 0 ? 5 : -5); 
+                    } else {
+                        // Open field approach
+                        targetX = this.ball.x - (dx * approachDist);
+                        targetY = this.ball.y - (dy * approachDist);
+                    }
+
+                    // If close to approach point, go for ball
+                    if (Math.hypot(targetX - p.x, targetY - p.y) < 15) {
+                        targetX = this.ball.x;
+                        targetY = this.ball.y;
+                    }
+
+                } else {
+                    // Support: Stay spread out
+                    targetY = this.ball.y + (p.team === 0 ? 50 : -50); 
+                    // Spread horizontally from ball
+                    targetX = this.ball.x + (p.x < PITCH_WIDTH/2 ? -40 : 40); 
+                    // Clamp to pitch
+                    targetX = Math.max(30, Math.min(PITCH_WIDTH-30, targetX));
+                }
+            }
+
+            // Move
+            const dx = targetX - p.x;
+            const dy = targetY - p.y;
+            const dist = Math.hypot(dx, dy);
+            
+            p.vx = 0; p.vy = 0;
+            if (dist > 3) {
+                let speed = PLAYER_SPEED * 0.8;
+                if (p.team === 1) speed *= 0.85; // Slight CPU nerf
+                
+                p.vx = (dx / dist) * speed;
+                p.vy = (dy / dist) * speed;
+            }
+
+            // Shoot Logic
+            if (distToBall < p.radius + BALL_RADIUS + 3) {
+                const goalDir = p.team === 0 ? -1 : 1;
+                const distToGoal = Math.abs(p.y - goalY);
+                
+                // Shoot if facing goal or good angle
+                if (distToGoal < 200) {
+                     const jitter = (Math.random() - 0.5) * 60; 
+                     const angle = Math.atan2(goalY - p.y, (PITCH_WIDTH/2 + jitter) - p.x);
+                     this.ball.vx = Math.cos(angle) * (SHOOT_POWER * 0.85);
+                     this.ball.vy = Math.sin(angle) * (SHOOT_POWER * 0.85);
+                     AudioSys.kick();
+                } else {
+                    // Dribble
+                    this.ball.vx = p.vx * 1.4;
+                    this.ball.vy = p.vy * 1.4;
+                }
+            }
+        });
+    },
+
+    getBallOwner() {
+        let owner = null;
+        let minDist = 18;
+        this.players.forEach(p => {
+            const d = Math.hypot(p.x - this.ball.x, p.y - this.ball.y);
+            if (d < minDist) {
+                owner = p;
+                minDist = d;
+            }
+        });
+        return owner;
+    },
+
+    resolveCollisions() {
+        // Player vs Player (Softer collisions)
+        for (let i = 0; i < this.players.length; i++) {
+            for (let j = i + 1; j < this.players.length; j++) {
+                const p1 = this.players[i];
+                const p2 = this.players[j];
+                const dx = p2.x - p1.x;
+                const dy = p2.y - p1.y;
+                const dist = Math.hypot(dx, dy);
+                const minDist = p1.radius + p2.radius;
+
+                if (dist < minDist && dist > 0) {
+                    const angle = Math.atan2(dy, dx);
+                    const overlap = (minDist - dist) * 0.5; // Soft push
+                    const pushX = Math.cos(angle) * overlap;
+                    const pushY = Math.sin(angle) * overlap;
+                    
+                    p1.x -= pushX;
+                    p1.y -= pushY;
+                    p2.x += pushX;
+                    p2.y += pushY;
+                }
+            }
+        }
+
+        // Player vs Ball (Improved Dribble & Anti-Stick)
+        this.players.forEach(p => {
+            const dx = this.ball.x - p.x;
+            const dy = this.ball.y - p.y;
+            const dist = Math.hypot(dx, dy);
+            const safeDist = p.radius + this.ball.radius;
+            
+            if (dist < safeDist) {
+                const angle = Math.atan2(dy, dx);
+                
+                // Calculate position ball wants to be
+                let bx = p.x + Math.cos(angle) * (safeDist + 1);
+                let by = p.y + Math.sin(angle) * (safeDist + 1);
+
+                // Anti-Stuck: If pushing into wall, deflect tangent
+                if (bx < BALL_RADIUS || bx > PITCH_WIDTH - BALL_RADIUS) {
+                    // Ball is being pushed into wall. Slide it Y instead.
+                    bx = this.ball.x; // Keep X (wall handles bounce)
+                    by += (by > this.ball.y ? 2 : -2); // Slide vertically
+                }
+                
+                this.ball.x = bx;
+                this.ball.y = by;
+                
+                // Transfer velocity (dribble feel)
+                this.ball.vx += p.vx * 0.4;
+                this.ball.vy += p.vy * 0.4;
+            }
+        });
+    },
+
+    drawPitch() {
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--pitch-green').trim();
+        ctx.fillRect(0, 0, PITCH_WIDTH, PITCH_HEIGHT);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.arc(PITCH_WIDTH/2, PITCH_HEIGHT/2, 40, 0, Math.PI*2);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(0, PITCH_HEIGHT/2);
+        ctx.lineTo(PITCH_WIDTH, PITCH_HEIGHT/2);
+        ctx.stroke();
+
+        ctx.strokeRect((PITCH_WIDTH - 160)/2, 0, 160, 60);
+        ctx.strokeRect((PITCH_WIDTH - 160)/2, PITCH_HEIGHT - 60, 160, 60);
+
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect((PITCH_WIDTH - GOAL_WIDTH)/2, -5, GOAL_WIDTH, 5);
+        ctx.fillRect((PITCH_WIDTH - GOAL_WIDTH)/2, PITCH_HEIGHT, GOAL_WIDTH, 5);
+    },
+
+    updateTimer() {
+        if (Math.random() < 0.016) { 
+             timeLeft -= 1;
+             const m = Math.floor(timeLeft / 60);
+             const s = Math.floor(timeLeft % 60);
+             if (m >= 0) {
+                 document.querySelector('.timer').textContent = `${m}:${s < 10 ? '0'+s : s}`;
+             }
+             if (timeLeft <= 0) this.endGame();
+        }
+    },
+
+    endGame() {
+        gameState = 'OVER';
+        AudioSys.whistle();
+        setTimeout(() => AudioSys.whistle(), 300);
+        document.getElementById('game-over').classList.remove('hidden');
+        document.getElementById('final-score').textContent = `${score[0]} - ${score[1]}`;
+        
+        let title = "DRAW";
+        if (score[0] > score[1]) title = "YOU WIN!";
+        if (score[1] > score[0]) title = "DEFEAT";
+        document.getElementById('result-title').textContent = title;
+    },
+
+    loop() {
+        if (gameState !== 'PLAYING') {
+            if (gameState === 'GOAL') return; 
+            return;
+        }
+
+        ctx.clearRect(0, 0, PITCH_WIDTH, PITCH_HEIGHT);
+        this.drawPitch();
+        this.handleInput();
+        this.updateAI();
+        this.resolveCollisions();
+        
+        this.players.forEach(p => {
+            p.update();
+            p.draw();
+        });
+
+        this.ball.update();
+        this.ball.draw();
+        this.updateTimer();
+        requestAnimationFrame(() => this.loop());
+    }
+};
+
+window.addEventListener('keydown', e => {
+    if (keys.hasOwnProperty(e.key)) keys[e.key] = true;
+});
+
+window.addEventListener('keyup', e => {
+    if (keys.hasOwnProperty(e.key)) keys[e.key] = false;
+});
+
+const setupTouch = (id, key) => {
+    const el = document.querySelector(id);
+    if (!el) return;
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+    el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+    el.addEventListener('mousedown', (e) => { e.preventDefault(); keys[key] = true; });
+    el.addEventListener('mouseup', (e) => { e.preventDefault(); keys[key] = false; });
+};
+
+const dpad = document.getElementById('dpad');
+const handleDpad = (e) => {
+    e.preventDefault();
+    const touch = e.touches ? e.touches[0] : e;
+    const rect = dpad.getBoundingClientRect();
+    const x = touch.clientX - rect.left - rect.width/2;
+    const y = touch.clientY - rect.top - rect.height/2;
+    
+    keys['up'] = keys['down'] = keys['left'] = keys['right'] = false;
+    const angle = Math.atan2(y, x);
+    const dist = Math.hypot(x, y);
+
+    if (dist > 10) {
+        if (angle > -2.35 && angle < -0.78) keys['up'] = true;
+        if (angle > 0.78 && angle < 2.35) keys['down'] = true;
+        if (Math.abs(angle) > 2.35) keys['left'] = true;
+        if (Math.abs(angle) < 0.78) keys['right'] = true;
+    }
+};
+
+dpad.addEventListener('touchstart', handleDpad);
+dpad.addEventListener('touchmove', handleDpad);
+dpad.addEventListener('touchend', () => {
+    keys['up'] = keys['down'] = keys['left'] = keys['right'] = false;
+});
+
+dpad.addEventListener('mousedown', (e) => {
+    dpad.addEventListener('mousemove', handleDpad);
+    handleDpad(e);
+});
+window.addEventListener('mouseup', () => {
+    dpad.removeEventListener('mousemove', handleDpad);
+    keys['up'] = keys['down'] = keys['left'] = keys['right'] = false;
+});
+
+setupTouch('#action-btn', 'shoot');
+
+document.getElementById('start-btn').addEventListener('click', () => game.startMatch());
+document.getElementById('restart-btn').addEventListener('click', () => game.startMatch());
+
+if (document.body.classList.contains('mobile-mode')) {
+    // handled by CSS
+}
+
+</script>
+</body>
+</html>
