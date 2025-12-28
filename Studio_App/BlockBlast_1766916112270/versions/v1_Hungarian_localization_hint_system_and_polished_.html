@@ -1,0 +1,924 @@
+<!--
+APP_NAME: Block Blast
+APP_DESCRIPTION: Addictive 8x8 block puzzle game with hints and smooth animations.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 650
+VERSION_SUMMARY: Hungarian localization, hint system, and polished glass UI.
+STORE_ID: block-blast-gemini
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Block Blast</title>
+<style>
+    :root {
+        --bg-color: #f3f4f6;
+        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-border: rgba(255, 255, 255, 0.5);
+        --primary: #6366f1;
+        --accent: #ec4899;
+        --text: #1f2937;
+        --grid-gap: 4px;
+        --cell-size: 40px;
+        --radius: 12px;
+        --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #e0e7ff 0%, #fce7f3 100%);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--text);
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    /* Container for the game area */
+    .game-container {
+        width: 100%;
+        max-width: 400px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    /* Header: Score and Best */
+    .header {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    .score-box {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        padding: 10px 20px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        text-align: center;
+        flex: 1;
+        margin: 0 5px;
+    }
+
+    .score-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #6b7280;
+        margin-bottom: 4px;
+    }
+
+    .score-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--primary);
+    }
+
+    /* The 8x8 Grid */
+    .board-wrapper {
+        position: relative;
+        background: var(--glass-bg);
+        padding: 10px;
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--glass-border);
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        grid-template-rows: repeat(8, 1fr);
+        gap: var(--grid-gap);
+        width: calc(8 * var(--cell-size) + 7 * var(--grid-gap));
+        height: calc(8 * var(--cell-size) + 7 * var(--grid-gap));
+    }
+
+    .cell {
+        width: var(--cell-size);
+        height: var(--cell-size);
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 6px;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+
+    .cell.filled {
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+    }
+
+    .cell.hint-ghost {
+        background-color: rgba(99, 102, 241, 0.3) !important;
+        border: 2px dashed rgba(99, 102, 241, 0.6);
+        box-sizing: border-box;
+    }
+
+    /* Piece Spawning Area */
+    .dock {
+        margin-top: auto;
+        width: 100%;
+        height: 120px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding-bottom: 10px;
+    }
+
+    .piece-container {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+
+    /* The Draggable Blocks */
+    .block-shape {
+        display: grid;
+        gap: 2px;
+        pointer-events: auto; /* Allow touch */
+        touch-action: none;
+        cursor: grab;
+        transition: transform 0.1s;
+    }
+    
+    .block-shape:active {
+        cursor: grabbing;
+        transform: scale(1.1);
+    }
+
+    .b-cell {
+        width: 18px; /* Preview size */
+        height: 18px;
+        border-radius: 4px;
+        box-shadow: inset 0 -2px 0 rgba(0,0,0,0.15);
+    }
+
+    /* Colors */
+    .color-1 .b-cell, .cell.c1 { background: #ef4444; } /* Red */
+    .color-2 .b-cell, .cell.c2 { background: #f59e0b; } /* Orange */
+    .color-3 .b-cell, .cell.c3 { background: #10b981; } /* Green */
+    .color-4 .b-cell, .cell.c4 { background: #3b82f6; } /* Blue */
+    .color-5 .b-cell, .cell.c5 { background: #8b5cf6; } /* Purple */
+
+    /* Dragging Proxy */
+    .dragging-proxy {
+        position: fixed;
+        z-index: 1000;
+        pointer-events: none;
+        opacity: 0.9;
+        transform-origin: center center;
+    }
+    
+    .dragging-proxy .b-cell {
+        width: var(--cell-size); /* Full size when dragging */
+        height: var(--cell-size);
+        gap: var(--grid-gap);
+        margin: 0; 
+        /* Adjust for gap in grid layout inside proxy */
+        margin-right: var(--grid-gap); 
+        margin-bottom: var(--grid-gap);
+        display: inline-block;
+        vertical-align: top;
+    }
+
+    /* Buttons */
+    .controls {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .btn {
+        background: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        color: var(--primary);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: transform 0.1s, box-shadow 0.1s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn:active {
+        transform: scale(0.95);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-help {
+        background: #ec4899;
+        color: white;
+    }
+
+    /* Overlay for Game Over */
+    .modal-overlay {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(5px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    .modal-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .modal-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+        color: var(--text);
+    }
+    
+    .modal-score {
+        font-size: 1.2rem;
+        margin-bottom: 20px;
+        color: #4b5563;
+    }
+
+    /* Responsive adjustments */
+    body.mobile-mode .grid {
+        /* Mobile optimization if class present */
+    }
+
+    @media (max-width: 380px) {
+        :root {
+            --cell-size: 34px;
+        }
+        .piece-container { width: 60px; height: 60px; }
+    }
+    
+    /* Animation for clearing */
+    @keyframes pop {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.2); opacity: 0.8; }
+        100% { transform: scale(0); opacity: 0; }
+    }
+    .clearing {
+        animation: pop 0.3s forwards ease-out;
+    }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+    <div class="header">
+        <div class="score-box">
+            <div class="score-label">Pontszám</div>
+            <div class="score-value" id="score">0</div>
+        </div>
+        <div class="score-box">
+            <div class="score-label">Rekord</div>
+            <div class="score-value" id="best-score">0</div>
+        </div>
+    </div>
+
+    <div class="board-wrapper">
+        <div class="grid" id="grid">
+            <!-- Cells generated by JS -->
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-help" id="hint-btn">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+            Segítség
+        </button>
+        <button class="btn" id="restart-btn-small">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            Újra
+        </button>
+    </div>
+
+    <div class="dock" id="dock">
+        <div class="piece-container" id="slot-0"></div>
+        <div class="piece-container" id="slot-1"></div>
+        <div class="piece-container" id="slot-2"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="game-over-modal">
+    <div class="modal-title">Vége a játéknak!</div>
+    <div class="modal-score">Végső pontszám: <span id="final-score">0</span></div>
+    <button class="btn btn-primary" id="restart-btn-modal">Új Játék</button>
+</div>
+
+<script>
+/**
+ * Block Blast Logic
+ */
+
+// --- Audio System ---
+const AudioSys = {
+    ctx: null,
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    },
+    playTone(freq, type, duration, vol = 0.1) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    },
+    playPickup() { this.playTone(400, 'sine', 0.1); },
+    playDrop() { this.playTone(300, 'triangle', 0.15, 0.2); },
+    playClear() { 
+        this.playTone(600, 'sine', 0.1, 0.1); 
+        setTimeout(() => this.playTone(800, 'sine', 0.2, 0.1), 100);
+    },
+    playError() { this.playTone(150, 'sawtooth', 0.2, 0.1); },
+    playGameOver() {
+        this.playTone(300, 'sawtooth', 0.3);
+        setTimeout(() => this.playTone(250, 'sawtooth', 0.3), 300);
+        setTimeout(() => this.playTone(200, 'sawtooth', 0.6), 600);
+    }
+};
+
+// --- Game Constants & State ---
+const GRID_SIZE = 8;
+const BOARD = document.getElementById('grid');
+const SCORE_EL = document.getElementById('score');
+const BEST_EL = document.getElementById('best-score');
+const DOCK_SLOTS = [
+    document.getElementById('slot-0'),
+    document.getElementById('slot-1'),
+    document.getElementById('slot-2')
+];
+
+let gridData = Array(GRID_SIZE * GRID_SIZE).fill(0); // 0 = empty, 1-5 = color ID
+let score = 0;
+let bestScore = localStorage.getItem('blockBlastBest') || 0;
+let piecesInDock = [null, null, null];
+let isDragging = false;
+
+// --- Shapes Definition ---
+// Format: Array of [row, col] relative to top-left (0,0)
+const SHAPES = [
+    { id: '1x1', coords: [[0,0]], color: 1 },
+    { id: '1x2', coords: [[0,0], [0,1]], color: 2 },
+    { id: '2x1', coords: [[0,0], [1,0]], color: 2 },
+    { id: '1x3', coords: [[0,0], [0,1], [0,2]], color: 3 },
+    { id: '3x1', coords: [[0,0], [1,0], [2,0]], color: 3 },
+    { id: '1x4', coords: [[0,0], [0,1], [0,2], [0,3]], color: 4 },
+    { id: '4x1', coords: [[0,0], [1,0], [2,0], [3,0]], color: 4 },
+    { id: '2x2', coords: [[0,0], [0,1], [1,0], [1,1]], color: 5 },
+    { id: 'L1', coords: [[0,0], [1,0], [2,0], [2,1]], color: 1 }, // L
+    { id: 'L2', coords: [[0,1], [1,1], [2,1], [2,0]], color: 1 }, // J
+    { id: 'L3', coords: [[0,0], [0,1], [0,2], [1,0]], color: 2 }, 
+    { id: 'L4', coords: [[0,0], [0,1], [0,2], [1,2]], color: 2 },
+    { id: 'T1', coords: [[0,0], [0,1], [0,2], [1,1]], color: 3 }, // T
+    { id: 'T2', coords: [[0,1], [1,0], [1,1], [1,2]], color: 3 },
+    { id: 'Z1', coords: [[0,0], [0,1], [1,1], [1,2]], color: 4 }, // Z
+    { id: 'Z2', coords: [[0,1], [0,2], [1,0], [1,1]], color: 4 }, // S
+    { id: '3x3', coords: [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2],[2,0],[2,1],[2,2]], color: 5 } // Big Box rare
+];
+
+// --- Initialization ---
+function init() {
+    renderGrid();
+    BEST_EL.textContent = bestScore;
+    resetGame();
+    
+    // Event Listeners for buttons
+    document.getElementById('restart-btn-small').addEventListener('click', resetGame);
+    document.getElementById('restart-btn-modal').addEventListener('click', () => {
+        document.getElementById('game-over-modal').classList.remove('active');
+        resetGame();
+    });
+    document.getElementById('hint-btn').addEventListener('click', showHint);
+
+    // Global Interaction
+    document.body.addEventListener('mousedown', () => AudioSys.init(), { once: true });
+    document.body.addEventListener('touchstart', () => AudioSys.init(), { once: true });
+}
+
+function resetGame() {
+    gridData.fill(0);
+    score = 0;
+    updateScore(0);
+    updateGridVisuals();
+    spawnPieces();
+    document.getElementById('game-over-modal').classList.remove('active');
+}
+
+function updateScore(points) {
+    score += points;
+    SCORE_EL.textContent = score;
+    if (score > bestScore) {
+        bestScore = score;
+        BEST_EL.textContent = bestScore;
+        localStorage.setItem('blockBlastBest', bestScore);
+    }
+}
+
+// --- Grid Management ---
+function renderGrid() {
+    BOARD.innerHTML = '';
+    for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.dataset.index = i;
+        BOARD.appendChild(cell);
+    }
+}
+
+function updateGridVisuals() {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach((cell, i) => {
+        cell.className = 'cell'; // reset
+        if (gridData[i] !== 0) {
+            cell.classList.add('filled', `c${gridData[i]}`);
+        }
+    });
+}
+
+// --- Piece Logic ---
+function spawnPieces() {
+    piecesInDock = [getRandomShape(), getRandomShape(), getRandomShape()];
+    renderDock();
+    checkGameOver();
+}
+
+function getRandomShape() {
+    // Weighted random? Just uniform for now, maybe reduce 3x3 chance
+    const r = Math.random();
+    if (r > 0.98) return SHAPES.find(s => s.id === '3x3'); // 2% chance for big box
+    return SHAPES[Math.floor(Math.random() * (SHAPES.length - 1))]; // Exclude last if not lucky
+}
+
+function renderDock() {
+    DOCK_SLOTS.forEach((slot, i) => {
+        slot.innerHTML = '';
+        const shape = piecesInDock[i];
+        if (shape) {
+            const el = createPieceElement(shape, i);
+            slot.appendChild(el);
+        }
+    });
+}
+
+function createPieceElement(shape, slotIndex) {
+    const container = document.createElement('div');
+    container.className = `block-shape color-${shape.color}`;
+    
+    // Determine grid size of the shape to center it
+    let maxR = 0, maxC = 0;
+    shape.coords.forEach(([r, c]) => {
+        maxR = Math.max(maxR, r);
+        maxC = Math.max(maxC, c);
+    });
+    
+    container.style.gridTemplateRows = `repeat(${maxR + 1}, 1fr)`;
+    container.style.gridTemplateColumns = `repeat(${maxC + 1}, 1fr)`;
+
+    // Map coords to a grid area
+    // Simple approach: Create a grid of divs
+    // We need to fill blanks with empty divs or position absolutely?
+    // Grid approach:
+    const gridMap = Array(maxR + 1).fill(null).map(() => Array(maxC + 1).fill(false));
+    shape.coords.forEach(([r, c]) => gridMap[r][c] = true);
+
+    for (let r = 0; r <= maxR; r++) {
+        for (let c = 0; c <= maxC; c++) {
+            const cell = document.createElement('div');
+            if (gridMap[r][c]) {
+                cell.className = 'b-cell';
+            } else {
+                cell.style.visibility = 'hidden';
+            }
+            container.appendChild(cell);
+        }
+    }
+
+    // Attach Drag Events
+    setupDrag(container, shape, slotIndex);
+
+    return container;
+}
+
+// --- Drag & Drop Logic ---
+function setupDrag(element, shape, slotIndex) {
+    const startDrag = (e) => {
+        e.preventDefault();
+        if (isDragging) return;
+        isDragging = true;
+        AudioSys.playPickup();
+        
+        // Remove hints
+        clearHints();
+
+        // Get touch/mouse pos
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        // Create Proxy
+        const proxy = element.cloneNode(true);
+        proxy.classList.add('dragging-proxy');
+        
+        // Calculate offset to center under finger roughly
+        // But we want the "block" to be visible above finger usually in mobile
+        // In desktop, center is fine.
+        const rect = element.getBoundingClientRect();
+        const offsetX = clientX - rect.left;
+        const offsetY = clientY - rect.top;
+
+        document.body.appendChild(proxy);
+
+        // Move handler
+        const moveHandler = (ev) => {
+            const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+            const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+            
+            // On mobile, offset Y up so finger doesn't hide block
+            const visualY = cy - 80; 
+            
+            proxy.style.left = `${cx - (proxy.offsetWidth / 2)}px`;
+            proxy.style.top = `${visualY}px`;
+
+            // Hit testing for highlight
+            // We need to calculate where the "top-left" block of the shape is
+            // relative to the board grid.
+            highlightPreview(cx, visualY, shape);
+        };
+
+        // End handler
+        const endHandler = (ev) => {
+            document.removeEventListener('mousemove', moveHandler);
+            document.removeEventListener('mouseup', endHandler);
+            document.removeEventListener('touchmove', moveHandler);
+            document.removeEventListener('touchend', endHandler);
+            
+            const cx = ev.changedTouches ? ev.changedTouches[0].clientX : ev.clientX;
+            const cy = ev.changedTouches ? ev.changedTouches[0].clientY : ev.clientY;
+            
+            // Adjust to match visual offset
+            const visualY = cy - 80;
+
+            const dropped = tryDrop(cx, visualY, shape);
+            
+            proxy.remove();
+            isDragging = false;
+            
+            if (dropped) {
+                AudioSys.playDrop();
+                piecesInDock[slotIndex] = null;
+                renderDock();
+                checkLines();
+                
+                // Refill dock if empty
+                if (piecesInDock.every(p => p === null)) {
+                    setTimeout(() => {
+                        spawnPieces();
+                    }, 300);
+                } else {
+                    checkGameOver();
+                }
+            } else {
+                // Return animation? Just snap back
+                AudioSys.playError();
+            }
+            
+            // Clear highlights
+            updateGridVisuals();
+        };
+
+        // Initial Move
+        moveHandler(e);
+
+        document.addEventListener('mousemove', moveHandler, {passive: false});
+        document.addEventListener('mouseup', endHandler);
+        document.addEventListener('touchmove', moveHandler, {passive: false});
+        document.addEventListener('touchend', endHandler);
+    };
+
+    element.addEventListener('mousedown', startDrag);
+    element.addEventListener('touchstart', startDrag, {passive: false});
+}
+
+function getHoveredCellIndex(x, y) {
+    // Check if x,y is inside board
+    const boardRect = BOARD.getBoundingClientRect();
+    if (x < boardRect.left || x > boardRect.right || 
+        y < boardRect.top || y > boardRect.bottom) {
+        return -1;
+    }
+
+    // Determine cell index
+    const relativeX = x - boardRect.left;
+    const relativeY = y - boardRect.top;
+    
+    // CSS Vars
+    const style = getComputedStyle(document.documentElement);
+    // Rough calc based on board width and 8 cells
+    const cellTotalSize = boardRect.width / 8;
+    
+    const col = Math.floor(relativeX / cellTotalSize);
+    const row = Math.floor(relativeY / cellTotalSize);
+    
+    if (col < 0 || col >= 8 || row < 0 || row >= 8) return -1;
+    
+    return row * 8 + col;
+}
+
+function highlightPreview(x, y, shape) {
+    updateGridVisuals(); // clear previous
+    const rootIndex = getHoveredCellIndex(x, y);
+    if (rootIndex === -1) return;
+
+    const rootR = Math.floor(rootIndex / 8);
+    const rootC = rootIndex % 8;
+
+    // Check if valid placement
+    let isValid = true;
+    const targetIndices = [];
+
+    for (let [dr, dc] of shape.coords) {
+        const nr = rootR + dr;
+        const nc = rootC + dc;
+        if (nr >= 8 || nc >= 8) {
+            isValid = false; break;
+        }
+        const idx = nr * 8 + nc;
+        if (gridData[idx] !== 0) {
+            isValid = false; break;
+        }
+        targetIndices.push(idx);
+    }
+
+    if (isValid) {
+        targetIndices.forEach(idx => {
+            const cell = BOARD.children[idx];
+            if (cell) {
+                cell.style.backgroundColor = 'rgba(0,0,0,0.1)';
+                cell.style.boxShadow = 'inset 0 0 0 2px rgba(99, 102, 241, 0.5)';
+            }
+        });
+    }
+}
+
+function tryDrop(x, y, shape) {
+    const rootIndex = getHoveredCellIndex(x, y);
+    if (rootIndex === -1) return false;
+
+    const rootR = Math.floor(rootIndex / 8);
+    const rootC = rootIndex % 8;
+
+    // Check bounds and collisions
+    for (let [dr, dc] of shape.coords) {
+        const nr = rootR + dr;
+        const nc = rootC + dc;
+        if (nr >= 8 || nc >= 8) return false;
+        if (gridData[nr * 8 + nc] !== 0) return false;
+    }
+
+    // Place
+    let points = 0;
+    for (let [dr, dc] of shape.coords) {
+        const idx = (rootR + dr) * 8 + (rootC + dc);
+        gridData[idx] = shape.color;
+        points += 1;
+    }
+    updateScore(points);
+    updateGridVisuals();
+    return true;
+}
+
+// --- Logic: Line Clearing ---
+function checkLines() {
+    let rowsToClear = [];
+    let colsToClear = [];
+
+    // Check Rows
+    for (let r = 0; r < 8; r++) {
+        let full = true;
+        for (let c = 0; c < 8; c++) {
+            if (gridData[r * 8 + c] === 0) {
+                full = false; break;
+            }
+        }
+        if (full) rowsToClear.push(r);
+    }
+
+    // Check Cols
+    for (let c = 0; c < 8; c++) {
+        let full = true;
+        for (let r = 0; r < 8; r++) {
+            if (gridData[r * 8 + c] === 0) {
+                full = false; break;
+            }
+        }
+        if (full) colsToClear.push(c);
+    }
+
+    if (rowsToClear.length > 0 || colsToClear.length > 0) {
+        AudioSys.playClear();
+        
+        // Calculate combo score
+        const totalLines = rowsToClear.length + colsToClear.length;
+        const bonus = totalLines > 1 ? totalLines * 10 : 0;
+        updateScore((totalLines * 10) + bonus);
+
+        // Visual clear
+        const indicesToClear = new Set();
+        rowsToClear.forEach(r => {
+            for (let c = 0; c < 8; c++) indicesToClear.add(r * 8 + c);
+        });
+        colsToClear.forEach(c => {
+            for (let r = 0; r < 8; r++) indicesToClear.add(r * 8 + c);
+        });
+
+        indicesToClear.forEach(idx => {
+            const cell = BOARD.children[idx];
+            if (cell) cell.classList.add('clearing');
+        });
+
+        setTimeout(() => {
+            indicesToClear.forEach(idx => gridData[idx] = 0);
+            updateGridVisuals();
+        }, 300);
+    }
+}
+
+// --- Hint System & Game Over ---
+function checkGameOver() {
+    // Check if ANY piece in dock can fit ANYWHERE
+    let canMove = false;
+    
+    // Filter out nulls
+    const availableShapes = piecesInDock.filter(p => p !== null);
+    if (availableShapes.length === 0) return; // Should not happen if refilled
+
+    for (let shape of availableShapes) {
+        if (findBestMove(shape)) {
+            canMove = true;
+            break;
+        }
+    }
+
+    if (!canMove) {
+        setTimeout(() => {
+            AudioSys.playGameOver();
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('game-over-modal').classList.add('active');
+        }, 500);
+    }
+}
+
+function findBestMove(shape) {
+    // Returns {r, c, score} or null if no fit
+    // Score heuristic: Lines cleared > space filled
+    
+    let bestMove = null;
+    let maxScore = -1;
+
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            // Check fit
+            let fits = true;
+            for (let [dr, dc] of shape.coords) {
+                const nr = r + dr;
+                const nc = c + dc;
+                if (nr >= 8 || nc >= 8 || gridData[nr * 8 + nc] !== 0) {
+                    fits = false; break;
+                }
+            }
+
+            if (fits) {
+                // Simulate placement to calculate score
+                // This is a "shallow" check (doesn't check future moves), good enough for hint
+                // Actually, just returning any valid move is okay, but let's prioritize clearing lines
+                let moveScore = 0;
+                
+                // Temp fill
+                const tempGrid = [...gridData];
+                for (let [dr, dc] of shape.coords) {
+                    tempGrid[(r+dr)*8 + (c+dc)] = 1;
+                }
+
+                // Count lines
+                // Rows
+                for (let i = 0; i < 8; i++) {
+                    let full = true;
+                    for (let j = 0; j < 8; j++) if(tempGrid[i*8+j]===0) full=false;
+                    if(full) moveScore += 10;
+                }
+                // Cols
+                for (let j = 0; j < 8; j++) {
+                    let full = true;
+                    for (let i = 0; i < 8; i++) if(tempGrid[i*8+j]===0) full=false;
+                    if(full) moveScore += 10;
+                }
+
+                if (moveScore > maxScore) {
+                    maxScore = moveScore;
+                    bestMove = {r, c};
+                } else if (bestMove === null) {
+                    // At least one valid move found
+                    bestMove = {r, c};
+                }
+            }
+        }
+    }
+    return bestMove;
+}
+
+function showHint() {
+    AudioSys.playPickup();
+    clearHints();
+    
+    // Find first available piece that fits
+    const availableShapes = piecesInDock.map((s, i) => ({s, i})).filter(x => x.s !== null);
+    
+    // Check all available shapes for the best possible move
+    let best = null;
+    let bestShapeIdx = -1;
+    let maxPoints = -1;
+
+    for (let item of availableShapes) {
+        const move = findBestMove(item.s);
+        if (move) {
+            // Since findBestMove doesn't return the exact score, we re-calc or just trust logic
+            // We'll prioritize the first one that clears lines, else just the first one that fits
+            if (!best) {
+                best = move;
+                bestShapeIdx = item.i;
+            }
+            // If we really wanted to optimize, we'd compare the scores from findBestMove here
+        }
+    }
+
+    if (best) {
+        const shape = piecesInDock[bestShapeIdx];
+        // Draw ghost on grid
+        shape.coords.forEach(([dr, dc]) => {
+            const idx = (best.r + dr) * 8 + (best.c + dc);
+            const cell = BOARD.children[idx];
+            if (cell) cell.classList.add('hint-ghost');
+        });
+        
+        // Highlight the piece in dock
+        DOCK_SLOTS[bestShapeIdx].querySelector('.block-shape').style.transform = "scale(1.1)";
+        setTimeout(() => {
+             DOCK_SLOTS[bestShapeIdx].querySelector('.block-shape').style.transform = "";
+        }, 500);
+    } else {
+        AudioSys.playError(); // No moves possible (should be game over anyway)
+    }
+}
+
+function clearHints() {
+    document.querySelectorAll('.hint-ghost').forEach(el => el.classList.remove('hint-ghost'));
+}
+
+// Check responsive mode
+if (document.body.classList.contains('mobile-mode') || window.innerWidth < 450) {
+    document.documentElement.style.setProperty('--cell-size', '36px');
+}
+
+init();
+
+</script>
+</body>
+</html>
