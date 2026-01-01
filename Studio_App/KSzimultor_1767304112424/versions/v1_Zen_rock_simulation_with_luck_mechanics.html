@@ -1,0 +1,579 @@
+<!--
+APP_NAME: Kő Szimulátor
+APP_DESCRIPTION: A legrealisztikusabb kő élmény. Várj a szélre. 1 az 1000-hez esély.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 520
+VERSION_SUMMARY: Zen rock simulation with luck mechanics
+STORE_ID: rock-sim-hu
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kő Szimulátor</title>
+    <style>
+        :root {
+            --bg-color: #eef2f5;
+            --text-color: #2d3436;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            --primary: #0984e3;
+            --rock-color: #636e72;
+            --cliff-color: #b2bec3;
+            --ocean-color: #74b9ff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Landscape / Scene */
+        .scene {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(to bottom, #dfe6e9 0%, #81ecec 100%);
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        /* Sun/Moon/Clouds could go here, but let's keep it zen */
+        .cloud {
+            position: absolute;
+            top: 20px;
+            left: -100px;
+            width: 60px;
+            height: 20px;
+            background: white;
+            border-radius: 20px;
+            opacity: 0.8;
+            filter: blur(4px);
+            animation: floatCloud 25s linear infinite;
+        }
+        .cloud:nth-child(2) { top: 50px; opacity: 0.5; animation-duration: 40s; animation-delay: -10s; transform: scale(0.7); }
+
+        @keyframes floatCloud {
+            0% { left: -100px; }
+            100% { left: 120%; }
+        }
+
+        /* The Cliff */
+        .cliff {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50%;
+            height: 40%;
+            background: var(--cliff-color);
+            border-top-right-radius: 20px;
+            box-shadow: inset -10px -10px 40px rgba(0,0,0,0.1);
+            z-index: 2;
+        }
+
+        /* The Ocean */
+        .ocean {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 60%;
+            height: 35%;
+            background: var(--ocean-color);
+            z-index: 1;
+            overflow: hidden;
+        }
+        .wave {
+            position: absolute;
+            top: -10px;
+            left: 0;
+            width: 200%;
+            height: 20px;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="%23ffffff" fill-opacity="0.3"/></svg>');
+            background-size: 50% 100%;
+            animation: waveFlow 4s linear infinite;
+        }
+        @keyframes waveFlow { 100% { transform: translateX(-50%); } }
+
+        /* THE ROCK */
+        .rock-container {
+            position: absolute;
+            bottom: 38%; /* Just above cliff */
+            left: 35%;
+            width: 60px;
+            height: 50px;
+            z-index: 3;
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .rock {
+            width: 100%;
+            height: 100%;
+            background: var(--rock-color);
+            border-radius: 62% 38% 30% 70% / 60% 40% 60% 40%;
+            box-shadow: -4px 4px 10px rgba(0,0,0,0.2), inset 4px -4px 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .rock::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 20%;
+            width: 20%;
+            height: 20%;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .face {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.6;
+        }
+        .eye {
+            width: 4px;
+            height: 4px;
+            background: #2d3436;
+            border-radius: 50%;
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(2deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(-2deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes fall {
+            0% { transform: translate(0, 0) rotate(0); }
+            20% { transform: translate(30px, -20px) rotate(45deg); }
+            100% { transform: translate(120px, 200px) rotate(180deg); }
+        }
+        
+        @keyframes splash {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .splash-effect {
+            position: absolute;
+            bottom: 10%;
+            right: 30%;
+            width: 40px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            z-index: 4;
+            display: none;
+        }
+        .splash-effect.active {
+            display: block;
+            animation: splash 0.6s ease-out forwards;
+        }
+
+        /* UI Panel */
+        .ui-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid var(--glass-border);
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            box-shadow: var(--shadow);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.5);
+            padding: 10px 15px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+            margin: 0 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #636e72;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-color);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .log-area {
+            height: 60px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #555;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            opacity: 0.7;
+        }
+        .log-entry.highlight {
+            color: #d63031;
+            font-weight: bold;
+            opacity: 1;
+        }
+        .log-entry.win {
+            color: #00b894;
+            font-weight: bold;
+            opacity: 1;
+        }
+
+        .status-header {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #b2bec3;
+            transition: background 0.3s;
+        }
+        .status-dot.active { background: #fdcb6e; box-shadow: 0 0 8px #fdcb6e; }
+        .status-dot.won { background: #00b894; box-shadow: 0 0 8px #00b894; }
+
+        .btn-reset {
+            background: var(--text-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .btn-reset.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .btn-reset:hover {
+            background: #000;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scene">
+        <div class="cloud"></div>
+        <div class="cloud"></div>
+        
+        <div class="cliff"></div>
+        
+        <div class="rock-container" id="rock">
+            <div class="rock">
+                <div class="face">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ocean">
+            <div class="wave"></div>
+        </div>
+
+        <div class="splash-effect" id="splash"></div>
+    </div>
+
+    <div class="ui-panel">
+        <div class="status-header">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="mainStatus">Állapot: Létezés</span>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-label">Eltelt Idő</div>
+                <div class="stat-value" id="timeDisplay">00:00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Esély / mp</div>
+                <div class="stat-value">0.1%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Próbálkozások</div>
+                <div class="stat-value" id="attemptsDisplay">0</div>
+            </div>
+        </div>
+
+        <div class="log-area" id="logArea">
+            <div class="log-entry">Kő inicializálása...</div>
+            <div class="log-entry">Várakozás a sorsra...</div>
+        </div>
+
+        <button class="btn-reset" id="resetBtn" onclick="resetGame()">Újra Kő Leszek</button>
+    </div>
+
+    <script>
+        // Game State
+        const STATE = {
+            playing: true,
+            attempts: 0,
+            seconds: 0,
+            winChance: 0.001, // 1 in 1000
+            interval: null,
+            timerInterval: null
+        };
+
+        // DOM Elements
+        const elRock = document.getElementById('rock');
+        const elLog = document.getElementById('logArea');
+        const elAttempts = document.getElementById('attemptsDisplay');
+        const elTime = document.getElementById('timeDisplay');
+        const elStatus = document.getElementById('mainStatus');
+        const elDot = document.getElementById('statusDot');
+        const elSplash = document.getElementById('splash');
+        const elReset = document.getElementById('resetBtn');
+
+        // Audio Context (Synthesized sounds)
+        let audioCtx;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playWindSound(intensity = 0.5) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createBufferSource();
+            const bufferSize = audioCtx.sampleRate * 0.5; // 0.5 sec burst
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            osc.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400 + (intensity * 400);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.05 * intensity, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+        }
+
+        function playWinSound() {
+            if (!audioCtx) return;
+            // Splash sound
+            const osc = audioCtx.createBufferSource();
+            const bufferSize = audioCtx.sampleRate * 1;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            
+            osc.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+            filter.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+
+            // Success chime
+            const osc2 = audioCtx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc2.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+            
+            const gain2 = audioCtx.createGain();
+            gain2.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+            
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start();
+        }
+
+        // Logging
+        function log(msg, type = '') {
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            div.textContent = `[${STATE.seconds}s] ${msg}`;
+            elLog.appendChild(div);
+            elLog.scrollTop = elLog.scrollHeight;
+            
+            // Limit log size
+            if (elLog.children.length > 5) {
+                elLog.removeChild(elLog.firstChild);
+            }
+        }
+
+        function formatTime(s) {
+            const mins = Math.floor(s / 60).toString().padStart(2, '0');
+            const secs = (s % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        // Game Loop
+        function gameTick() {
+            if (!STATE.playing) return;
+
+            STATE.attempts++;
+            elAttempts.textContent = STATE.attempts;
+
+            // Visual feedback of "wind check"
+            elDot.classList.add('active');
+            setTimeout(() => elDot.classList.remove('active'), 200);
+
+            // Logic: 1 in 1000
+            const roll = Math.random();
+            const isWin = roll < STATE.winChance;
+            
+            // Random tiny shake for ambiance
+            if (Math.random() < 0.1) {
+                elRock.style.animation = 'shake 0.5s ease';
+                playWindSound(0.3);
+                log("Enyhe szellő...", 'normal');
+                setTimeout(() => elRock.style.animation = '', 500);
+            } else if (Math.random() < 0.05) {
+                log("Nincs szél.", 'normal');
+            }
+
+            if (isWin) {
+                winGame();
+            }
+        }
+
+        function winGame() {
+            STATE.playing = false;
+            clearInterval(STATE.interval);
+            clearInterval(STATE.timerInterval);
+
+            log("BEFÚJT A SZÉL!", 'win');
+            elStatus.textContent = "Állapot: VIZES KŐ";
+            elStatus.style.color = "#00b894";
+            elDot.classList.add('won');
+
+            // Animation
+            elRock.style.animation = 'fall 1.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards';
+            
+            playWinSound();
+
+            setTimeout(() => {
+                elSplash.classList.add('active');
+                log("Csobbanás!", 'win');
+            }, 1200);
+
+            setTimeout(() => {
+                elReset.classList.add('visible');
+            }, 2000);
+        }
+
+        function resetGame() {
+            STATE.playing = true;
+            STATE.attempts = 0;
+            STATE.seconds = 0;
+            
+            // Reset UI
+            elRock.style.animation = '';
+            elRock.style.transform = ''; // Clear forwards state
+            elSplash.classList.remove('active');
+            elReset.classList.remove('visible');
+            elStatus.textContent = "Állapot: Létezés";
+            elStatus.style.color = "var(--text-color)";
+            elDot.classList.remove('won');
+            
+            elAttempts.textContent = '0';
+            elTime.textContent = '00:00';
+            elLog.innerHTML = '';
+            log("Újrakezdés. Sok sikert.");
+
+            startLoops();
+        }
+
+        function startLoops() {
+            // Logic loop
+            STATE.interval = setInterval(gameTick, 1000);
+            
+            // Timer loop
+            STATE.timerInterval = setInterval(() => {
+                STATE.seconds++;
+                elTime.textContent = formatTime(STATE.seconds);
+            }, 1000);
+        }
+
+        // Initialize interaction for Audio Context
+        document.body.addEventListener('click', initAudio, { once: true });
+        
+        // Start
+        startLoops();
+
+    </script>
+</body>
+</html>
