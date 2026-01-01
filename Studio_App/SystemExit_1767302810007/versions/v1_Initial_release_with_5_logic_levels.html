@@ -1,0 +1,935 @@
+<!--
+APP_NAME: System Exit
+APP_DESCRIPTION: A reverse puzzle platformer where the goal is to eliminate your character.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 550
+VERSION_SUMMARY: Initial release with 5 logic levels.
+STORE_ID: system-exit-game
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Exit</title>
+    <style>
+        :root {
+            --bg-color: #eef2f5;
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --accent: #ff4757; /* Death color */
+            --safe: #2ed573;   /* Player color */
+            --text: #2f3542;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: transparent;
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Mobile Mode Adjustments */
+        body.mobile-mode {
+            background-color: #fff;
+        }
+
+        #app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            box-sizing: border-box;
+            background: var(--bg-color);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.5px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            font-size: 10px;
+            background: var(--accent);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .level-indicator {
+            font-size: 12px;
+            font-weight: 600;
+            color: #747d8c;
+        }
+
+        #game-canvas-container {
+            position: relative;
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #dfe4ea;
+        }
+
+        canvas {
+            background: #ffffff;
+            /* Pixel art crispness */
+            image-rendering: pixelated; 
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        #ui-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .title-text {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--text);
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+
+        .subtitle-text {
+            font-size: 14px;
+            color: #57606f;
+            margin-bottom: 24px;
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.4;
+        }
+
+        button.primary-btn {
+            background: var(--text);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        button.primary-btn:active {
+            transform: scale(0.96);
+        }
+
+        button.primary-btn:hover {
+            background: #000;
+        }
+
+        /* Controls */
+        #controls-area {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            height: 80px;
+        }
+
+        .control-btn {
+            background: var(--glass-bg);
+            border: 1px solid #ced6e0;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            color: var(--text);
+            cursor: pointer;
+            transition: background 0.1s, transform 0.1s;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .control-btn:active {
+            background: #dfe4ea;
+            transform: translateY(2px);
+        }
+
+        /* Hide desktop controls hint on mobile */
+        .desktop-hint {
+            position: absolute;
+            bottom: 12px;
+            font-size: 11px;
+            color: #a4b0be;
+            text-align: center;
+            width: 100%;
+        }
+
+        body.mobile-mode .desktop-hint {
+            display: none;
+        }
+
+        body:not(.mobile-mode) #controls-area {
+            display: none; /* Hide touch controls on desktop */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <header>
+            <h1>
+                <span style="color:var(--accent);">⚠</span> System Exit
+            </h1>
+            <div class="level-indicator" id="level-display">Level 1</div>
+        </header>
+
+        <div id="game-canvas-container">
+            <canvas id="gameCanvas" width="320" height="320"></canvas>
+            
+            <div id="ui-overlay">
+                <div class="title-text">SYSTEM EXIT</div>
+                <div class="subtitle-text" id="overlay-msg">Objective: Terminate the Subject.<br>Safety Protocols: DISABLED.</div>
+                <button class="primary-btn" id="start-btn">INITIATE SEQUENCE</button>
+            </div>
+            
+            <div class="desktop-hint">Arrow Keys to Move/Jump • R to Restart</div>
+        </div>
+
+        <div id="controls-area">
+            <div class="control-btn" id="btn-left">←</div>
+            <div class="control-btn" id="btn-jump">↑</div>
+            <div class="control-btn" id="btn-right">→</div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * AUDIO SYSTEM
+         * Synthesized sound effects using Web Audio API
+         */
+        class AudioSys {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.vol = 0.3;
+            }
+
+            playTone(freq, type, duration, slideTo = null) {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                if (slideTo) {
+                    osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+                }
+
+                gain.gain.setValueAtTime(this.vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playNoise(duration) {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const bufferSize = this.ctx.sampleRate * duration;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(this.vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                
+                noise.connect(gain);
+                gain.connect(this.ctx.destination);
+                noise.start();
+            }
+
+            jump() { this.playTone(200, 'square', 0.1, 400); }
+            land() { this.playTone(100, 'sine', 0.05); }
+            push() { this.playTone(80, 'sawtooth', 0.1); }
+            win() { 
+                // A happy "death" sound
+                this.playTone(800, 'sine', 0.1);
+                setTimeout(() => this.playNoise(0.2), 100);
+            }
+            start() {
+                this.playTone(440, 'sine', 0.1);
+                setTimeout(() => this.playTone(660, 'sine', 0.1), 100);
+            }
+        }
+
+        const audio = new AudioSys();
+
+        /**
+         * GAME ENGINE
+         */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const uiOverlay = document.getElementById('ui-overlay');
+        const overlayMsg = document.getElementById('overlay-msg');
+        const startBtn = document.getElementById('start-btn');
+        const levelDisplay = document.getElementById('level-display');
+
+        // Check for mobile mode
+        if (document.body.classList.contains('mobile-mode')) {
+            // Adjustments if needed
+        }
+
+        // Game Constants
+        const GRAVITY = 0.5;
+        const TERMINAL_VELOCITY = 8;
+        const FRICTION = 0.8;
+        const MOVE_SPEED = 0.5;
+        const JUMP_FORCE = -7.5;
+        
+        // Game State
+        let gameState = 'MENU'; // MENU, PLAYING, LEVEL_TRANSITION, END
+        let currentLevel = 0;
+        let particles = [];
+        let shake = 0;
+
+        // Inputs
+        const keys = { left: false, right: false, up: false, restart: false };
+
+        class Entity {
+            constructor(x, y, w, h, type) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = h;
+                this.vx = 0;
+                this.vy = 0;
+                this.type = type; // player, wall, spike, crate, button, crusher
+                this.grounded = false;
+                this.color = '#000';
+                this.active = true; // For togglable walls
+                this.id = Math.random().toString(36).substr(2, 9);
+            }
+
+            draw() {
+                if (!this.active && this.type === 'wall_toggle') {
+                    ctx.globalAlpha = 0.2;
+                }
+                
+                ctx.fillStyle = this.color;
+
+                if (this.type === 'spike') {
+                    // Draw triangle spikes
+                    ctx.beginPath();
+                    const spikes = Math.floor(this.w / 10);
+                    const spikeW = this.w / spikes;
+                    for(let i=0; i<spikes; i++) {
+                        ctx.moveTo(this.x + i * spikeW, this.y + this.h);
+                        ctx.lineTo(this.x + i * spikeW + spikeW/2, this.y);
+                        ctx.lineTo(this.x + (i+1) * spikeW, this.y + this.h);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.type === 'player') {
+                    // Draw robot face
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                    ctx.fillStyle = '#fff';
+                    // Eyes
+                    const blink = Math.random() > 0.98;
+                    const h = blink ? 2 : 6;
+                    ctx.fillRect(this.x + 4, this.y + 6, 6, h);
+                    ctx.fillRect(this.x + 14, this.y + 6, 6, h);
+                } else if (this.type === 'button') {
+                    ctx.fillStyle = '#b2bec3';
+                    ctx.fillRect(this.x, this.y + this.h/2, this.w, this.h/2);
+                    ctx.fillStyle = this.active ? '#ff4757' : '#2ed573'; // Red active, Green pressed
+                    const btnH = this.active ? this.h/2 : this.h/4;
+                    const btnY = this.active ? this.y : this.y + this.h/4;
+                    ctx.fillRect(this.x + 4, btnY, this.w - 8, btnH);
+                } else {
+                    // Standard blocks/crates
+                    ctx.fillRect(this.x, this.y, this.w, this.h);
+                    
+                    if (this.type === 'crate') {
+                        // Crate detail
+                        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(this.x+2, this.y+2, this.w-4, this.h-4);
+                        ctx.beginPath();
+                        ctx.moveTo(this.x, this.y);
+                        ctx.lineTo(this.x+this.w, this.y+this.h);
+                        ctx.moveTo(this.x+this.w, this.y);
+                        ctx.lineTo(this.x, this.y+this.h);
+                        ctx.stroke();
+                    }
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            update() {
+                if (this.type === 'wall' || this.type === 'spike' || this.type === 'button' || (this.type === 'wall_toggle' && !this.active)) return;
+
+                // Physics
+                this.vy += GRAVITY;
+                this.vx *= FRICTION;
+
+                // Cap velocity
+                if (this.vy > TERMINAL_VELOCITY) this.vy = TERMINAL_VELOCITY;
+                if (Math.abs(this.vx) < 0.1) this.vx = 0;
+
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+        }
+
+        let entities = [];
+        let player = null;
+
+        /**
+         * LEVELS
+         */
+        const LEVELS = [
+            {
+                name: "The Spike",
+                setup: () => {
+                    entities = [];
+                    // Borders
+                    entities.push(new Entity(0, 300, 320, 20, 'wall')); // Floor
+                    entities.push(new Entity(-20, 0, 20, 320, 'wall')); // Left Wall
+                    entities.push(new Entity(320, 0, 20, 320, 'wall')); // Right Wall
+                    entities.push(new Entity(0, -20, 320, 20, 'wall')); // Ceiling
+
+                    // Level specific
+                    entities.push(new Entity(160, 200, 20, 100, 'wall')); // Divider
+                    
+                    let spike = new Entity(200, 280, 80, 20, 'spike');
+                    spike.color = '#ff4757';
+                    entities.push(spike);
+
+                    // Crate
+                    let crate = new Entity(80, 200, 32, 32, 'crate');
+                    crate.color = '#ffa502';
+                    entities.push(crate);
+
+                    // Player
+                    player = new Entity(40, 260, 24, 24, 'player');
+                    player.color = '#2ed573';
+                    entities.push(player);
+                }
+            },
+            {
+                name: "The Button",
+                setup: () => {
+                    entities = [];
+                    // Room
+                    entities.push(new Entity(0, 300, 320, 20, 'wall'));
+                    entities.push(new Entity(-20, 0, 20, 320, 'wall'));
+                    entities.push(new Entity(320, 0, 20, 320, 'wall'));
+                    entities.push(new Entity(0, -20, 320, 20, 'wall'));
+
+                    // Toggle Wall blocking spikes
+                    let toggleWall = new Entity(240, 200, 20, 100, 'wall_toggle');
+                    toggleWall.color = '#57606f';
+                    toggleWall.active = true;
+                    toggleWall.targetId = 'wall1';
+                    entities.push(toggleWall);
+
+                    // Spikes behind wall
+                    let spike = new Entity(270, 280, 40, 20, 'spike');
+                    spike.color = '#ff4757';
+                    entities.push(spike);
+
+                    // Platform for button
+                    entities.push(new Entity(50, 220, 80, 20, 'wall'));
+
+                    // Button
+                    let btn = new Entity(80, 204, 30, 16, 'button');
+                    btn.triggerId = 'wall1';
+                    btn.active = true; // unpressed
+                    entities.push(btn);
+
+                    // Player
+                    player = new Entity(20, 260, 24, 24, 'player');
+                    player.color = '#2ed573';
+                    entities.push(player);
+                }
+            },
+            {
+                name: "The Stack",
+                setup: () => {
+                    entities = [];
+                    entities.push(new Entity(0, 300, 320, 20, 'wall'));
+                    entities.push(new Entity(-20, 0, 20, 320, 'wall'));
+                    entities.push(new Entity(320, 0, 20, 320, 'wall'));
+
+                    // High spikes
+                    entities.push(new Entity(10, 100, 60, 20, 'spike'));
+                    let spikeBase = new Entity(10, 120, 60, 20, 'wall');
+                    spikeBase.color = '#57606f';
+                    entities.push(spikeBase);
+
+
+                    // Crates
+                    let c1 = new Entity(150, 200, 32, 32, 'crate');
+                    c1.color = '#ffa502';
+                    entities.push(c1);
+                    
+                    let c2 = new Entity(220, 200, 32, 32, 'crate');
+                    c2.color = '#ffa502';
+                    entities.push(c2);
+
+                    player = new Entity(280, 260, 24, 24, 'player');
+                    player.color = '#2ed573';
+                    entities.push(player);
+                }
+            },
+            {
+                name: "The Trap",
+                setup: () => {
+                    entities = [];
+                    entities.push(new Entity(0, 300, 320, 20, 'wall'));
+                    entities.push(new Entity(-20, 0, 20, 320, 'wall'));
+                    entities.push(new Entity(320, 0, 20, 320, 'wall'));
+
+                    // Pit in middle
+                    entities.push(new Entity(100, 300, 120, 20, 'spike')); // "Lava"
+                    
+                    // Bridge over pit (toggleable)
+                    let bridge = new Entity(100, 300, 120, 20, 'wall_toggle');
+                    bridge.color = '#a4b0be';
+                    bridge.active = true; 
+                    bridge.targetId = 'bridge';
+                    entities.push(bridge);
+
+                    // Button high up
+                    entities.push(new Entity(130, 150, 60, 20, 'wall'));
+                    let btn = new Entity(145, 134, 30, 16, 'button');
+                    btn.triggerId = 'bridge';
+                    btn.active = true;
+                    entities.push(btn);
+
+                    // Crate to reach button
+                    let c1 = new Entity(50, 200, 32, 32, 'crate');
+                    c1.color = '#ffa502';
+                    entities.push(c1);
+
+                    player = new Entity(20, 260, 24, 24, 'player');
+                    player.color = '#2ed573';
+                    entities.push(player);
+                }
+            },
+            {
+                name: "Crusher",
+                setup: () => {
+                    entities = [];
+                    entities.push(new Entity(0, 300, 320, 20, 'wall'));
+                    entities.push(new Entity(-20, 0, 20, 320, 'wall'));
+                    entities.push(new Entity(320, 0, 20, 320, 'wall'));
+                    entities.push(new Entity(0, -20, 320, 20, 'wall'));
+
+                    // Crusher block (heavy crate style)
+                    let crusher = new Entity(140, 50, 40, 80, 'crate'); // It's a physics object
+                    crusher.color = '#747d8c';
+                    entities.push(crusher);
+
+                    // Platform holding crusher
+                    let holder = new Entity(140, 130, 40, 20, 'wall_toggle');
+                    holder.color = '#a4b0be';
+                    holder.active = true;
+                    holder.targetId = 'hold';
+                    entities.push(holder);
+
+                    // Button
+                    let btn = new Entity(250, 284, 30, 16, 'button');
+                    btn.triggerId = 'hold';
+                    btn.active = true;
+                    entities.push(btn);
+
+                    player = new Entity(50, 260, 24, 24, 'player');
+                    player.color = '#2ed573';
+                    entities.push(player);
+                }
+            }
+        ];
+
+        /**
+         * PHYSICS & COLLISION
+         */
+        function checkCollision(a, b) {
+            return (a.x < b.x + b.w &&
+                    a.x + a.w > b.x &&
+                    a.y < b.y + b.h &&
+                    a.y + a.h > b.y);
+        }
+
+        function resolveCollision(entity, wall) {
+            // Very simple AABB resolution
+            // Calculate overlap
+            let dx = (entity.x + entity.w/2) - (wall.x + wall.w/2);
+            let dy = (entity.y + entity.h/2) - (wall.y + wall.h/2);
+            let width = (entity.w + wall.w) / 2;
+            let height = (entity.h + wall.h) / 2;
+            let crossWidth = width * dy;
+            let crossHeight = height * dx;
+
+            let collisionSide = null;
+
+            if (Math.abs(dx) <= width && Math.abs(dy) <= height) {
+                if (crossWidth > crossHeight) {
+                    if (crossWidth > -crossHeight) {
+                        // Bottom collision (entity hits top of wall)
+                        // Actually this logic is often finicky. Let's use previous position logic for robustness if we had it,
+                        // but for this simple app, we'll try simple projection.
+                        
+                        // Let's rely on checking overlaps:
+                        let overlapX = width - Math.abs(dx);
+                        let overlapY = height - Math.abs(dy);
+
+                        if (overlapX < overlapY) {
+                            // Horizontal collision
+                            if (dx > 0) {
+                                entity.x = wall.x + wall.w; // Right
+                                collisionSide = 'left'; // hit wall's right
+                            } else {
+                                entity.x = wall.x - entity.w; // Left
+                                collisionSide = 'right'; // hit wall's left
+                            }
+                            entity.vx = 0;
+                        } else {
+                            // Vertical collision
+                            if (dy > 0) {
+                                entity.y = wall.y + wall.h; // Bottom
+                                collisionSide = 'top'; 
+                                entity.vy = 0;
+                            } else {
+                                entity.y = wall.y - entity.h; // Top
+                                collisionSide = 'bottom';
+                                entity.vy = 0;
+                                entity.grounded = true;
+                            }
+                        }
+                    } else {
+                        // Left
+                        entity.x = wall.x - entity.w;
+                        entity.vx = 0;
+                        collisionSide = 'right';
+                    }
+                } else {
+                    if (crossWidth > -crossHeight) {
+                        // Right
+                        entity.x = wall.x + wall.w;
+                        entity.vx = 0;
+                        collisionSide = 'left';
+                    } else {
+                        // Top
+                        entity.y = wall.y - entity.h;
+                        entity.vy = 0;
+                        entity.grounded = true;
+                        collisionSide = 'bottom';
+                    }
+                }
+            }
+            return collisionSide;
+        }
+
+        function spawnParticles(x, y, color) {
+            for(let i=0; i<20; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        function gameLoop() {
+            if (gameState === 'PLAYING') {
+                update();
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // Apply shake
+            if (shake > 0) shake *= 0.9;
+            if (shake < 0.5) shake = 0;
+
+            // Player Inputs
+            if (keys.left) player.vx -= MOVE_SPEED;
+            if (keys.right) player.vx += MOVE_SPEED;
+            if (keys.up && player.grounded) {
+                player.vy = JUMP_FORCE;
+                player.grounded = false;
+                audio.jump();
+            }
+            if (keys.restart) {
+                loadLevel(currentLevel);
+                keys.restart = false;
+            }
+
+            // Cap Player Horizontal Speed
+            if (player.vx > 3) player.vx = 3;
+            if (player.vx < -3) player.vx = -3;
+
+            // Reset grounded for everyone
+            entities.forEach(e => {
+                if (e.type === 'player' || e.type === 'crate') e.grounded = false;
+            });
+
+            // Update Physics Entities (Player + Crates)
+            let physicsEntities = entities.filter(e => e.type === 'player' || e.type === 'crate');
+            
+            physicsEntities.forEach(entity => {
+                entity.update();
+                
+                // Screen boundaries
+                if (entity.x < 0) entity.x = 0;
+                if (entity.x + entity.w > canvas.width) entity.x = canvas.width - entity.w;
+                if (entity.y > canvas.height + 100) {
+                    // Fell out of world
+                    if (entity.type === 'player') loadLevel(currentLevel); // Reset
+                }
+
+                // Check collisions with static objects
+                entities.forEach(wall => {
+                    if (entity === wall) return;
+                    
+                    // Interaction logic
+                    if (wall.type === 'wall' || (wall.type === 'wall_toggle' && wall.active)) {
+                        resolveCollision(entity, wall);
+                    }
+                    else if (wall.type === 'crate' && entity !== wall) {
+                         // Crate on Crate or Player on Crate
+                         resolveCollision(entity, wall);
+                    }
+                    else if (wall.type === 'spike') {
+                        if (checkCollision(entity, wall)) {
+                            if (entity.type === 'player') {
+                                levelWin();
+                            }
+                        }
+                    }
+                    else if (wall.type === 'button') {
+                        if (checkCollision(entity, wall)) {
+                            if (wall.active) {
+                                wall.active = false;
+                                audio.push();
+                                // Trigger logic
+                                entities.forEach(t => {
+                                    if (t.targetId === wall.triggerId) {
+                                        t.active = !t.active;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Crate pushing logic
+            // If player collides with crate, push it
+            physicsEntities.forEach(crate => {
+                if (crate.type !== 'crate') return;
+                
+                if (checkCollision(player, crate)) {
+                    // Determine side
+                    let dx = (player.x + player.w/2) - (crate.x + crate.w/2);
+                    let dy = (player.y + player.h/2) - (crate.y + crate.h/2);
+                    let w = (player.w + crate.w)/2;
+                    let h = (player.h + crate.h)/2;
+                    
+                    let overlapX = w - Math.abs(dx);
+                    let overlapY = h - Math.abs(dy);
+
+                    if (overlapX < overlapY && overlapY > 2) {
+                        // Side collision
+                        if (dx < 0) { // Player is left of crate
+                            crate.vx = 2;
+                            player.x = crate.x - player.w;
+                        } else { // Player is right
+                            crate.vx = -2;
+                            player.x = crate.x + crate.w;
+                        }
+                    }
+                }
+            });
+
+            // Update particles
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.05;
+            });
+            particles = particles.filter(p => p.life > 0);
+        }
+
+        function draw() {
+            // Clear
+            ctx.fillStyle = '#f0f5f9';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Camera shake
+            ctx.save();
+            if (shake > 0) {
+                let dx = (Math.random() - 0.5) * shake;
+                let dy = (Math.random() - 0.5) * shake;
+                ctx.translate(dx, dy);
+            }
+
+            // Draw Entities
+            entities.forEach(e => {
+                // Draw toggle walls behind everything
+                if (e.type === 'wall_toggle' && !e.active) e.draw();
+            });
+            entities.forEach(e => {
+                if (!(e.type === 'wall_toggle' && !e.active)) e.draw();
+            });
+
+            // Draw Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+            });
+            ctx.globalAlpha = 1;
+
+            ctx.restore();
+        }
+
+        function levelWin() {
+            gameState = 'LEVEL_TRANSITION';
+            audio.win();
+            spawnParticles(player.x, player.y, '#ff4757');
+            shake = 20;
+            player.x = -1000; // hide player
+
+            setTimeout(() => {
+                currentLevel++;
+                if (currentLevel >= LEVELS.length) {
+                    gameComplete();
+                } else {
+                    loadLevel(currentLevel);
+                }
+            }, 1500);
+        }
+
+        function loadLevel(idx) {
+            currentLevel = idx;
+            LEVELS[idx].setup();
+            levelDisplay.textContent = `Level ${idx + 1}/${LEVELS.length}: ${LEVELS[idx].name}`;
+            gameState = 'PLAYING';
+            shake = 0;
+            particles = [];
+            audio.start();
+        }
+
+        function gameComplete() {
+            gameState = 'END';
+            uiOverlay.classList.remove('hidden');
+            document.querySelector('.title-text').textContent = "SEQUENCE COMPLETE";
+            overlayMsg.innerHTML = "Subject successfully terminated.<br>All systems offline.";
+            startBtn.textContent = "REBOOT SYSTEM";
+            currentLevel = 0;
+        }
+
+        // Init
+        startBtn.addEventListener('click', () => {
+            uiOverlay.classList.add('hidden');
+            loadLevel(currentLevel);
+        });
+
+        // Controls
+        window.addEventListener('keydown', e => {
+            if (e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === 'ArrowRight') keys.right = true;
+            if (e.key === 'ArrowUp') keys.up = true;
+            if (e.key === 'r' || e.key === 'R') keys.restart = true;
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'ArrowRight') keys.right = false;
+            if (e.key === 'ArrowUp') keys.up = false;
+        });
+
+        // Touch Controls
+        const btnLeft = document.getElementById('btn-left');
+        const btnRight = document.getElementById('btn-right');
+        const btnJump = document.getElementById('btn-jump');
+
+        const addTouch = (elem, key) => {
+            elem.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+            elem.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+            elem.addEventListener('mousedown', (e) => { keys[key] = true; });
+            elem.addEventListener('mouseup', (e) => { keys[key] = false; });
+            elem.addEventListener('mouseleave', (e) => { keys[key] = false; });
+        };
+
+        addTouch(btnLeft, 'left');
+        addTouch(btnRight, 'right');
+        addTouch(btnJump, 'up');
+
+        // Initial render
+        ctx.fillStyle = '#f0f5f9';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        gameLoop();
+
+    </script>
+</body>
+</html>
