@@ -1,0 +1,757 @@
+<!--
+APP_NAME: Alien Krumpli Farm
+APP_DESCRIPTION: Gazdálkodj az űrben! Csapj oda az alvó űrlényeknek, hogy szedjék a krumplit.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Realisztikus ostor fizika és hangok.
+STORE_ID: alien-potato-farm
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien Krumpli Farm</title>
+    <style>
+        :root {
+            --primary: #4caf50;
+            --secondary: #8d6e63;
+            --accent: #ff9800;
+            --bg-color: #f0f4f8;
+            --glass: rgba(255, 255, 255, 0.85);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+            font-family: var(--font-main);
+            overflow: hidden;
+            user-select: none;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>') 12 12, auto;
+        }
+
+        /* UI Overlays */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-radius: 0 0 16px 16px;
+            pointer-events: auto;
+            margin: 0 10px;
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #555;
+            font-weight: 700;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #333;
+        }
+
+        /* Game Screens */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 32px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            max-width: 80%;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8) translateY(20px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        h1 { margin: 0 0 8px 0; color: #333; }
+        p { color: #666; margin-bottom: 24px; line-height: 1.5; }
+
+        button {
+            background: #222;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        button:hover { transform: translateY(-2px); background: #333; }
+        button:active { transform: translateY(1px); }
+
+        /* Game Field */
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Whip Effect Canvas */
+        #whip-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* Alien CSS (for reference, mostly drawn in canvas now for performance/interaction, 
+           but we'll keep pure CSS for the "Quota" icon) */
+        .potato-icon {
+            width: 20px;
+            height: 24px;
+            background: #d4a373;
+            border-radius: 40% 60% 50% 50% / 50% 50% 60% 40%;
+            position: relative;
+        }
+        .potato-icon::before {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 50%;
+            top: 5px; left: 5px;
+        }
+
+        /* Mobile specific adjustments */
+        .mobile-mode .hud {
+            padding: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas Layers -->
+    <canvas id="game-canvas"></canvas>
+    <canvas id="whip-canvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div class="ui-layer">
+        <div class="hud">
+            <div class="stat-box">
+                <span class="stat-label">Krumpli</span>
+                <span class="stat-value" id="score">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Lusták</span>
+                <span class="stat-value" id="lazy-count" style="color: #e53935">0/5</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Idő</span>
+                <span class="stat-value" id="timer">60</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen active">
+        <div class="card">
+            <div style="font-size: 40px; margin-bottom: 10px;">👽🥔</div>
+            <h1>Alien Farm</h1>
+            <p>Az űrlények lusták. Ha elalszanak (Zzz), csapj oda nekik az ostorral!<br><br>Gyűjts minél több krumplit, mielőtt lejár az idő.</p>
+            <button id="start-btn">Munka Indítása</button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="end-screen" class="screen">
+        <div class="card">
+            <div style="font-size: 40px; margin-bottom: 10px;">🏆</div>
+            <h1>Játék Vége</h1>
+            <p>A betakarítás befejeződött.<br>Összeszedtél: <strong id="final-score">0</strong> krumplit.</p>
+            <button id="restart-btn">Újra</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * AUDIO SYSTEM (Web Audio API)
+         * Synthesized sounds for self-containment
+         */
+        const AudioSys = {
+            ctx: null,
+            init: function() {
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+            },
+            playWhip: function() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                
+                // Noise buffer for the crack
+                const bufferSize = this.ctx.sampleRate * 0.1; // 0.1s noise
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                
+                const noiseFilter = this.ctx.createBiquadFilter();
+                noiseFilter.type = 'highpass';
+                noiseFilter.frequency.value = 1000;
+                
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(1, t);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+                
+                noise.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(this.ctx.destination);
+                noise.start(t);
+                
+                // Whoosh sound (low frequency sweep)
+                const osc = this.ctx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, t);
+                osc.frequency.exponentialRampToValueAtTime(50, t + 0.15);
+                
+                const oscGain = this.ctx.createGain();
+                oscGain.gain.setValueAtTime(0.3, t);
+                oscGain.gain.linearRampToValueAtTime(0, t + 0.15);
+                
+                osc.connect(oscGain);
+                oscGain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.2);
+            },
+            playSqueak: function() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, t);
+                osc.frequency.linearRampToValueAtTime(800, t + 0.1);
+                
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.linearRampToValueAtTime(0, t + 0.1);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.1);
+            },
+            playPop: function() {
+                if (!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, t);
+                osc.frequency.exponentialRampToValueAtTime(1200, t + 0.05);
+                
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.06);
+            }
+        };
+
+        /**
+         * GAME LOGIC & RENDERING
+         */
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const whipCanvas = document.getElementById('whip-canvas');
+        const whipCtx = whipCanvas.getContext('2d');
+
+        let width, height;
+        let aliens = [];
+        let particles = [];
+        let score = 0;
+        let timeLeft = 60;
+        let gameLoopId;
+        let lastTime = 0;
+        let isGameRunning = false;
+        let lazyCount = 0;
+        const MAX_LAZY = 5;
+
+        // Whip Logic
+        let whipPoints = [];
+        let isWhipping = false;
+
+        function resize() {
+            width = canvas.width = whipCanvas.width = window.innerWidth;
+            height = canvas.height = whipCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Check for mobile mode
+        if (document.body.classList.contains('mobile-mode') || window.innerWidth < 450) {
+            document.body.classList.add('mobile-mode');
+        }
+
+        class Alien {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 50;
+                this.height = 60;
+                this.color = `hsl(${Math.random() * 360}, 60%, 50%)`;
+                this.state = 'working'; // working, sleeping, stunned
+                this.timer = 0;
+                this.workCycle = Math.random() * 100 + 50;
+                this.sleepChance = 0.005; // Chance per frame to fall asleep
+                this.animOffset = Math.random() * Math.PI * 2;
+                this.stunTimer = 0;
+                this.potatoProgress = 0;
+            }
+
+            update(dt) {
+                if (this.state === 'stunned') {
+                    this.stunTimer -= dt;
+                    if (this.stunTimer <= 0) {
+                        this.state = 'working';
+                    }
+                    return;
+                }
+
+                if (this.state === 'working') {
+                    this.potatoProgress += dt * 2; // Speed of work
+                    
+                    // Harvest logic
+                    if (this.potatoProgress >= 100) {
+                        this.potatoProgress = 0;
+                        score++;
+                        AudioSys.playPop();
+                        // Create visual potato flying
+                        createParticles(this.x, this.y - 30, 1, '#d4a373');
+                        updateHUD();
+                    }
+
+                    // Chance to sleep
+                    if (Math.random() < this.sleepChance) {
+                        this.state = 'sleeping';
+                        lazyCount++;
+                        updateHUD();
+                    }
+                }
+            }
+
+            draw(ctx, time) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Bobbing animation
+                let bob = 0;
+                if (this.state === 'working') {
+                    bob = Math.sin(time * 0.005 + this.animOffset) * 5;
+                }
+                ctx.translate(0, bob);
+
+                // Shake if stunned
+                if (this.state === 'stunned') {
+                    ctx.translate(Math.random() * 4 - 2, Math.random() * 4 - 2);
+                }
+
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(0, 30, 20, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Body
+                ctx.fillStyle = this.color;
+                // Rounded rectangle body
+                ctx.beginPath();
+                ctx.roundRect(-20, -30, 40, 60, 15);
+                ctx.fill();
+
+                // Eyes
+                ctx.fillStyle = 'white';
+                if (this.state === 'sleeping') {
+                    // Closed eyes
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#333';
+                    ctx.beginPath();
+                    ctx.moveTo(-12, -10); ctx.lineTo(-4, -10);
+                    ctx.moveTo(4, -10); ctx.lineTo(12, -10);
+                    ctx.stroke();
+                    
+                    // Zzz
+                    ctx.fillStyle = '#333';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.fillText('Zzz', 15, -40 + Math.sin(time * 0.002) * 5);
+                } else {
+                    // Open eyes
+                    ctx.beginPath();
+                    ctx.arc(-8, -10, 6, 0, Math.PI*2);
+                    ctx.arc(8, -10, 6, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // Pupils
+                    ctx.fillStyle = 'black';
+                    const pupilOffset = Math.sin(time * 0.003) * 2;
+                    ctx.beginPath();
+                    ctx.arc(-8 + pupilOffset, -10, 2, 0, Math.PI*2);
+                    ctx.arc(8 + pupilOffset, -10, 2, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                // Antenna
+                ctx.beginPath();
+                ctx.moveTo(0, -30);
+                ctx.lineTo(0, -45);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.fillStyle = 'red';
+                ctx.beginPath();
+                ctx.arc(0, -45, 4, 0, Math.PI*2);
+                ctx.fill();
+
+                // Progress Bar (if working)
+                if (this.state === 'working') {
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.fillRect(-20, 35, 40, 6);
+                    ctx.fillStyle = '#8bc34a';
+                    ctx.fillRect(-20, 35, 40 * (this.potatoProgress / 100), 6);
+                }
+
+                ctx.restore();
+            }
+
+            checkHit(x, y) {
+                const dist = Math.hypot(x - this.x, y - this.y);
+                if (dist < 40) {
+                    if (this.state === 'sleeping') {
+                        this.wakeUp();
+                        return true;
+                    } else if (this.state === 'working') {
+                        // Cruel to whip working aliens, but possible
+                        this.state = 'stunned';
+                        this.stunTimer = 1500; // 1.5s stun
+                        AudioSys.playSqueak();
+                        createParticles(this.x, this.y, 5, this.color);
+                    }
+                }
+                return false;
+            }
+
+            wakeUp() {
+                this.state = 'stunned';
+                this.stunTimer = 500; // Short stun then work
+                lazyCount = Math.max(0, lazyCount - 1);
+                AudioSys.playSqueak();
+                createParticles(this.x, this.y, 8, '#ffffff'); // Stars/dust
+                updateHUD();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8;
+                this.life = 1;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.05;
+                this.vy += 0.2; // Gravity
+            }
+            draw(ctx) {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function createParticles(x, y, count, color) {
+            for(let i=0; i<count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function initGame() {
+            aliens = [];
+            particles = [];
+            score = 0;
+            lazyCount = 0;
+            timeLeft = 60;
+            
+            // Create Grid of Aliens
+            const cols = 3;
+            const rows = 4;
+            const spacingX = width / cols;
+            const spacingY = (height - 150) / rows;
+            const startY = 150;
+
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    // Add some jitter to position
+                    const jitterX = (Math.random() - 0.5) * 20;
+                    const jitterY = (Math.random() - 0.5) * 20;
+                    aliens.push(new Alien(
+                        (c * spacingX) + spacingX/2 + jitterX,
+                        (r * spacingY) + startY + jitterY
+                    ));
+                }
+            }
+            
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('lazy-count').innerText = `${lazyCount}/${MAX_LAZY}`;
+            document.getElementById('timer').innerText = Math.ceil(timeLeft);
+
+            if (lazyCount >= MAX_LAZY) {
+                endGame();
+            }
+        }
+
+        function drawBackground() {
+            // Draw farm field
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, '#7cb342'); // Grass top
+            gradient.addColorStop(1, '#558b2f'); // Grass bottom
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            // Furrows
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 20;
+            for(let y = 100; y < height; y += 60) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawWhip() {
+            whipCtx.clearRect(0, 0, width, height);
+            if (whipPoints.length < 2) return;
+
+            whipCtx.beginPath();
+            whipCtx.moveTo(whipPoints[0].x, whipPoints[0].y);
+            
+            // Bezier curve through points for smooth whip look
+            for (let i = 1; i < whipPoints.length - 1; i++) {
+                const xc = (whipPoints[i].x + whipPoints[i + 1].x) / 2;
+                const yc = (whipPoints[i].y + whipPoints[i + 1].y) / 2;
+                whipCtx.quadraticCurveTo(whipPoints[i].x, whipPoints[i].y, xc, yc);
+            }
+            // Connect last point
+            if(whipPoints.length > 2) {
+                whipCtx.lineTo(whipPoints[whipPoints.length-1].x, whipPoints[whipPoints.length-1].y);
+            }
+
+            // Whip Style
+            whipCtx.lineCap = 'round';
+            whipCtx.lineJoin = 'round';
+            whipCtx.lineWidth = 4;
+            whipCtx.strokeStyle = '#3e2723'; // Leather brown
+            whipCtx.stroke();
+
+            // Inner highlight
+            whipCtx.lineWidth = 2;
+            whipCtx.strokeStyle = '#6d4c41';
+            whipCtx.stroke();
+            
+            // Fade points
+            if (!isWhipping) {
+                whipPoints.shift();
+                whipPoints.shift(); // Remove faster to fade out
+            }
+        }
+
+        function loop(timestamp) {
+            if (!isGameRunning) return;
+
+            const dt = timestamp - lastTime;
+            lastTime = timestamp;
+
+            // Timer
+            timeLeft -= dt / 1000;
+            if (timeLeft <= 0) {
+                endGame();
+                return;
+            }
+            if (Math.floor(timeLeft) !== Math.floor(timeLeft + dt/1000)) {
+                updateHUD();
+            }
+
+            // Clear
+            ctx.clearRect(0, 0, width, height);
+            
+            drawBackground();
+
+            // Update & Draw Aliens
+            // Sort by Y for depth
+            aliens.sort((a, b) => a.y - b.y);
+            
+            aliens.forEach(alien => {
+                alien.update(dt);
+                alien.draw(ctx, timestamp);
+            });
+
+            // Particles
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw(ctx);
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+
+            // Whip Visuals
+            drawWhip();
+
+            gameLoopId = requestAnimationFrame(loop);
+        }
+
+        function startGame() {
+            AudioSys.init();
+            document.getElementById('start-screen').classList.remove('active');
+            document.getElementById('end-screen').classList.remove('active');
+            isGameRunning = true;
+            lastTime = performance.now();
+            initGame();
+            gameLoopId = requestAnimationFrame(loop);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            cancelAnimationFrame(gameLoopId);
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('end-screen').classList.add('active');
+        }
+
+        // Input Handling
+        const handleInputStart = (e) => {
+            if (!isGameRunning) return;
+            const x = e.clientX || e.touches[0].clientX;
+            const y = e.clientY || e.touches[0].clientY;
+            
+            isWhipping = true;
+            whipPoints = [{x, y}];
+            
+            // Sound
+            AudioSys.playWhip();
+            
+            // Check Hits immediate
+            let hit = false;
+            // Iterate backwards to hit top aliens first
+            for (let i = aliens.length - 1; i >= 0; i--) {
+                if (aliens[i].checkHit(x, y)) {
+                    hit = true;
+                    break; // Only hit one at a time
+                }
+            }
+            
+            if (!hit) {
+                // Dust effect on ground if missed
+                createParticles(x, y, 3, '#8d6e63');
+            }
+        };
+
+        const handleInputMove = (e) => {
+            if (!isGameRunning || !isWhipping) return;
+            const x = e.clientX || e.touches[0].clientX;
+            const y = e.clientY || e.touches[0].clientY;
+            
+            whipPoints.push({x, y});
+            if(whipPoints.length > 10) whipPoints.shift(); // Keep trail short
+        };
+
+        const handleInputEnd = () => {
+            isWhipping = false;
+        };
+
+        window.addEventListener('mousedown', handleInputStart);
+        window.addEventListener('mousemove', handleInputMove);
+        window.addEventListener('mouseup', handleInputEnd);
+
+        window.addEventListener('touchstart', handleInputStart, {passive: false});
+        window.addEventListener('touchmove', handleInputMove, {passive: false});
+        window.addEventListener('touchend', handleInputEnd);
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+
+    </script>
+</body>
+</html>
