@@ -1,2 +1,0 @@
-[01/01/2026, 22:29:39] v1:
-generálj egy tehén fejő szimulátort (nem clicker)
