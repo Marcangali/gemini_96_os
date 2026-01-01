@@ -1,0 +1,2 @@
+[01/01/2026, 22:48:33] v1:
+egy kő vagy, és nem tudsz semmit csinálni, de úgy nyersz ha szerencsés vagy, és 1 a 1000 eséllyel belök a szél a vízbe. minden másodpercben dönt a program hogy bele e fújja vagy nem, és addig megy a játék amíg nem lesz befújva a kő az oceánba
