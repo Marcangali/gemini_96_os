@@ -1,0 +1,712 @@
+<!--
+APP_NAME: Tehén Fejő Mester
+APP_DESCRIPTION: Realisztikus fejő szimulátor. Húzd a tőgyet, gyűjtsd a tejet, de vigyázz a tehénre!
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Initial release with physics-based teat stretching and fluid dynamics.
+STORE_ID: cow-milker-sim
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tehén Fejő Mester</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --cow-pattern: #333;
+            --udder-skin: #ffcccb;
+            --udder-dark: #e6b3b2;
+            --milk-color: #ffffff;
+            --accent: #007aff;
+            --danger: #ff3b30;
+            --success: #34c759;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+            color: #333;
+        }
+
+        /* UI Overlay */
+        .ui-header {
+            width: 100%;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Stress Meter */
+        .stress-container {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 4px;
+        }
+
+        .stress-label {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 600;
+            z-index: 2;
+            color: #444;
+        }
+
+        .stress-bar {
+            height: 16px;
+            width: 0%;
+            background: linear-gradient(90deg, #34c759, #ffcc00, #ff3b30);
+            border-radius: 8px;
+            transition: width 0.2s ease;
+        }
+
+        /* Game Area */
+        .game-container {
+            flex: 1;
+            width: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 40px;
+        }
+
+        /* Cow Body Graphics */
+        .cow-body {
+            position: absolute;
+            top: -100px;
+            width: 120%;
+            height: 250px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .cow-spot {
+            position: absolute;
+            background: #222;
+            border-radius: 50%;
+            filter: blur(2px);
+        }
+
+        /* Udder */
+        .udder-base {
+            width: 200px;
+            height: 120px;
+            background: radial-gradient(circle at 30% 30%, var(--udder-skin), var(--udder-dark));
+            border-bottom-left-radius: 100px;
+            border-bottom-right-radius: 100px;
+            position: relative;
+            z-index: 5;
+            box-shadow: inset 0 -10px 20px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: center;
+        }
+
+        .teats-container {
+            position: absolute;
+            bottom: -20px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            width: 100%;
+            perspective: 500px;
+        }
+
+        .teat {
+            width: 30px;
+            height: 50px;
+            background: linear-gradient(to bottom, var(--udder-skin), var(--udder-dark));
+            border-radius: 0 0 15px 15px;
+            cursor: grab;
+            position: relative;
+            transform-origin: top center;
+            transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .teat:active {
+            cursor: grabbing;
+            transition: none; /* Instant response for drag */
+        }
+
+        /* Milk Particles */
+        .milk-particle {
+            position: absolute;
+            width: 6px;
+            height: 12px;
+            background: var(--milk-color);
+            border-radius: 3px;
+            pointer-events: none;
+            z-index: 4;
+            opacity: 0.9;
+        }
+
+        /* Bucket */
+        .bucket-area {
+            position: absolute;
+            bottom: 20px;
+            width: 220px;
+            height: 160px;
+            z-index: 6;
+        }
+
+        .bucket {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #dbe4eb, #f0f4f8, #c4d0d9);
+            border-radius: 10px 10px 40px 40px;
+            border: 4px solid #aab7c4;
+            border-top: none;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+
+        .bucket::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 0;
+            right: 0;
+            height: 20px;
+            border: 4px solid #aab7c4;
+            border-radius: 50%;
+            box-sizing: border-box;
+            background: rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .milk-surface {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: var(--milk-color);
+            transition: height 0.3s ease-out;
+            box-shadow: inset 0 10px 10px rgba(0,0,0,0.05);
+        }
+
+        .milk-ripple {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            transform: scaleY(0.3);
+            opacity: 0;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .shaking {
+            animation: shake 0.5s;
+        }
+
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .game-over-overlay.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .btn {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+            transition: transform 0.1s;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Instructions Toast */
+        .toast {
+            position: absolute;
+            bottom: 200px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ui-header">
+        <div class="stat-box">
+            <span class="stat-label">Idő (Time)</span>
+            <span class="stat-value" id="timer">60</span>
+        </div>
+        <div style="font-weight: 700; color: #333;">Tehén Fejő</div>
+        <div class="stat-box">
+            <span class="stat-label">Tej (Liters)</span>
+            <span class="stat-value" id="score">0.0</span>
+        </div>
+    </div>
+
+    <div class="stress-container">
+        <div class="stress-label">Tehén Stressz Szint</div>
+        <div class="stress-bar" id="stress-bar"></div>
+    </div>
+
+    <div class="game-container" id="game-container">
+        
+        <!-- Cow Body -->
+        <div class="cow-body">
+            <div class="cow-spot" style="width: 100px; height: 80px; top: 50px; left: 20px;"></div>
+            <div class="cow-spot" style="width: 120px; height: 90px; top: 20px; right: -20px;"></div>
+            <div class="cow-spot" style="width: 60px; height: 60px; top: 150px; left: 40%;"></div>
+        </div>
+
+        <!-- Udder -->
+        <div class="udder-base">
+            <div class="teats-container">
+                <div class="teat" id="teat-1" data-id="0"></div>
+                <div class="teat" id="teat-2" data-id="1"></div>
+                <div class="teat" id="teat-3" data-id="2"></div>
+                <div class="teat" id="teat-4" data-id="3"></div>
+            </div>
+        </div>
+
+        <!-- Bucket -->
+        <div class="bucket-area">
+            <div class="bucket">
+                <div class="milk-surface" id="milk-surface">
+                    <div class="milk-ripple"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="toast" id="toast">Húzd lefelé a tőgyet a fejéshez!</div>
+    </div>
+
+    <div class="game-over-overlay" id="game-over">
+        <h2 id="go-title">Játék Vége!</h2>
+        <p id="go-msg">A tehén felrúgta a vödröt.</p>
+        <p style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">Összesen: <span id="final-score">0</span> L</p>
+        <button class="btn" onclick="game.reset()">Újra (Restart)</button>
+    </div>
+
+    <script>
+        // --- Audio System (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        const Sound = {
+            playSquirt: () => {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+
+                // White noise simulation roughly
+                // Actually, let's just do a quick sine slide for a "wet" sound
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            },
+            playMoo: () => {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(130, audioCtx.currentTime + 0.5);
+                osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 1.2);
+
+                gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.2);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.2);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.3);
+            },
+            playKick: () => {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            }
+        };
+
+        // --- Game Logic ---
+        const game = {
+            active: false,
+            score: 0,
+            stress: 0,
+            timeLeft: 60,
+            maxStress: 100,
+            stressDecay: 0.2, // Stress drops over time
+            stressIncrement: 15, // Stress added per "bad" pull or too fast
+            lastPullTime: 0,
+            timerInterval: null,
+            gameLoopId: null,
+
+            // DOM Elements
+            scoreEl: document.getElementById('score'),
+            timerEl: document.getElementById('timer'),
+            stressBar: document.getElementById('stress-bar'),
+            milkSurface: document.getElementById('milk-surface'),
+            gameOverEl: document.getElementById('game-over'),
+            goTitle: document.getElementById('go-title'),
+            goMsg: document.getElementById('go-msg'),
+            finalScore: document.getElementById('final-score'),
+            container: document.getElementById('game-container'),
+            toast: document.getElementById('toast'),
+
+            init() {
+                this.setupTeats();
+                this.loop();
+                this.reset();
+                
+                // Show toast instruction
+                setTimeout(() => {
+                    this.toast.style.opacity = '1';
+                    setTimeout(() => {
+                        this.toast.style.opacity = '0';
+                    }, 3000);
+                }, 500);
+            },
+
+            reset() {
+                this.active = true;
+                this.score = 0;
+                this.stress = 0;
+                this.timeLeft = 60;
+                this.updateUI();
+                this.gameOverEl.classList.remove('visible');
+                this.milkSurface.style.height = '0%';
+                
+                clearInterval(this.timerInterval);
+                this.timerInterval = setInterval(() => {
+                    if(!this.active) return;
+                    this.timeLeft--;
+                    if(this.timeLeft <= 0) this.endGame(true);
+                    this.updateUI();
+                    
+                    // Random Moo
+                    if(Math.random() < 0.05) Sound.playMoo();
+                    
+                }, 1000);
+            },
+
+            loop() {
+                if(this.active) {
+                    // Decay stress naturally
+                    if(this.stress > 0) {
+                        this.stress -= this.stressDecay;
+                        if(this.stress < 0) this.stress = 0;
+                    }
+                    this.updateStressUI();
+                }
+                requestAnimationFrame(() => this.loop());
+            },
+
+            setupTeats() {
+                const teats = document.querySelectorAll('.teat');
+                teats.forEach(teat => {
+                    let startY = 0;
+                    let currentY = 0;
+                    let isDragging = false;
+                    const maxStretch = 80;
+
+                    const startDrag = (e) => {
+                        if(!this.active) return;
+                        isDragging = true;
+                        startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                        teat.style.transition = 'none'; // Disable transition for direct control
+                    };
+
+                    const moveDrag = (e) => {
+                        if (!isDragging || !this.active) return;
+                        
+                        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                        const deltaY = clientY - startY;
+
+                        // Only allow pulling down
+                        if (deltaY > 0) {
+                            // Elastic resistance
+                            currentY = Math.min(deltaY, maxStretch);
+                            // Visual stretch
+                            const scale = 1 + (currentY / 100);
+                            teat.style.transform = `scaleY(${scale}) translateY(${currentY/2}px)`;
+                        }
+                    };
+
+                    const endDrag = () => {
+                        if (!isDragging) return;
+                        isDragging = false;
+                        
+                        // Check if pull was sufficient
+                        if (currentY > 40) {
+                            this.milk(teat);
+                        }
+                        
+                        // Reset
+                        teat.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                        teat.style.transform = 'scaleY(1) translateY(0)';
+                        currentY = 0;
+                    };
+
+                    teat.addEventListener('mousedown', startDrag);
+                    window.addEventListener('mousemove', moveDrag);
+                    window.addEventListener('mouseup', endDrag);
+
+                    teat.addEventListener('touchstart', startDrag);
+                    window.addEventListener('touchmove', moveDrag);
+                    window.addEventListener('touchend', endDrag);
+                });
+            },
+
+            milk(teat) {
+                const now = Date.now();
+                const timeDiff = now - this.lastPullTime;
+                
+                // Stress logic: If pulling too fast (spamming)
+                if (timeDiff < 150) {
+                    this.stress += this.stressIncrement;
+                    this.flashStress();
+                }
+                this.lastPullTime = now;
+
+                // Success
+                Sound.playSquirt();
+                this.createMilkParticle(teat);
+                
+                // Add score
+                this.score += 0.1; // 100ml
+                this.score = Math.round(this.score * 10) / 10;
+                
+                this.updateUI();
+
+                // Check fail condition
+                if(this.stress >= 100) {
+                    this.endGame(false);
+                }
+            },
+
+            createMilkParticle(teat) {
+                const rect = teat.getBoundingClientRect();
+                const particle = document.createElement('div');
+                particle.classList.add('milk-particle');
+                
+                // Position relative to game container
+                const containerRect = this.container.getBoundingClientRect();
+                
+                particle.style.left = (rect.left + rect.width/2 - containerRect.left - 3) + 'px';
+                particle.style.top = (rect.bottom - containerRect.top - 10) + 'px';
+                
+                this.container.appendChild(particle);
+
+                // Animate
+                let posY = 0;
+                let speed = 5;
+                const accel = 1.5; // Gravity
+                
+                const anim = () => {
+                    posY += speed;
+                    speed += accel;
+                    particle.style.transform = `translateY(${posY}px)`;
+                    
+                    // Hit bucket
+                    const bucketTop = 380; // Approximate relative pixel value
+                    if(posY > 300) { // Rough distance to bucket bottom
+                         particle.remove();
+                         return;
+                    }
+                    requestAnimationFrame(anim);
+                };
+                requestAnimationFrame(anim);
+
+                // Clean up backup
+                setTimeout(() => { if(particle.parentElement) particle.remove() }, 1000);
+            },
+
+            flashStress() {
+                this.stressBar.style.filter = "brightness(1.5)";
+                setTimeout(() => this.stressBar.style.filter = "brightness(1)", 100);
+            },
+
+            updateStressUI() {
+                this.stressBar.style.width = this.stress + '%';
+                if(this.stress > 80) {
+                    this.stressBar.style.background = '#ff3b30'; // Red
+                } else if(this.stress > 50) {
+                    this.stressBar.style.background = '#ffcc00'; // Yellow
+                } else {
+                    this.stressBar.style.background = 'linear-gradient(90deg, #34c759, #ffcc00, #ff3b30)';
+                }
+            },
+
+            updateUI() {
+                this.scoreEl.innerText = this.score.toFixed(1);
+                this.timerEl.innerText = this.timeLeft;
+                
+                // Update Bucket Fill visually
+                // Max capacity assumed 10 Liters for visual scaling
+                const fillPercent = Math.min((this.score / 10) * 100, 95);
+                this.milkSurface.style.height = fillPercent + '%';
+            },
+
+            endGame(win) {
+                this.active = false;
+                clearInterval(this.timerInterval);
+                
+                if(!win) {
+                    Sound.playKick();
+                    document.body.classList.add('shaking');
+                    setTimeout(() => document.body.classList.remove('shaking'), 500);
+                    this.goTitle.innerText = "Jaj ne!";
+                    this.goMsg.innerText = "A tehén túl stresszes lett és felrúgta a vödröt!";
+                    this.goMsg.style.color = "red";
+                } else {
+                    Sound.playMoo();
+                    this.goTitle.innerText = "Szép munka!";
+                    this.goMsg.innerText = "A fejés sikeresen befejeződött.";
+                    this.goMsg.style.color = "green";
+                }
+
+                this.finalScore.innerText = this.score.toFixed(1);
+                this.gameOverEl.classList.add('visible');
+            }
+        };
+
+        // Mobile optimization check
+        if (document.body.clientWidth < 400 || document.body.classList.contains('mobile-mode')) {
+             // Adjust scaling if needed
+        }
+
+        // Start
+        window.onload = () => game.init();
+
+    </script>
+</body>
+</html>
