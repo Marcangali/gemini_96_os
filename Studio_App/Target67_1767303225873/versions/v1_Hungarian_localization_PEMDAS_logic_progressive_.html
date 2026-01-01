@@ -1,0 +1,748 @@
+<!--
+APP_NAME: Target 67
+APP_DESCRIPTION: Matematikai kirakós játék. Oldj meg egyenleteket, ahol a végeredmény mindig 67!
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Hungarian localization, PEMDAS logic, progressive difficulty.
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Target 67</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg-color: #f3f4f6;
+            --glass: rgba(255, 255, 255, 0.85);
+            --text: #1f2937;
+            --success: #10b981;
+            --error: #ef4444;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Mobile Mode Optimization */
+        body.mobile-mode {
+            font-size: 18px;
+        }
+
+        .app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            max-width: 100%;
+            height: 100%;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            padding: 12px 20px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        .score-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .score-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .score-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        /* Game Area */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .equation-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .equation-display {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 10px;
+            line-height: 1.4;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .equation-part {
+            display: inline-block;
+        }
+
+        .missing-box {
+            background: #e0e7ff;
+            color: var(--primary);
+            padding: 0 12px;
+            border-radius: 8px;
+            border-bottom: 4px solid var(--primary);
+            min-width: 50px;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        .target-display {
+            font-size: 1rem;
+            color: #6b7280;
+            font-weight: 500;
+            background: #f3f4f6;
+            padding: 6px 16px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .input-display {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            min-height: 60px;
+            margin: 10px 0;
+            border-bottom: 2px solid #e5e7eb;
+            width: 100%;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .input-display.placeholder {
+            color: #d1d5db;
+        }
+
+        /* Numpad */
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .key {
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 16px;
+            height: 56px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.1s;
+        }
+
+        .key:active {
+            transform: scale(0.95);
+            background: #eef2ff;
+        }
+
+        .key-action {
+            background: #e5e7eb;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .key-submit {
+            background: var(--primary);
+            color: white;
+            grid-column: span 3;
+            margin-top: 8px;
+        }
+
+        .key-submit:active {
+            background: var(--primary-dark);
+        }
+
+        /* Feedback Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); background: #c7d2fe; }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .shake {
+            animation: shake 0.4s ease-in-out;
+            border: 2px solid var(--error);
+        }
+
+        .pop {
+            animation: pop 0.3s ease-out;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Overlay */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 12px;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            margin: 0 0 10px 0;
+        }
+
+        p {
+            color: #4b5563;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+        
+        .difficulty-badge {
+            font-size: 0.7rem;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-top: 4px;
+        }
+
+        /* Success Particles */
+        .particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-anim 1s forwards;
+        }
+        
+        @keyframes particle-anim {
+            0% { transform: translate(0,0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="score-box">
+                <span class="score-label">Szint</span>
+                <span class="score-value" id="level-display">1</span>
+            </div>
+            <div class="score-box">
+                <span class="score-label">Pont</span>
+                <span class="score-value" id="score-display">0</span>
+            </div>
+            <div class="score-box">
+                <div class="difficulty-badge" id="difficulty-display">Könnyű</div>
+            </div>
+        </header>
+
+        <div class="game-area">
+            <div class="equation-card" id="equation-card">
+                <div class="equation-display" id="equation-container">
+                    <!-- Equation injected here -->
+                </div>
+                <div class="target-display">= 67</div>
+                <div class="input-display placeholder" id="user-input">?</div>
+            </div>
+
+            <div class="numpad">
+                <div class="key" data-key="1">1</div>
+                <div class="key" data-key="2">2</div>
+                <div class="key" data-key="3">3</div>
+                <div class="key" data-key="4">4</div>
+                <div class="key" data-key="5">5</div>
+                <div class="key" data-key="6">6</div>
+                <div class="key" data-key="7">7</div>
+                <div class="key" data-key="8">8</div>
+                <div class="key" data-key="9">9</div>
+                <div class="key key-action" data-key="DEL">⌫</div>
+                <div class="key" data-key="0">0</div>
+                <div class="key key-action" data-key="-">−</div>
+                <button class="key key-submit" id="submit-btn">Ellenőrzés</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Overlay -->
+    <div class="overlay" id="start-screen">
+        <h1>Target 67</h1>
+        <p>Találd meg a hiányzó számot!<br>Minden egyenlet eredménye <strong>67</strong>.</p>
+        <button class="btn-primary" onclick="startGame()">Játék Indítása</button>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div class="overlay hidden" id="game-over-screen">
+        <h1 style="color:var(--error)">Vége a játéknak!</h1>
+        <p>Elért pontszám: <strong id="final-score">0</strong></p>
+        <p>A helyes válasz: <strong id="correct-answer"></strong></p>
+        <button class="btn-primary" onclick="startGame()">Újra</button>
+    </div>
+
+<script>
+    /**
+     * Audio System using Web Audio API
+     */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        } else if (type === 'success') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.1); // C#
+            osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.2); // E
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        } else if (type === 'error') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.2);
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+    }
+
+    /**
+     * Game Logic
+     */
+    let currentLevel = 1;
+    let score = 0;
+    let currentEquation = null;
+    let userInput = "";
+    
+    // Equation Node Class
+    class Node {
+        constructor(val, left = null, right = null, op = null) {
+            this.val = val; // Numerical value of this subtree
+            this.left = left;
+            this.right = right;
+            this.op = op; // Operator connecting left and right
+        }
+    }
+
+    // Helper to get operator precedence
+    function getPrecedence(op) {
+        if (op === '*' || op === '÷') return 2;
+        if (op === '+' || op === '-') return 1;
+        return 0;
+    }
+
+    // Generate random int between min and max
+    function rand(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Generate Equation Tree
+    // Target is always 67, but we recursively split values to build complexity
+    function generateEquationTree(targetValue, depth) {
+        if (depth === 0) {
+            return new Node(targetValue);
+        }
+
+        // Choose operator
+        const ops = ['+', '-'];
+        // Only allow multiplication/division if targetValue has factors or we can construct it easily
+        // To keep it simple but varied:
+        // We will construct "A op B = targetValue"
+        
+        let op = ops[rand(0, ops.length - 1)];
+        // Add * and / for higher depths (harder levels)
+        if (currentLevel > 3 && Math.random() > 0.6) {
+             // Try multiplication split? 
+             // It's hard to split prime numbers or specific nums. 
+             // Easier approach: Reverse.
+             // Instead of splitting Target, let's pick A and B and Op such that A op B = Target.
+        }
+
+        let a, b;
+
+        if (op === '+') {
+            // A + B = Target.  0 < A < Target
+            if (targetValue <= 1) { a = 0; b = targetValue; }
+            else {
+                a = rand(1, targetValue - 1);
+                b = targetValue - a;
+            }
+        } else if (op === '-') {
+            // A - B = Target. A = Target + B.
+            b = rand(1, 20 + (currentLevel * 2)); // Keep numbers reasonable
+            a = targetValue + b;
+        } 
+        
+        // Sometimes use Multiplication
+        if (currentLevel >= 3 && Math.random() > 0.5) {
+            // Try to find factors
+            let factors = [];
+            for(let i=2; i<=Math.sqrt(targetValue); i++) {
+                if(targetValue % i === 0) factors.push(i);
+            }
+            if (factors.length > 0) {
+                op = '*';
+                a = factors[rand(0, factors.length-1)];
+                b = targetValue / a;
+            } else {
+                // If prime or no easy factors, maybe do Division?
+                // A / B = Target -> A = Target * B
+                if (targetValue * 2 < 200) { // Limit size
+                    op = '÷';
+                    b = rand(2, 5);
+                    a = targetValue * b;
+                }
+            }
+        }
+
+        // Recursively build children
+        // Decrease depth probability
+        const leftDepth = (depth > 1 && Math.random() > 0.5) ? depth - 1 : 0;
+        const rightDepth = (depth > 1 && leftDepth === 0) ? depth - 1 : 0; // Ensure at least one side might be simple
+
+        return new Node(
+            targetValue, 
+            generateEquationTree(a, leftDepth), 
+            generateEquationTree(b, rightDepth), 
+            op
+        );
+    }
+
+    // Convert Tree to String with Hole
+    let hiddenValue = null;
+    let partsArray = [];
+
+    function treeToParts(node, parentPrecedence = 0) {
+        if (!node.op) {
+            // Leaf node
+            return [{ type: 'num', val: node.val }];
+        }
+
+        const currentPrecedence = getPrecedence(node.op);
+        const needParens = currentPrecedence < parentPrecedence || (node.op === '-' && parentPrecedence === currentPrecedence && node === node.parent?.right); // Simplified paren logic
+
+        let parts = [];
+        if (needParens) parts.push({ type: 'str', val: '(' });
+        parts = parts.concat(treeToParts(node.left, currentPrecedence));
+        parts.push({ type: 'op', val: node.op });
+        parts = parts.concat(treeToParts(node.right, currentPrecedence)); // Right associative nuance skipped for simplicity in +/*
+        if (needParens) parts.push({ type: 'str', val: ')' });
+        
+        return parts;
+    }
+
+    function generatePuzzle() {
+        let depth = 1;
+        if (currentLevel > 5) depth = 2;
+        if (currentLevel > 15) depth = 3;
+
+        const tree = generateEquationTree(67, depth);
+        const parts = treeToParts(tree);
+        
+        // Flatten numbers
+        let numberIndices = [];
+        parts.forEach((p, i) => {
+            if (p.type === 'num') numberIndices.push(i);
+        });
+
+        // Pick one to hide
+        const hideIndex = numberIndices[rand(0, numberIndices.length - 1)];
+        hiddenValue = parts[hideIndex].val;
+        parts[hideIndex].val = '?';
+        parts[hideIndex].type = 'missing';
+
+        return parts;
+    }
+
+    function renderPuzzle() {
+        const container = document.getElementById('equation-container');
+        container.innerHTML = '';
+        const parts = generatePuzzle();
+        
+        parts.forEach(p => {
+            const span = document.createElement('span');
+            span.className = 'equation-part';
+            if (p.type === 'op') {
+                span.textContent = p.val;
+                span.style.color = '#6366f1';
+                span.style.margin = '0 4px';
+            } else if (p.type === 'missing') {
+                span.className = 'missing-box';
+                span.textContent = '?';
+            } else if (p.type === 'str') {
+                span.textContent = p.val;
+                span.style.color = '#9ca3af';
+            } else {
+                span.textContent = p.val;
+            }
+            container.appendChild(span);
+        });
+        
+        // Update Difficulty UI
+        const diffLabel = document.getElementById('difficulty-display');
+        if (currentLevel < 5) {
+            diffLabel.textContent = "Könnyű";
+            diffLabel.style.background = "#dbeafe";
+            diffLabel.style.color = "#1e40af";
+        } else if (currentLevel < 15) {
+            diffLabel.textContent = "Közepes";
+            diffLabel.style.background = "#fef3c7";
+            diffLabel.style.color = "#92400e";
+        } else {
+            diffLabel.textContent = "Nehéz";
+            diffLabel.style.background = "#fee2e2";
+            diffLabel.style.color = "#991b1b";
+        }
+    }
+
+    function updateInputDisplay() {
+        const el = document.getElementById('user-input');
+        if (userInput === "") {
+            el.textContent = "?";
+            el.classList.add('placeholder');
+        } else {
+            el.textContent = userInput;
+            el.classList.remove('placeholder');
+        }
+        
+        // Update the ? box in equation
+        const missingBox = document.querySelector('.missing-box');
+        if (missingBox) {
+            missingBox.textContent = userInput === "" ? "?" : userInput;
+            if (userInput !== "") missingBox.style.animation = "none";
+        }
+    }
+
+    function handleInput(val) {
+        playSound('click');
+        if (val === 'DEL') {
+            userInput = userInput.slice(0, -1);
+        } else if (val === '-') {
+            if (userInput === "") userInput = "-";
+        } else {
+            if (userInput.length < 5) {
+                userInput += val;
+            }
+        }
+        updateInputDisplay();
+    }
+
+    function checkAnswer() {
+        const val = parseInt(userInput);
+        if (isNaN(val)) return;
+
+        if (val === hiddenValue) {
+            // Correct
+            playSound('success');
+            score += 10 + Math.floor(currentLevel * 1.5);
+            currentLevel++;
+            
+            // Particles
+            createParticles();
+
+            // Update UI
+            document.getElementById('score-display').textContent = score;
+            document.getElementById('level-display').textContent = currentLevel;
+            
+            // Animation
+            const card = document.getElementById('equation-card');
+            card.classList.add('pop');
+            setTimeout(() => card.classList.remove('pop'), 300);
+
+            // Reset
+            userInput = "";
+            updateInputDisplay();
+            setTimeout(renderPuzzle, 400); // Slight delay for satisfaction
+        } else {
+            // Wrong
+            playSound('error');
+            const card = document.getElementById('equation-card');
+            card.classList.add('shake');
+            setTimeout(() => card.classList.remove('shake'), 400);
+            
+            // Only end game if score is high enough to matter, or just deduct points?
+            // "Game Over" logic
+            gameOver();
+        }
+    }
+
+    function createParticles() {
+        const btn = document.getElementById('submit-btn');
+        const rect = btn.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        for (let i = 0; i < 20; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.backgroundColor = ['#6366f1', '#10b981', '#f59e0b'][Math.floor(Math.random()*3)];
+            p.style.left = centerX + 'px';
+            p.style.top = centerY + 'px';
+            
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = 50 + Math.random() * 100;
+            p.style.setProperty('--tx', Math.cos(angle) * velocity + 'px');
+            p.style.setProperty('--ty', Math.sin(angle) * velocity + 'px');
+            
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 1000);
+        }
+    }
+
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-over-screen').classList.add('hidden');
+        currentLevel = 1;
+        score = 0;
+        document.getElementById('score-display').textContent = score;
+        document.getElementById('level-display').textContent = currentLevel;
+        userInput = "";
+        updateInputDisplay();
+        renderPuzzle();
+    }
+
+    function gameOver() {
+        document.getElementById('final-score').textContent = score;
+        document.getElementById('correct-answer').textContent = hiddenValue;
+        document.getElementById('game-over-screen').classList.remove('hidden');
+    }
+
+    // Event Listeners
+    document.querySelectorAll('.key').forEach(key => {
+        key.addEventListener('click', () => {
+            const k = key.getAttribute('data-key');
+            if (k) handleInput(k);
+        });
+    });
+
+    document.getElementById('submit-btn').addEventListener('click', checkAnswer);
+
+    document.addEventListener('keydown', (e) => {
+        if (document.querySelector('.overlay:not(.hidden)')) return;
+
+        if (e.key >= '0' && e.key <= '9') handleInput(e.key);
+        if (e.key === 'Backspace') handleInput('DEL');
+        if (e.key === '-') handleInput('-');
+        if (e.key === 'Enter') checkAnswer();
+    });
+    
+    // Check for mobile mode
+    if (document.body.classList.contains('mobile-mode') || window.innerWidth < 450) {
+        document.body.classList.add('mobile-mode');
+    }
+
+</script>
+</body>
+</html>
