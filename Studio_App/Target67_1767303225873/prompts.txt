@@ -1,0 +1,2 @@
+[01/01/2026, 22:33:47] v1:
+matek játék ahol könnyűtől nehéz random matek feladat. akármilyen engyenlettel, legyen +, -, *, ÷ vagy akármi, a pemdas használata is benne lehet, de minden eredmény 67 legyen
