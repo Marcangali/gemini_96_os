@@ -1,0 +1,696 @@
+<!--
+APP_NAME: Tehén Tycoon
+APP_DESCRIPTION: Fejd meg a tehenet, add el a tejet, és vegyél jobb teheneket! Vicces klikker játék.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Első kiadás hanghatásokkal és bolt rendszerrel.
+STORE_ID: tehen-tycoon-11
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tehén Tycoon</title>
+    <style>
+        :root {
+            --bg-sky: #e0f7fa;
+            --bg-grass: #c8e6c9;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.9);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            --primary: #4caf50;
+            --primary-dark: #388e3c;
+            --accent: #ff9800;
+            --text: #37474f;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background: linear-gradient(180deg, var(--bg-sky) 0%, var(--bg-sky) 60%, var(--bg-grass) 60%, var(--bg-grass) 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        /* Stats Bar */
+        .header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.7;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        /* Game Area */
+        .game-area {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding-bottom: 40px; /* Space for grass */
+        }
+
+        /* THE COW CSS ART */
+        .cow-container {
+            position: relative;
+            width: 200px;
+            height: 180px;
+            cursor: pointer;
+            transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 5;
+        }
+
+        .cow-container:active {
+            transform: scale(0.9) translateY(5px);
+        }
+
+        .cow-body {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            width: 160px;
+            height: 110px;
+            background: #fff;
+            border-radius: 60px 80px 50px 50px;
+            border: 4px solid #333;
+            z-index: 2;
+            overflow: hidden; /* For spots */
+        }
+
+        /* Dynamic Skin Colors */
+        .cow-container[data-skin="basic"] .cow-body { background: #fdfdfd; }
+        .cow-container[data-skin="holstein"] .cow-body { background: #fff; }
+        .cow-container[data-skin="choco"] .cow-body { background: #795548; }
+        .cow-container[data-skin="gold"] .cow-body { background: linear-gradient(135deg, #ffd700, #ffecb3); border-color: #b7950b; }
+
+        .spot {
+            position: absolute;
+            background: #333;
+            border-radius: 50%;
+        }
+        
+        .cow-container[data-skin="basic"] .spot { background: #8d6e63; opacity: 0.8; }
+        .cow-container[data-skin="holstein"] .spot { background: #000; }
+        .cow-container[data-skin="choco"] .spot { background: #4e342e; }
+        .cow-container[data-skin="gold"] .spot { background: rgba(255,255,255,0.4); }
+
+        .spot.s1 { top: 10px; left: 30px; width: 40px; height: 30px; transform: rotate(10deg); }
+        .spot.s2 { top: 50px; left: 90px; width: 50px; height: 40px; transform: rotate(-15deg); }
+        .spot.s3 { bottom: -10px; left: 10px; width: 30px; height: 30px; }
+
+        .cow-head {
+            position: absolute;
+            top: 20px;
+            left: -10px;
+            width: 70px;
+            height: 80px;
+            background: inherit; /* Matches body */
+            border-radius: 30px;
+            border: 4px solid #333;
+            z-index: 3;
+        }
+        .cow-container[data-skin="gold"] .cow-head { border-color: #b7950b; background: #ffd700; }
+
+        .ears {
+            position: absolute;
+            top: 25px;
+            left: -15px;
+            width: 80px;
+            height: 20px;
+        }
+        .ear {
+            width: 20px;
+            height: 25px;
+            background: inherit;
+            border: 4px solid #333;
+            border-radius: 50%;
+            position: absolute;
+            background: #fff;
+        }
+        .ear.left { left: 0; transform: rotate(-30deg); }
+        .ear.right { right: 0; transform: rotate(30deg); }
+        .cow-container[data-skin="gold"] .ear { border-color: #b7950b; background: #ffd700; }
+
+        .eyes {
+            position: absolute;
+            top: 30px;
+            left: 10px;
+            width: 40px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 4;
+        }
+        .eye {
+            width: 8px;
+            height: 8px;
+            background: #000;
+            border-radius: 50%;
+        }
+
+        .nose {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            width: 44px;
+            height: 24px;
+            background: #ffccbc;
+            border-radius: 20px;
+            border: 3px solid #333;
+            z-index: 4;
+        }
+        .cow-container[data-skin="gold"] .nose { background: #fff9c4; border-color: #b7950b; }
+
+        .udder {
+            position: absolute;
+            bottom: 25px;
+            left: 80px;
+            width: 40px;
+            height: 30px;
+            background: #ffab91;
+            border-radius: 0 0 20px 20px;
+            border: 3px solid #333;
+            z-index: 1;
+        }
+
+        .leg {
+            position: absolute;
+            bottom: 0;
+            width: 16px;
+            height: 50px;
+            background: #fff;
+            border: 4px solid #333;
+            z-index: 0;
+            border-radius: 0 0 8px 8px;
+        }
+        .cow-container[data-skin="choco"] .leg { background: #795548; }
+        .cow-container[data-skin="gold"] .leg { background: #ffd700; border-color: #b7950b; }
+
+        .leg.l1 { left: 40px; }
+        .leg.l2 { left: 140px; }
+        .leg.l3 { left: 60px; height: 40px; bottom: 10px; z-index: -1; opacity: 0.8; }
+        .leg.l4 { left: 120px; height: 40px; bottom: 10px; z-index: -1; opacity: 0.8; }
+
+        /* Milk Particles */
+        .milk-drop {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            animation: squirt 0.8s forwards;
+            z-index: 20;
+        }
+
+        @keyframes squirt {
+            0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
+            50% { transform: translate(var(--tx), 100px) scale(1); }
+            100% { transform: translate(var(--tx), 200px) scale(0.5); opacity: 0; }
+        }
+
+        /* Controls / Shop */
+        .controls {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--glass-border);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 45%;
+            overflow-y: auto;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+        }
+
+        .btn-main {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-main:active {
+            transform: scale(0.98);
+        }
+
+        .btn-main:disabled {
+            background: #ccc;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .shop-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin: 8px 0 4px 0;
+            color: #555;
+        }
+
+        .shop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.5);
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: background 0.2s;
+        }
+
+        .shop-item:hover {
+            background: rgba(255,255,255,0.8);
+        }
+
+        .shop-item.disabled {
+            opacity: 0.6;
+            filter: grayscale(1);
+        }
+
+        .item-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .item-cost {
+            font-size: 0.8rem;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .btn-buy {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .btn-buy:disabled {
+            background: #b0bec5;
+            cursor: not-allowed;
+        }
+
+        /* Floating Text */
+        .float-text {
+            position: absolute;
+            color: var(--primary-dark);
+            font-weight: 800;
+            font-size: 1.2rem;
+            pointer-events: none;
+            animation: floatUp 1s ease-out forwards;
+            text-shadow: 0 2px 0 rgba(255,255,255,0.8);
+            z-index: 50;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1.2); }
+        }
+
+        /* Mobile Optimization */
+        body.mobile-mode .cow-container {
+            transform: scale(1.1);
+        }
+        
+        /* Message bubble */
+        .moo-bubble {
+            position: absolute;
+            top: -40px;
+            right: -20px;
+            background: #fff;
+            padding: 6px 12px;
+            border-radius: 12px;
+            border: 2px solid #333;
+            font-weight: bold;
+            opacity: 0;
+            transform: scale(0);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .moo-bubble.show {
+            opacity: 1;
+            transform: scale(1);
+            animation: wobble 0.5s ease-in-out;
+        }
+
+        @keyframes wobble {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-10deg) scale(1.1); }
+            75% { transform: rotate(10deg) scale(1.1); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="stat-group">
+            <span class="stat-label">Tej (Liter)</span>
+            <span class="stat-value" id="milk-display">0</span>
+        </div>
+        <div class="stat-group">
+            <span class="stat-label">Pénz ($)</span>
+            <span class="stat-value" id="money-display">0</span>
+        </div>
+    </div>
+
+    <div class="game-area">
+        <div class="cow-container" id="cow" data-skin="basic">
+            <div class="moo-bubble" id="moo-text">MÚÚÚ!</div>
+            
+            <div class="legs">
+                <div class="leg l3"></div>
+                <div class="leg l4"></div>
+                <div class="leg l1"></div>
+                <div class="leg l2"></div>
+            </div>
+            
+            <div class="udder"></div>
+            
+            <div class="cow-body">
+                <div class="spot s1"></div>
+                <div class="spot s2"></div>
+                <div class="spot s3"></div>
+            </div>
+            
+            <div class="ears">
+                <div class="ear left"></div>
+                <div class="ear right"></div>
+            </div>
+            
+            <div class="cow-head">
+                <div class="eyes">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+                <div class="nose"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-main" id="sell-btn" disabled>
+            <span>💰</span> Eladom a tejet (+<span id="sell-val">0</span>$)
+        </button>
+
+        <div class="shop-title">TEHÉN BOLT</div>
+        <div id="shop-list">
+            <!-- Items injected by JS -->
+        </div>
+    </div>
+
+    <script>
+        // --- State ---
+        const state = {
+            milk: 0,
+            money: 0,
+            clickMultiplier: 1,
+            cowLevel: 0
+        };
+
+        const cows = [
+            { id: 0, name: "Magyar Tarka", cost: 0, prod: 1, skin: "basic" },
+            { id: 1, name: "Holstein-fríz", cost: 50, prod: 2, skin: "holstein" },
+            { id: 2, name: "Csokis Tehén", cost: 300, prod: 5, skin: "choco" },
+            { id: 3, name: "Arany Borjú", cost: 1000, prod: 15, skin: "gold" },
+            { id: 4, name: "Galaktikus Mú", cost: 5000, prod: 50, skin: "holstein" } // Reusing skin for now or default
+        ];
+
+        // --- Elements ---
+        const elMilk = document.getElementById('milk-display');
+        const elMoney = document.getElementById('money-display');
+        const elCow = document.getElementById('cow');
+        const elMoo = document.getElementById('moo-text');
+        const elSellBtn = document.getElementById('sell-btn');
+        const elSellVal = document.getElementById('sell-val');
+        const elShopList = document.getElementById('shop-list');
+
+        // --- Audio Context ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        // --- Audio Functions ---
+        function playMoo() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+
+            osc.type = 'sawtooth';
+            // Start lower, drop pitch slightly
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime); 
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.6);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(400, audioCtx.currentTime);
+
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
+        }
+
+        function playSquirt() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const bufferSize = audioCtx.sampleRate * 0.1; // 100ms
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            noise.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        }
+
+        function playCash() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1600, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        // --- Visual Effects ---
+        function spawnMilk(x, y) {
+            const particle = document.createElement('div');
+            particle.className = 'milk-drop';
+            
+            // Random trajectory
+            const tx = (Math.random() - 0.5) * 100 + 'px';
+            particle.style.setProperty('--tx', tx);
+            
+            particle.style.left = (x - 6) + 'px'; // Center roughly
+            particle.style.top = (y) + 'px';
+            
+            document.body.appendChild(particle);
+            setTimeout(() => particle.remove(), 800);
+        }
+
+        function showFloatingText(text, x, y, color = '#388e3c') {
+            const float = document.createElement('div');
+            float.className = 'float-text';
+            float.textContent = text;
+            float.style.left = x + 'px';
+            float.style.top = y + 'px';
+            float.style.color = color;
+            document.body.appendChild(float);
+            setTimeout(() => float.remove(), 1000);
+        }
+
+        // --- Logic ---
+        function updateUI() {
+            elMilk.textContent = state.milk;
+            elMoney.textContent = state.money;
+            elSellVal.textContent = state.milk;
+            elSellBtn.disabled = state.milk === 0;
+
+            renderShop();
+        }
+
+        function renderShop() {
+            elShopList.innerHTML = '';
+            
+            // Show next available cow
+            const nextCowIndex = state.cowLevel + 1;
+            
+            cows.forEach((cow, index) => {
+                if (index <= nextCowIndex && index < cows.length) {
+                    const item = document.createElement('div');
+                    const isOwned = index <= state.cowLevel;
+                    const canBuy = state.money >= cow.cost && !isOwned;
+                    const isNext = index === state.cowLevel + 1;
+
+                    // Only show current and next upgrade, hide old ones to save space or mark as owned
+                    if (!isOwned && !isNext) return; 
+
+                    item.className = `shop-item ${(!canBuy && !isOwned) ? 'disabled' : ''}`;
+                    
+                    let btnHTML = '';
+                    if (isOwned) {
+                        btnHTML = `<span style="color:green; font-size:1.2rem;">✔</span>`;
+                    } else {
+                        btnHTML = `<button class="btn-buy" onclick="buyCow(${index})" ${canBuy ? '' : 'disabled'}>Vétel ($${cow.cost})</button>`;
+                    }
+
+                    item.innerHTML = `
+                        <div class="item-info">
+                            <span class="item-name">${cow.name}</span>
+                            <span class="item-cost">+${cow.prod} Tej / Klikk</span>
+                        </div>
+                        ${btnHTML}
+                    `;
+                    elShopList.appendChild(item);
+                }
+            });
+        }
+
+        window.buyCow = function(index) {
+            const cow = cows[index];
+            if (state.money >= cow.cost) {
+                state.money -= cow.cost;
+                state.cowLevel = index;
+                state.clickMultiplier = cow.prod;
+                
+                // Update skin
+                elCow.setAttribute('data-skin', cow.skin);
+                
+                playCash();
+                updateUI();
+                showFloatingText("Fejlesztés!", window.innerWidth/2 - 40, window.innerHeight/2);
+            }
+        };
+
+        // --- Interactions ---
+        elCow.addEventListener('mousedown', (e) => {
+            // Logic
+            state.milk += state.clickMultiplier;
+            updateUI();
+
+            // Audio
+            playSquirt();
+            // 30% chance for Moo
+            if (Math.random() > 0.7) {
+                playMoo();
+                elMoo.classList.add('show');
+                setTimeout(() => elMoo.classList.remove('show'), 600);
+            }
+
+            // Visuals
+            const rect = elCow.getBoundingClientRect();
+            // Spawn milk from udder position roughly
+            spawnMilk(rect.left + 100, rect.top + 130);
+            showFloatingText(`+${state.clickMultiplier}`, e.clientX - 10, e.clientY - 30);
+        });
+
+        // Touch support for mobile
+        elCow.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // prevent zoom
+            elCow.dispatchEvent(new Event('mousedown'));
+        });
+
+        elSellBtn.addEventListener('click', () => {
+            if (state.milk > 0) {
+                const earnings = state.milk;
+                state.money += earnings;
+                state.milk = 0;
+                playCash();
+                updateUI();
+                
+                // Animation on button
+                const rect = elSellBtn.getBoundingClientRect();
+                showFloatingText(`+$${earnings}`, rect.left + rect.width/2 - 20, rect.top, '#ff9800');
+            }
+        });
+
+        // --- Init ---
+        // Check for mobile mode
+        if (document.body.classList.contains('mobile-mode') || window.innerWidth < 450) {
+            document.body.classList.add('mobile-mode');
+        }
+        
+        // Initial Render
+        updateUI();
+
+    </script>
+</body>
+</html>
