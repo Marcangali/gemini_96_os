@@ -1,0 +1,732 @@
+<!--
+APP_NAME: Neon Dash
+APP_DESCRIPTION: fast-paced rhythm platformer with neon visuals and synthesized music.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 520
+WINDOW_HEIGHT: 380
+VERSION_SUMMARY: Initial release with infinite procedural generation.
+STORE_ID: neon-dash-11
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Dash</title>
+    <style>
+        :root {
+            --primary: #00f3ff;
+            --secondary: #ff00ff;
+            --bg-dark: #111;
+            --bg-glass: rgba(20, 20, 30, 0.85);
+            --text: #fff;
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #050510;
+            font-family: var(--font-family);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: var(--text);
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 100%);
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 900;
+            margin: 0 0 20px 0;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px rgba(0, 243, 255, 0.3);
+            letter-spacing: -2px;
+            text-transform: uppercase;
+            font-style: italic;
+        }
+
+        p {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 30px;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 32px;
+            font-size: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .score-box {
+            font-size: 24px;
+            font-weight: 800;
+            font-style: italic;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .mute-btn {
+            pointer-events: auto;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.5);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+        }
+        .mute-btn:hover {
+            color: white;
+        }
+
+        /* CRT Effect */
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body class="mobile-mode"> <!-- Default to check logic, though iframe sets it -->
+
+    <div id="app-container">
+        <div id="hud">
+            <div class="score-box">SCORE: <span id="score">0</span></div>
+            <button class="mute-btn" id="mute-btn">🔊</button>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+        <div class="scanlines"></div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="overlay">
+            <h1>Neon Dash</h1>
+            <p>Jump: Space, Click, or Tap<br>Avoid spikes. Stay on the blocks.</p>
+            <button id="start-btn">Start Game</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="overlay hidden">
+            <h1 style="color: #ff3366; -webkit-text-fill-color: #ff3366;">CRASHED</h1>
+            <p>Score: <span id="final-score">0</span><br>High Score: <span id="high-score">0</span></p>
+            <button id="retry-btn">Try Again</button>
+        </div>
+    </div>
+
+<script>
+/**
+ * AUDIO ENGINE (Web Audio API)
+ * Synthesizes music and SFX to avoid external assets.
+ */
+class AudioEngine {
+    constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.connect(this.ctx.destination);
+        this.masterGain.gain.value = 0.4;
+        this.isMuted = false;
+        
+        this.isPlaying = false;
+        this.nextNoteTime = 0;
+        this.tempo = 140;
+        this.beatCount = 0;
+        this.schedulerTimer = null;
+    }
+
+    resume() {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+    }
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.4, this.ctx.currentTime);
+        return this.isMuted;
+    }
+
+    playJump() {
+        if (this.isMuted) return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, t);
+        osc.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+        
+        gain.gain.setValueAtTime(0.3, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+        
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.1);
+    }
+
+    playCrash() {
+        if (this.isMuted) return;
+        const t = this.ctx.currentTime;
+        const bufferSize = this.ctx.sampleRate * 0.5;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1000, t);
+        filter.frequency.exponentialRampToValueAtTime(100, t + 0.3);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.5, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        noise.start(t);
+    }
+
+    // Simple sequencer
+    startMusic() {
+        this.isPlaying = true;
+        this.beatCount = 0;
+        this.nextNoteTime = this.ctx.currentTime + 0.1;
+        this.schedule();
+    }
+
+    stopMusic() {
+        this.isPlaying = false;
+        clearTimeout(this.schedulerTimer);
+    }
+
+    schedule() {
+        if (!this.isPlaying) return;
+        
+        const secondsPerBeat = 60.0 / this.tempo;
+        const lookahead = 0.1; // seconds
+
+        while (this.nextNoteTime < this.ctx.currentTime + lookahead) {
+            this.playBeat(this.nextNoteTime, this.beatCount);
+            this.nextNoteTime += secondsPerBeat;
+            this.beatCount++;
+        }
+        
+        this.schedulerTimer = setTimeout(() => this.schedule(), 25);
+    }
+
+    playBeat(time, beat) {
+        if (this.isMuted) return;
+
+        // Kick on 0, 1, 2, 3 (4/4)
+        if (beat % 1 === 0) {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(150, time);
+            osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+            gain.gain.setValueAtTime(0.5, time);
+            gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(time);
+            osc.stop(time + 0.5);
+        }
+
+        // Snare on offbeats? No, let's do HiHat
+        if (beat % 0.5 === 0) { // 8th notes
+            // Simple noise hat
+            const bufferSize = this.ctx.sampleRate * 0.05;
+            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'highpass';
+            filter.frequency.value = 5000;
+            const gain = this.ctx.createGain();
+            gain.gain.value = 0.1;
+            
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.masterGain);
+            noise.start(time);
+        }
+
+        // Bassline
+        const bassNotes = [55, 55, 65, 55]; // Frequencies
+        const noteIndex = Math.floor(beat) % 4;
+        if (beat % 0.25 === 0) { // 16th notes running bass
+            const osc = this.ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.value = bassNotes[noteIndex];
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(400, time);
+            filter.frequency.linearRampToValueAtTime(100, time + 0.1);
+            
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(0.1, time);
+            gain.gain.linearRampToValueAtTime(0, time + 0.15);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(time);
+            osc.stop(time + 0.15);
+        }
+    }
+}
+
+/**
+ * GAME ENGINE
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const audio = new AudioEngine();
+
+// State
+let isPlaying = false;
+let score = 0;
+let highScore = localStorage.getItem('neonDashHighScore') || 0;
+let frameCount = 0;
+let gameSpeed = 6;
+let hue = 0;
+
+// Entities
+const player = {
+    x: 100,
+    y: 0,
+    size: 30,
+    vy: 0,
+    gravity: 0.7,
+    jumpPower: -11,
+    grounded: false,
+    rotation: 0,
+    color: '#00f3ff'
+};
+
+let obstacles = [];
+let particles = [];
+let floorHeight = 50; // Distance from bottom
+
+// Resize
+function resize() {
+    canvas.width = document.getElementById('app-container').clientWidth;
+    canvas.height = document.getElementById('app-container').clientHeight;
+    player.y = canvas.height - floorHeight - player.size;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Input
+function jump() {
+    if (!isPlaying) return;
+    if (player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
+        
+        // Spawn jump particles
+        for(let i=0; i<5; i++) {
+            particles.push(new Particle(player.x + player.size/2, player.y + player.size, '#fff'));
+        }
+        audio.playJump();
+    }
+}
+
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.code === 'ArrowUp') jump();
+});
+canvas.addEventListener('mousedown', jump);
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); }, {passive: false});
+
+// Classes
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 5;
+        this.vy = (Math.random() - 0.5) * 5;
+        this.life = 1.0;
+        this.color = color;
+        this.size = Math.random() * 4 + 2;
+    }
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.03;
+    }
+    draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+class Obstacle {
+    constructor(x, type) {
+        this.x = x;
+        this.type = type; // 'spike' or 'block'
+        this.marked = false;
+        
+        if (type === 'spike') {
+            this.w = 30;
+            this.h = 30;
+            this.y = canvas.height - floorHeight - this.h;
+        } else if (type === 'block') {
+            this.w = 40;
+            this.h = 40;
+            // Block can be on ground or floating
+            this.y = canvas.height - floorHeight - this.h - (Math.random() > 0.5 ? 40 : 0);
+        }
+    }
+    
+    update() {
+        this.x -= gameSpeed;
+    }
+    
+    draw(ctx) {
+        if (this.type === 'spike') {
+            ctx.fillStyle = '#ff0055';
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y + this.h);
+            ctx.lineTo(this.x + this.w / 2, this.y);
+            ctx.lineTo(this.x + this.w, this.y + this.h);
+            ctx.closePath();
+            ctx.fill();
+            // Glow
+            ctx.shadowColor = '#ff0055';
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        } else {
+            ctx.fillStyle = '#cc00ff';
+            ctx.fillRect(this.x, this.y, this.w, this.h);
+            // Border
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.x, this.y, this.w, this.h);
+        }
+    }
+}
+
+// Logic
+function spawnObstacle() {
+    // Determine gap based on speed
+    const minGap = 200 + (gameSpeed * 10);
+    const lastObstacle = obstacles[obstacles.length - 1];
+    
+    if (!lastObstacle || (canvas.width - lastObstacle.x > minGap)) {
+        if (Math.random() < 0.3) {
+            // Pattern: Triple spike? No, too hard. Double spike.
+            // Let's stick to single entities for simplicity but vary them
+            let type = Math.random() > 0.4 ? 'spike' : 'block';
+            obstacles.push(new Obstacle(canvas.width + 50, type));
+        }
+    }
+}
+
+function checkCollision(rect1, rect2) {
+    // Shrink hitboxes slightly for forgiveness
+    const padding = 6;
+    return (rect1.x + padding < rect2.x + rect2.w - padding &&
+            rect1.x + rect1.w - padding > rect2.x + padding &&
+            rect1.y + padding < rect2.y + rect2.h - padding &&
+            rect1.y + rect1.h - padding > rect2.y + padding);
+}
+
+function gameOver() {
+    isPlaying = false;
+    audio.playCrash();
+    audio.stopMusic();
+    
+    // Death particles
+    for(let i=0; i<30; i++) {
+        particles.push(new Particle(player.x + player.size/2, player.y + player.size/2, player.color));
+    }
+    
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('neonDashHighScore', highScore);
+    }
+    
+    document.getElementById('final-score').innerText = Math.floor(score);
+    document.getElementById('high-score').innerText = Math.floor(highScore);
+    document.getElementById('game-over-screen').classList.remove('hidden');
+}
+
+function resetGame() {
+    obstacles = [];
+    particles = [];
+    score = 0;
+    gameSpeed = 6;
+    hue = 0;
+    player.y = canvas.height - floorHeight - player.size;
+    player.vy = 0;
+    player.rotation = 0;
+    document.getElementById('score').innerText = '0';
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    
+    audio.resume();
+    audio.startMusic();
+    isPlaying = true;
+    requestAnimationFrame(loop);
+}
+
+// Main Loop
+function loop() {
+    if (!isPlaying) {
+        // Render one frame for particles if dead
+        if (particles.length > 0) {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            // Draw floor/bg for context
+            drawBackground();
+             // Particles
+            particles.forEach((p, index) => {
+                p.update();
+                p.draw(ctx);
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+            requestAnimationFrame(loop);
+        }
+        return;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Update Score & Speed
+    score += 0.1;
+    document.getElementById('score').innerText = Math.floor(score);
+    if (gameSpeed < 12) gameSpeed += 0.001;
+    hue = (hue + 0.5) % 360;
+
+    drawBackground();
+
+    // Player Physics
+    player.vy += player.gravity;
+    player.y += player.vy;
+
+    // Floor Collision
+    const floorY = canvas.height - floorHeight;
+    if (player.y + player.size >= floorY) {
+        player.y = floorY - player.size;
+        player.vy = 0;
+        player.grounded = true;
+        
+        // Snap rotation to nearest 90
+        const rem = player.rotation % 90;
+        if (rem !== 0) player.rotation = Math.round(player.rotation / 90) * 90;
+    } else {
+        player.grounded = false;
+        player.rotation += 4; // Rotate while in air
+    }
+
+    // Spawn & Update Obstacles
+    spawnObstacle();
+
+    obstacles.forEach((obs, index) => {
+        obs.update();
+        obs.draw(ctx);
+
+        // Cleanup
+        if (obs.x + obs.w < 0) {
+            obstacles.splice(index, 1);
+        }
+
+        // Collision
+        // Player hitbox
+        const pRect = {x: player.x, y: player.y, w: player.size, h: player.size};
+        // Obs hitbox
+        const oRect = {x: obs.x, y: obs.y, w: obs.w, h: obs.h};
+
+        if (checkCollision(pRect, oRect)) {
+            // Check if landing on top of block
+            if (obs.type === 'block' && player.vy > 0 && player.y + player.size - player.vy <= obs.y) {
+                player.y = obs.y - player.size;
+                player.vy = 0;
+                player.grounded = true;
+                 const rem = player.rotation % 90;
+                if (rem !== 0) player.rotation = Math.round(player.rotation / 90) * 90;
+            } else {
+                gameOver();
+            }
+        }
+    });
+
+    // Draw Player
+    ctx.save();
+    ctx.translate(player.x + player.size/2, player.y + player.size/2);
+    ctx.rotate(player.rotation * Math.PI / 180);
+    ctx.fillStyle = player.color;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = player.color;
+    ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+    // Inner square
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
+    ctx.restore();
+
+    // Particles
+    particles.forEach((p, index) => {
+        p.update();
+        p.draw(ctx);
+        if (p.life <= 0) particles.splice(index, 1);
+    });
+
+    requestAnimationFrame(loop);
+}
+
+function drawBackground() {
+    // Dynamic Grid
+    ctx.strokeStyle = `hsla(${hue}, 50%, 50%, 0.2)`;
+    ctx.lineWidth = 1;
+    
+    const gridSize = 40;
+    const offsetX = (frameCount * gameSpeed * 0.5) % gridSize;
+    
+    // Vertical lines
+    for (let x = -offsetX; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    // Horizontal lines
+    for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+
+    // Floor
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, canvas.height - floorHeight, canvas.width, floorHeight);
+    
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height - floorHeight);
+    ctx.lineTo(canvas.width, canvas.height - floorHeight);
+    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    frameCount++;
+}
+
+// UI Event Listeners
+document.getElementById('start-btn').addEventListener('click', resetGame);
+document.getElementById('retry-btn').addEventListener('click', resetGame);
+document.getElementById('mute-btn').addEventListener('click', (e) => {
+    const isMuted = audio.toggleMute();
+    e.target.innerText = isMuted ? '🔇' : '🔊';
+});
+
+// Initial draw
+resize();
+drawBackground();
+// Draw player initial state
+ctx.fillStyle = player.color;
+ctx.fillRect(player.x, player.y, player.size, player.size);
+
+</script>
+</body>
+</html>
