@@ -1,0 +1,409 @@
+<!--
+APP_NAME: Marci
+APP_DESCRIPTION: A goofy interactive stress-relief character with weird sounds and physics.
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 360
+WINDOW_HEIGHT: 520
+VERSION_SUMMARY: Initial release with physics engine and synthesized audio.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marci</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --text-color: #1e293b;
+            --primary: #6366f1;
+            --marci-skin: #fca;
+            --marci-shirt: #3b82f6;
+            --marci-pants: #ffffff;
+            --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Responsive Mobile Check */
+        body.mobile-mode {
+            cursor: pointer; /* Better touch feedback */
+        }
+
+        .app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 20px;
+            padding-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Glass Header */
+        .header {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 20px;
+            box-shadow: var(--shadow-soft);
+            text-align: center;
+            z-index: 10;
+            border: 1px solid rgba(255,255,255,0.8);
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .header p {
+            margin: 4px 0 0 0;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* Marci Character Container */
+        .marci-wrapper {
+            position: relative;
+            width: 200px;
+            height: 300px;
+            cursor: pointer;
+            transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .marci-wrapper:active {
+            transform: scale(0.95) translateY(5px);
+        }
+
+        /* SVG Character Styling */
+        svg.marci-svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .marci-body-part {
+            stroke: #333;
+            stroke-width: 3;
+            stroke-linejoin: round;
+        }
+
+        .skin { fill: var(--marci-skin); }
+        .shirt { fill: var(--marci-shirt); }
+        .pants { fill: var(--marci-pants); }
+        .face { fill: none; stroke: #333; stroke-width: 3; stroke-linecap: round; }
+        
+        /* Interactive States */
+        .marci-wrapper.squeezed .mouth {
+            d: path("M 85 65 Q 100 80 115 65"); /* Open/Sad mouth */
+        }
+        
+        .marci-wrapper.squeezed .eye {
+            transform-origin: center;
+            transform: scaleY(0.5);
+        }
+
+        /* Particle Canvas */
+        #fluid-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 4; /* Behind Marci slightly or on top? Let's go behind for depth, or on top for effect. On top. */
+            z-index: 6; 
+        }
+
+        /* Controls / Footer */
+        .controls {
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.6);
+            padding: 10px;
+            border-radius: 16px;
+            backdrop-filter: blur(8px);
+        }
+
+        .stat-box {
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .shake-anim {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="fluid-canvas"></canvas>
+
+    <div class="app-container">
+        <div class="header">
+            <h1>Marci</h1>
+            <p>Nyomd meg!</p>
+        </div>
+
+        <div class="marci-wrapper" id="marci">
+            <!-- Drawn Character using SVG -->
+            <svg class="marci-svg" viewBox="0 0 200 300">
+                <!-- Legs -->
+                <path class="marci-body-part skin" d="M 75 220 L 75 290" />
+                <path class="marci-body-part skin" d="M 125 220 L 125 290" />
+                
+                <!-- Arms -->
+                <path class="marci-body-part skin" id="arm-left" d="M 60 130 Q 30 160 40 190" fill="none" />
+                <path class="marci-body-part skin" id="arm-right" d="M 140 130 Q 170 160 160 190" fill="none" />
+
+                <!-- Torso (Shirt) -->
+                <rect class="marci-body-part shirt" x="60" y="120" width="80" height="100" rx="10" />
+
+                <!-- Underwear (The Source) -->
+                <path id="pant-zone" class="marci-body-part pants" d="M 60 220 L 140 220 L 125 250 L 75 250 Z" />
+
+                <!-- Head -->
+                <circle class="marci-body-part skin" cx="100" cy="80" r="45" />
+
+                <!-- Face -->
+                <circle class="eye" cx="85" cy="70" r="5" fill="#333" />
+                <circle class="eye" cx="115" cy="70" r="5" fill="#333" />
+                
+                <!-- Mouth (Dynamic) -->
+                <path class="mouth face" d="M 85 95 Q 100 105 115 95" />
+            </svg>
+        </div>
+
+        <div class="controls">
+            <div class="stat-box">
+                Squeeze: <span id="counter">0</span>
+            </div>
+        </div>
+    </div>
+
+<script>
+    /**
+     * Marci Application
+     * Handles Audio synthesis, Canvas Physics, and SVG manipulation.
+     */
+
+    const marci = document.getElementById('marci');
+    const counterDisplay = document.getElementById('counter');
+    const canvas = document.getElementById('fluid-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // State
+    let count = 0;
+    let particles = [];
+    let width, height;
+
+    // Resize Canvas
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // --- Audio Engine (Web Audio API) ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+
+    function playWeirdSound() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        // Connect nodes
+        osc.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        // Randomize sound characteristics
+        const type = Math.random() > 0.5 ? 'sawtooth' : 'triangle';
+        osc.type = type;
+
+        // "Squish" sound params
+        const duration = 0.3 + Math.random() * 0.4;
+        const startFreq = 200 + Math.random() * 300;
+        const endFreq = 50 + Math.random() * 100;
+
+        osc.frequency.setValueAtTime(startFreq, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, audioCtx.currentTime + duration);
+
+        // Filter for "wet" sound
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+        filter.Q.value = 5; // Resonance makes it "bloop"
+
+        // Envelope
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // --- Physics Engine (Particles) ---
+    class Particle {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            // Random spray direction (mostly down/out)
+            const angle = (Math.PI / 2) + (Math.random() - 0.5) * 1.5; 
+            const speed = 2 + Math.random() * 8;
+            
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed + 2; // Initial push down
+            
+            this.radius = 3 + Math.random() * 5;
+            this.life = 1.0;
+            this.decay = 0.01 + Math.random() * 0.02;
+            this.gravity = 0.4;
+        }
+
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += this.gravity;
+            this.life -= this.decay;
+            
+            // Shrink over time
+            if (this.life < 0.5) {
+                this.radius *= 0.95;
+            }
+        }
+
+        draw(ctx) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.life})`; // White droplets
+            ctx.fill();
+            
+            // Shininess
+            ctx.beginPath();
+            ctx.arc(this.x - this.radius*0.3, this.y - this.radius*0.3, this.radius*0.3, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.life * 0.8})`;
+            ctx.fill();
+        }
+    }
+
+    function spawnDroplets() {
+        // Find the "Pants" position relative to the viewport
+        const marciRect = marci.getBoundingClientRect();
+        
+        // Coordinates of the crotch area within the SVG (approx 100, 250 in 200x300 viewbox)
+        // Convert SVG local coords to screen coords
+        const scaleX = marciRect.width / 200;
+        const scaleY = marciRect.height / 300;
+        
+        const originX = marciRect.left + (100 * scaleX);
+        const originY = marciRect.top + (250 * scaleY);
+
+        for(let i=0; i<15; i++) {
+            particles.push(new Particle(originX, originY));
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+        
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw(ctx);
+            
+            if (particles[i].life <= 0) {
+                particles.splice(i, 1);
+                i--;
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    // --- Interaction Logic ---
+    function triggerMarci() {
+        count++;
+        counterDisplay.textContent = count;
+        
+        // Visuals
+        marci.classList.add('squeezed');
+        marci.classList.remove('shake-anim');
+        void marci.offsetWidth; // Trigger reflow
+        marci.classList.add('shake-anim');
+
+        setTimeout(() => {
+            marci.classList.remove('squeezed');
+        }, 150);
+
+        // Audio
+        playWeirdSound();
+
+        // Physics
+        spawnDroplets();
+    }
+
+    marci.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Prevent accidental selection
+        triggerMarci();
+    });
+
+    marci.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Prevent scroll on tap
+        triggerMarci();
+    }, { passive: false });
+
+    // Utility: Check for mobile class from parent OS
+    if (document.body.classList.contains('mobile-mode')) {
+        // Adjust physics gravity for mobile if needed, or UI scaling
+    }
+
+</script>
+</body>
+</html>
