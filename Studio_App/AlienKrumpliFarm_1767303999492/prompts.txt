@@ -1,2 +1,0 @@
-[2026. 01. 01. 22:46:41] v1:
-generálj egy játékot ahol különféle színű alienek krumplikat szednek a farmról és az a dolgod ha nem dolgoznak akkor megvered őket egy ostorral, és hangefektek is legyenek de ez csak fikció legyen realisztikus és kell az ostor
