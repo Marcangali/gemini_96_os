@@ -1,0 +1,660 @@
+<!--
+APP_NAME: MCC Hub
+APP_DESCRIPTION: Digital gateway to Mathias Corvinus Collegium news, events, and programs.
+APP_ICON: 
+APP_CATEGORY: Education
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 640
+VERSION_SUMMARY: Initial release with news feed, events calendar, and program explorer.
+STORE_ID: mcc-hub-11
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCC Hub</title>
+<style>
+    /* --- CSS VARIABLES & RESET --- */
+    :root {
+        --primary: #00274c; /* Deep Navy Blue */
+        --accent: #bfa67a; /* Gold/Bronze */
+        --accent-hover: #a38b63;
+        --bg-color: #f4f6f9;
+        --text-main: #1a1a1a;
+        --text-muted: #666;
+        --white: #ffffff;
+        --glass: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(255, 255, 255, 0.5);
+        --shadow-soft: 0 8px 24px rgba(0, 39, 76, 0.1);
+        --radius: 16px;
+        --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    
+    body {
+        font-family: var(--font-family);
+        background: var(--bg-color);
+        color: var(--text-main);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* --- LAYOUT --- */
+    #app-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        position: relative;
+    }
+
+    /* --- HEADER --- */
+    header {
+        background: var(--primary);
+        color: var(--white);
+        padding: 20px;
+        border-radius: 0 0 24px 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Decorative header pattern */
+    header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+        opacity: 0.2;
+        border-radius: 50%;
+    }
+
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    h1 {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+    
+    .subtitle {
+        font-size: 11px;
+        opacity: 0.8;
+        font-weight: 400;
+        letter-spacing: 1px;
+    }
+
+    .notification-bell {
+        position: relative;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .notification-bell:active { transform: scale(0.9); }
+    .notification-dot {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 8px;
+        height: 8px;
+        background: var(--accent);
+        border-radius: 50%;
+        border: 2px solid var(--primary);
+    }
+
+    /* --- MAIN CONTENT AREA --- */
+    main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        padding-bottom: 80px; /* Space for navbar */
+        scroll-behavior: smooth;
+    }
+
+    /* Hide scrollbar */
+    main::-webkit-scrollbar { width: 4px; }
+    main::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+    /* --- SECTIONS --- */
+    .section-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .section-title svg { stroke: var(--accent); }
+
+    /* Cards */
+    .card {
+        background: var(--white);
+        border-radius: var(--radius);
+        padding: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        border: 1px solid rgba(0,0,0,0.05);
+        margin-bottom: 16px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    .card:active {
+        transform: scale(0.98);
+    }
+
+    /* Featured Card (Hero) */
+    .hero-card {
+        background: linear-gradient(135deg, var(--primary), #1a3c5e);
+        color: white;
+        height: 160px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        position: relative;
+    }
+    .hero-card::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60') center/cover;
+        opacity: 0.3;
+        z-index: 0;
+    }
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+    .tag {
+        background: var(--accent);
+        color: var(--primary);
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 8px;
+    }
+    .hero-title {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+
+    /* News Items */
+    .news-item {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        background: var(--white);
+        padding: 12px;
+        border-radius: 12px;
+    }
+    .news-thumb {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        background-color: #ddd;
+        background-size: cover;
+        background-position: center;
+        flex-shrink: 0;
+    }
+    .news-info h3 {
+        font-size: 14px;
+        margin-bottom: 4px;
+        color: var(--text-main);
+    }
+    .news-info p {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.4;
+    }
+
+    /* Programs Grid */
+    .programs-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .program-card {
+        background: var(--white);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        border: 1px solid rgba(0,0,0,0.05);
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .program-card:hover {
+        border-color: var(--accent);
+        background: #fffdf8;
+    }
+    .program-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(0, 39, 76, 0.05);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        color: var(--primary);
+    }
+    .program-card h4 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    /* --- BOTTOM NAVIGATION --- */
+    .nav-bar {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 90%;
+        background: var(--glass);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        display: flex;
+        justify-content: space-around;
+        padding: 12px;
+        box-shadow: var(--shadow-soft);
+        z-index: 100;
+    }
+
+    .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: #888;
+        font-size: 10px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.3s;
+        width: 60px;
+    }
+
+    .nav-item svg {
+        width: 24px;
+        height: 24px;
+        stroke-width: 2;
+        transition: 0.3s;
+    }
+
+    .nav-item.active {
+        color: var(--primary);
+    }
+    .nav-item.active svg {
+        stroke: var(--primary);
+        fill: rgba(0, 39, 76, 0.1);
+        transform: translateY(-2px);
+    }
+
+    /* --- PAGES (TABS) --- */
+    .page {
+        display: none;
+        animation: fadeIn 0.4s ease;
+    }
+    .page.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* --- UTILITIES --- */
+    .btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        width: 100%;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 14px;
+    }
+    .btn:hover { background: #003666; }
+    .btn-outline {
+        background: transparent;
+        border: 2px solid var(--primary);
+        color: var(--primary);
+    }
+    .btn-outline:hover {
+        background: rgba(0, 39, 76, 0.05);
+    }
+
+    /* Form Styles */
+    .form-group { margin-bottom: 12px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
+    .form-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 14px;
+        outline: none;
+        transition: 0.2s;
+    }
+    .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(191, 166, 122, 0.2); }
+
+    /* Mobile overrides */
+    body.mobile-mode .nav-bar {
+        bottom: 10px;
+        width: 95%;
+    }
+    
+    /* Events List */
+    .event-card {
+        display: flex;
+        background: white;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .event-date {
+        background: rgba(0, 39, 76, 0.05);
+        border-radius: 8px;
+        padding: 8px 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        min-width: 60px;
+        color: var(--primary);
+    }
+    .date-day { font-size: 18px; font-weight: 700; }
+    .date-month { font-size: 10px; text-transform: uppercase; font-weight: 600; }
+    .event-details h3 { font-size: 14px; margin-bottom: 4px; }
+    .event-details p { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+
+</style>
+</head>
+<body>
+
+<div id="app-container">
+    <header>
+        <div class="header-top">
+            <div>
+                <h1>MCC Hub</h1>
+                <div class="subtitle">Mathias Corvinus Collegium</div>
+            </div>
+            <div class="notification-bell" onclick="playClick()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <div class="notification-dot"></div>
+            </div>
+        </div>
+    </header>
+
+    <main id="content-area">
+        
+        <!-- === HOME PAGE === -->
+        <div id="page-home" class="page active">
+            
+            <!-- Hero -->
+            <div class="card hero-card" onclick="openDetails('summit')">
+                <div class="hero-content">
+                    <span class="tag">FEATURED</span>
+                    <div class="hero-title">Budapest Summit 2024: The Future of Education</div>
+                </div>
+            </div>
+
+            <!-- Quick Access -->
+            <div class="section-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>
+                <span>Programs</span>
+            </div>
+            <div class="programs-grid">
+                <div class="program-card" onclick="playClick()">
+                    <div class="program-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg></div>
+                    <h4>University</h4>
+                </div>
+                <div class="program-card" onclick="playClick()">
+                    <div class="program-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg></div>
+                    <h4>Ph.D</h4>
+                </div>
+                <div class="program-card" onclick="playClick()">
+                    <div class="program-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div>
+                    <h4>Secondary</h4>
+                </div>
+                <div class="program-card" onclick="playClick()">
+                    <div class="program-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg></div>
+                    <h4>Public</h4>
+                </div>
+            </div>
+
+            <!-- Latest News -->
+            <div class="section-title" style="margin-top: 24px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>Latest News</span>
+            </div>
+
+            <div class="news-item" onclick="playClick()">
+                <div class="news-thumb" style="background-image: url('https://images.unsplash.com/photo-1524178232363-1fb2b075b955?ixlib=rb-1.2.1&auto=format&fit=crop&w=150&q=60')"></div>
+                <div class="news-info">
+                    <h3>New Campus Opening</h3>
+                    <p>The new center in Győr is now open for students.</p>
+                </div>
+            </div>
+
+            <div class="news-item" onclick="playClick()">
+                <div class="news-thumb" style="background-image: url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&auto=format&fit=crop&w=150&q=60')"></div>
+                <div class="news-info">
+                    <h3>Guest Lecture Series</h3>
+                    <p>Prof. Anderson on 'Modern Geopolitics' this Friday.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- === EVENTS PAGE === -->
+        <div id="page-events" class="page">
+            <div class="section-title">Upcoming Events</div>
+
+            <div class="event-card" onclick="playClick()">
+                <div class="event-date">
+                    <span class="date-day">12</span>
+                    <span class="date-month">Oct</span>
+                </div>
+                <div class="event-details">
+                    <h3>Leadership Workshop</h3>
+                    <p><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Tas vezér st. Campus</p>
+                    <p><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 14:00 - 16:00</p>
+                </div>
+            </div>
+
+            <div class="event-card" onclick="playClick()">
+                <div class="event-date">
+                    <span class="date-day">15</span>
+                    <span class="date-month">Oct</span>
+                </div>
+                <div class="event-details">
+                    <h3>Debate: AI Ethics</h3>
+                    <p><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Scruton Cafe</p>
+                    <p><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 18:00 - 20:00</p>
+                </div>
+            </div>
+
+             <div class="event-card" onclick="playClick()">
+                <div class="event-date">
+                    <span class="date-day">21</span>
+                    <span class="date-month">Oct</span>
+                </div>
+                <div class="event-details">
+                    <h3>Book Launch: History of Hungary</h3>
+                    <p><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Main Hall</p>
+                    <p><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 17:30</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- === ABOUT/APPLY PAGE === -->
+        <div id="page-about" class="page">
+             <div class="card" style="text-align: center; background: transparent; box-shadow: none; border: none;">
+                <div style="width: 80px; height: 80px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: var(--accent);">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                </div>
+                <h2 style="font-size: 20px; color: var(--primary);">Join MCC</h2>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">Talent management for the future leaders of the Carpathian Basin.</p>
+            </div>
+
+            <div class="card">
+                <div class="section-title">Request Information</div>
+                <form id="contact-form" onsubmit="handleForm(event)">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" placeholder="john@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Interest</label>
+                        <select class="form-input">
+                            <option>University Program</option>
+                            <option>Secondary School Program</option>
+                            <option>Ph.D Program</option>
+                            <option>Events</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">Submit Request</button>
+                </form>
+            </div>
+
+            <div class="card" style="background: var(--accent); color: var(--primary);">
+                <h4 style="font-size: 14px; font-weight: 700;">Did you know?</h4>
+                <p style="font-size: 12px; margin-top: 4px; line-height: 1.4;">Mathias Corvinus, King of Hungary (1458-1490), established the Bibliotheca Corviniana, one of the greatest libraries of the Renaissance.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Navigation -->
+    <nav class="nav-bar">
+        <div class="nav-item active" onclick="switchTab('home', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span>Home</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('events', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Events</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('about', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span>About</span>
+        </div>
+    </nav>
+
+</div>
+
+<script>
+    // --- AUDIO SYSTEM ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playTone(freq, type, duration) {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playClick() {
+        playTone(600, 'sine', 0.1);
+    }
+
+    function playSuccess() {
+        playTone(500, 'sine', 0.1);
+        setTimeout(() => playTone(800, 'sine', 0.2), 100);
+    }
+
+    // --- NAVIGATION LOGIC ---
+    function switchTab(tabId, el) {
+        playClick();
+        
+        // Remove active class from nav items
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        // Add active class to clicked item
+        el.classList.add('active');
+
+        // Hide all pages
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        // Show target page
+        const page = document.getElementById('page-' + tabId);
+        page.classList.add('active');
+        
+        // Reset scroll
+        document.querySelector('main').scrollTop = 0;
+    }
+
+    // --- FORM HANDLING ---
+    function handleForm(e) {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        const originalText = btn.innerText;
+        
+        btn.innerText = "Sending...";
+        btn.disabled = true;
+
+        setTimeout(() => {
+            playSuccess();
+            btn.innerText = "Request Sent!";
+            btn.style.background = "#28a745"; // Success green
+            e.target.reset();
+
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = ""; // Reset to CSS var
+                btn.disabled = false;
+            }, 2000);
+        }, 1000);
+    }
+
+    function openDetails(id) {
+        playClick();
+        // Just a visual feedback simulation
+        console.log("Opening details for " + id);
+    }
+
+    // Check responsiveness
+    if (window.innerWidth < 400) {
+        document.body.classList.add('mobile-mode');
+    }
+</script>
+
+</body>
+</html>
