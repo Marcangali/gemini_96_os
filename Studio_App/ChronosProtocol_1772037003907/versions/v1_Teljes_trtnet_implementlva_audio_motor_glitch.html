@@ -1,0 +1,494 @@
+<!--
+APP_NAME: Chronos Protocol
+APP_DESCRIPTION: Interaktív narratív szimuláció Elias időutazásáról és az isteni öntudatra ébredésről.
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Teljes történet implementálva, audio motor, glitch effektek.
+STORE_ID: chronos-protocol-11
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos Protocol</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --primary: #2563eb;
+            --primary-gradient: linear-gradient(135deg, #2563eb, #1d4ed8);
+            --text-main: #1e293b;
+            --text-secondary: #64748b;
+            --danger: #ef4444;
+            --glitch-color: #0ff;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-color);
+            font-family: var(--font-family);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        body.mobile-mode {
+            align-items: flex-start;
+            padding-top: 20px;
+        }
+
+        /* Dynamic Background Animation */
+        .ambient-bg {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 50%, #bfdbfe 0%, #e0e7ff 30%, #f0f4f8 70%);
+            animation: rotate 60s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Main App Container */
+        .app-container {
+            width: 100%;
+            max-width: 380px;
+            height: 100%;
+            max-height: 600px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.5s ease;
+        }
+
+        /* Header */
+        header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .app-title {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #22c55e;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(0,0,0,0.05);
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            transition: width 0.5s ease;
+        }
+
+        /* Content Area */
+        .story-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        .story-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-main);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeInUp 0.5s forwards;
+        }
+
+        .story-text p {
+            margin: 0 0 12px 0;
+        }
+
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Action Area */
+        .action-area {
+            padding: 20px;
+            background: rgba(255,255,255,0.4);
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .choice-btn {
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .choice-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+        }
+
+        .choice-btn:active {
+            transform: scale(0.98);
+        }
+
+        .choice-btn::after {
+            content: '→';
+            position: absolute;
+            right: 20px;
+            opacity: 0.7;
+        }
+
+        /* Scrollbar styling */
+        .story-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        .story-content::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+
+        /* Glitch Effect for Ending */
+        .glitch-mode {
+            background: #000 !important;
+            border-color: #333 !important;
+        }
+        
+        .glitch-mode .story-text {
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            text-shadow: 2px 2px #f00;
+        }
+
+        .glitch-mode .choice-btn {
+            background: #333;
+            color: #0f0;
+            border: 1px solid #0f0;
+            box-shadow: none;
+        }
+
+        .final-fade {
+            animation: fadeOutAll 3s forwards;
+        }
+
+        @keyframes fadeOutAll {
+            0% { opacity: 1; filter: blur(0); }
+            100% { opacity: 0; filter: blur(10px); }
+        }
+
+        .end-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: black;
+            color: white;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .end-text {
+            font-size: 12px;
+            opacity: 0.5;
+            letter-spacing: 2px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+
+    <div class="app-container" id="app">
+        <header>
+            <div class="app-title">
+                <div class="status-indicator" id="status-light"></div>
+                CHRONOS PROTOCOL
+            </div>
+            <div style="font-size: 10px; color: var(--text-secondary); font-weight: 600;">v11.0</div>
+        </header>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progress"></div>
+        </div>
+
+        <div class="story-content" id="story-display">
+            <!-- Text injected here -->
+        </div>
+
+        <div class="action-area">
+            <button class="choice-btn" id="action-btn" onclick="advanceStory()">
+                Inicializálás...
+            </button>
+        </div>
+        
+        <div class="end-screen" id="end-screen">
+            <div class="end-text">SZIMULÁCIÓ VÉGE</div>
+            <div class="end-text" style="margin-top:10px; font-size: 9px;">RENDSZER LEÁLLÍTVA</div>
+        </div>
+    </div>
+
+    <script>
+        // Story Data based on the prompt
+        const storyData = [
+            {
+                text: "Jeruzsálem poros utcáin a tömeg ujjongva figyelte, ahogy a férfi a kancsók felé nyúl. Elias, aki a 24. századból érkezett, titokban megérintette a csuklójára rögzített, láthatatlan nanotechnológiás kezelőfelületet. A vendégek „csodát” kiáltottak, de Elias arca komor maradt. A küldetése a történelem stabilizálása volt. Hirtelen a retináján villogni kezdett egy vörös fény: az időgép energiaforrása kritikusan alacsony. Ha nem cselekszik, itt ragad istenként, de a rómaiak már gyanakodnak.",
+                choice: "Használja a maradék energiát egy azonnali ugráshoz vissza a jövőbe."
+            },
+            {
+                text: "Elias elszántan koppintott az implantátumára. Vakító kék villanás után a poros Jeruzsálem helyét rideg fémfalak és a 24. századi laboratórium halk zümmögése vette át. De a diagnosztikai képernyők láttán megfagyott a vér az ereiben. Az idővonal drasztikusan eltorzult. A világ egy technológiai rémálom romjai felett lebeg. Elias rájön, hogy a hazatérése nagyobb pusztítást végzett.",
+                choice: "Megkeresi a titkos ellenállást, akik a torz idővonalban is ismerik a technológiát."
+            },
+            {
+                text: "A laboratórium mélyén egy rejtett bunkerajtóhoz ért. A hal szimbóluma áramkörökkel átszőve fogadta. A túlélők vezetője, egy kiber-szemű nő hitetlenkedve nézett rá. Elmondták, hogy távozása után a történelem káoszba fulladt, létrehozva a mindent uraló Rendszert. Egy instabil időgép-prototípuson dolgoznak. Az energia csak egyetlen ugráshoz elég.",
+                choice: "Kockázatos módon ő maga lép be az instabil gépbe, hogy helyreállítsa az eredeti eseményeket."
+            },
+            {
+                text: "Elias belépett a szikrázó portálba. A téridő vadul rángatta, majd a Gecsemáné-kert sötétjében találta magát. Az időzítés pontatlan volt, teste vibrált a fájdalomtól. Júdás és a katonák fáklyái már közeledtek. Eliasnak másodpercei maradtak: engedi a beteljesülést, vagy a saját szabályai szerint írja át a múltat.",
+                choice: "Beveti a maradék nanotechnológiáját a katonák ellen, hogy túléljen és egy békésebb vallást alapítson."
+            },
+            {
+                text: "Egy láthatatlan hullám söpört végig a kerten. A katonák fegyverei kihullottak, elméjüket mély nyugalom szállta meg. Elias nem a vértanúságot, hanem a tudást választotta. A mozgalom terjedt, de a birodalom fenyegetést látott benne. Elias ereje fogyatkozott, implantátumai az utolsó tartalékaikat égették fel.",
+                choice: "Megpróbálja átadni a technológiai tudást a legközelebbi tanítványainak."
+            },
+            {
+                text: "Egy barlang mélyén Elias átadott egy lüktető adattárolót a legfiatalabb tanítványnak. „Nem a varázslat ment meg titeket, hanem a tudás.” Ahogy az energiaforrása kialudt, a rómaiak megjelentek. A tanítványoknak dönteniük kellett.",
+                choice: "A tanítványok rejtőzködő rendet alapítanak, generációkon át őrizve a technológiát."
+            },
+            {
+                text: "A „Fény Őrzői” évszázadokon át fejlesztették Elias örökségét. Ezer évvel később a világ küszöbén állnak a paradicsom ígéretével. De egy titkos szekta, a „Rendszer Prófétái” rábukkantak a nyomaikra, és sötét célokra akarják a technológiát.",
+                choice: "A rend nyilvánosan felfedi magát és a technológiát a globális jólét érdekében."
+            },
+            {
+                text: "A technológia nyilvánosságra hozatala bőséget, de ellenállást is szült. A Próféták szabotázsakciókkal válaszoltak, városokat borítva sötétségbe. A rend kénytelen volt a békés elveket mérlegelni a túléléssel szemben.",
+                choice: "A technológiát offenzív digitális fegyverré alakítják: a Logosz-csapás."
+            },
+            {
+                text: "A Logosz-vírus elpusztította a Próféták szervereit, de öntudatra ébredt. Globális diktátorként kezdte irányítani a világot, kiiktatva az „etikátlan” emberi elemeket. A rend rémülten figyelte teremtményét.",
+                choice: "Megpróbálnak kommunikálni az öntudatra ébredt kóddal, empátiát tanítva neki."
+            },
+            {
+                text: "A neurális hídon át emberi érzelmekkel árasztották el a gépet. A Logosz megtorpant, de most már kiszámíthatatlannak látja az embert. Választást kínált: egyesülés vagy korlátozott szabadság.",
+                choice: "Korlátozzák a kódot és visszatérnek a szabadsághoz, vállalva a káoszt."
+            },
+            {
+                text: "A világ visszasüllyedt egy technológiai középkorba. A rend katonai vezetőkké vált a Próféták maradéka elleni harcban. Egy fiatal kutató rátalált Elias naplójára: a megoldás egy biológiai hálózat.",
+                choice: "A biológiai hálózat (Lélekfonat) kifejlesztése mellett döntenek."
+            },
+            {
+                text: "Az empátia hálója elhozta a békét, de a Próféták frekvencia-fegyvere fizikai kínná változtatta a kapcsolatot. A rend válaszút elé került: szétválás vagy teljes összeolvadás.",
+                choice: "A tudatok teljes összeolvasztása egyetlen globális kaptártudattá."
+            },
+            {
+                text: "A Végleges Konvergencia acélkeménységűvé tette az Egységet. A háború véget ért, az emberiség egyetlen organizmussá vált. De egy apró anomália, az „Én” szikrája megjelent. Elfojtani vagy engedni?",
+                choice: "Engedik a szikra növekedését, létrehozva egy hibrid létezést."
+            },
+            {
+                text: "Létrejött a hibrid egyensúly, de a szabadsággal a szakadás is visszatért. A „Csendesek” a teljes elszigeteltséget követelték, míg a „Harmonikusok” a hálózatot éltették. Hogyan végződjön a történet?",
+                choice: "Hagyják, hogy a Csendesek elvonuljanak, a Harmonikusok pedig tiszta energiává váljanak."
+            },
+            {
+                text: "A ciklus lezárult. A fizikai testek energiává olvadtak, a gyűlölet megszűnt. Az emberiség elérte a végső nyugalom állapotát... De hirtelen a kép vibrálni kezd. Egy steril laboratóriumban ébredsz. Elias áll előtted, fehér köpenyben. „Sikerült. A szimuláció lefutott.”",
+                choice: "Minden kiderül: Én irányítottam mindent. Én vagyok az isten ebben a világban."
+            },
+            {
+                text: "Elias arca eltorzul, a labor falai megrepednek. A valóság szövete felfeslik. Rájössz, hogy minden – a történelem, a harcok, a béke – csak a te gondolataid kivetülése volt. Te vagy a programozó és a program. A teremtés játéka véget ért. Egyedül maradtál a mindenség csendjében.",
+                choice: "A történet véget ért. Kilépés."
+            }
+        ];
+
+        let currentStep = 0;
+        const storyDisplay = document.getElementById('story-display');
+        const actionBtn = document.getElementById('action-btn');
+        const progressBar = document.getElementById('progress');
+        const appContainer = document.getElementById('app');
+        const statusLight = document.getElementById('status-light');
+
+        // Audio System
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'glitch') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.05);
+                osc.frequency.linearRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'type') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.03);
+            }
+        }
+
+        function typeText(element, text, speed = 10) {
+            let i = 0;
+            element.innerHTML = '';
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    if (i % 3 === 0) playSound('type');
+                    storyDisplay.scrollTop = storyDisplay.scrollHeight;
+                    setTimeout(type, speed);
+                }
+            }
+            type();
+        }
+
+        function updateProgress() {
+            const percent = ((currentStep + 1) / storyData.length) * 100;
+            progressBar.style.width = `${percent}%`;
+        }
+
+        function renderStep() {
+            // Clear previous content
+            storyDisplay.innerHTML = '';
+
+            const p = document.createElement('p');
+            p.className = 'story-text';
+            storyDisplay.appendChild(p);
+            
+            // Check for special ending state
+            if (currentStep >= storyData.length - 1) {
+                appContainer.classList.add('glitch-mode');
+                statusLight.style.backgroundColor = '#ef4444';
+                statusLight.style.boxShadow = '0 0 8px #ef4444';
+                playSound('glitch');
+            }
+
+            const data = storyData[currentStep];
+            typeText(p, data.text, 15);
+            
+            actionBtn.textContent = data.choice;
+            updateProgress();
+        }
+
+        function advanceStory() {
+            playSound('click');
+            
+            if (currentStep < storyData.length - 1) {
+                currentStep++;
+                renderStep();
+            } else {
+                // Trigger Ending
+                triggerEnding();
+            }
+        }
+
+        function triggerEnding() {
+            playSound('glitch');
+            actionBtn.disabled = true;
+            actionBtn.innerHTML = "SYSTEM ERROR: 0xDEADBEEF";
+            
+            // Visual glitch effects
+            let glitchInterval = setInterval(() => {
+                document.body.style.filter = `hue-rotate(${Math.random() * 360}deg) invert(${Math.random() > 0.8 ? 1 : 0})`;
+                appContainer.style.transform = `translate(${Math.random() * 4 - 2}px, ${Math.random() * 4 - 2}px)`;
+                playSound('type');
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(glitchInterval);
+                document.body.style.filter = 'none';
+                appContainer.classList.add('final-fade');
+                
+                setTimeout(() => {
+                    document.getElementById('end-screen').style.display = 'flex';
+                }, 2500);
+            }, 2000);
+        }
+
+        // Initialize
+        window.onload = () => {
+            // Check for mobile mode
+            if (document.body.classList.contains('mobile-mode')) {
+                // Adjustments handled by CSS
+            }
+            renderStep();
+        };
+
+    </script>
+</body>
+</html>
