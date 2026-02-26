@@ -16,7 +16,7 @@ STORE_ID: dad-sim-01-widget
     <title>ApuWidget</title>
     <style>
         :root {
-            --bg-glass: rgba(255, 255, 255, 0.9);
+            --bg-glass: rgba(255, 255, 255, 0.85);
             --text-main: #202020;
             --primary: #0078d4;
             --success: #107c10;
@@ -38,19 +38,23 @@ STORE_ID: dad-sim-01-widget
             user-select: none;
         }
 
+        /* Mobile Mode Adjustments */
+        body.mobile-mode {
+            font-size: 1.1rem;
+        }
+
         .widget-container {
             flex: 1;
             background: var(--bg-glass);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: space-between;
             padding: 16px;
             box-sizing: border-box;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 0; /* Window frame handles radius usually, but glass needs it? OS handles window radius. */
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
         /* Status Header */
@@ -64,7 +68,7 @@ STORE_ID: dad-sim-01-widget
             margin-bottom: 10px;
         }
 
-        .clock { font-variant-numeric: tabular-nums; }
+        .clock { font-variant-numeric: tabular-nums; font-weight: 600; }
 
         .money {
             font-weight: 700;
@@ -74,6 +78,7 @@ STORE_ID: dad-sim-01-widget
             border-radius: 12px;
             font-size: 0.8rem;
             border: 1px solid #bbf7d0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
 
         /* Avatar Section */
@@ -81,17 +86,17 @@ STORE_ID: dad-sim-01-widget
             position: relative;
             width: 72px;
             height: 72px;
-            background: #f1f5f9;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 42px;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05), 0 5px 10px rgba(0,0,0,0.05);
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.8), 0 4px 8px rgba(0,0,0,0.1);
             cursor: default;
             margin-bottom: 12px;
             transition: all 0.3s;
-            border: 2px solid #fff;
+            border: 3px solid #fff;
         }
         
         .zzz {
@@ -104,6 +109,7 @@ STORE_ID: dad-sim-01-widget
             animation: float 2.5s infinite ease-in-out;
             display: none;
             text-shadow: 1px 1px 0 #fff;
+            pointer-events: none;
         }
         
         .is-sleeping .zzz { display: block; }
@@ -122,9 +128,10 @@ STORE_ID: dad-sim-01-widget
             flex-direction: column;
             gap: 8px;
             margin-bottom: 16px;
-            background: rgba(255,255,255,0.5);
-            padding: 8px;
-            border-radius: 8px;
+            background: rgba(255,255,255,0.4);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.3);
         }
 
         .stat-row {
@@ -133,14 +140,15 @@ STORE_ID: dad-sim-01-widget
             gap: 8px;
         }
 
-        .stat-icon { font-size: 14px; width: 16px; text-align: center; cursor: default; }
+        .stat-icon { font-size: 14px; width: 16px; text-align: center; cursor: default; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1)); }
         
         .bar-bg {
             flex: 1;
             height: 8px;
-            background: rgba(0,0,0,0.08);
+            background: rgba(0,0,0,0.06);
             border-radius: 4px;
             overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
         }
         
         .bar-fill {
@@ -159,48 +167,75 @@ STORE_ID: dad-sim-01-widget
 
         button {
             border: none;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 12px;
             padding: 8px 0;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 3px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.mobile-mode button {
+            padding: 12px 0;
         }
 
         button:hover {
-            background: #f8fafc;
+            background: #fff;
             transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.08);
-            border-color: #cbd5e1;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
         }
         
-        button:active { transform: translateY(0); background: #f1f5f9; }
+        button:active { 
+            transform: translateY(1px); 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            background: #f1f5f9;
+        }
 
-        .btn-icon { font-size: 1.4rem; line-height: 1; }
-        .btn-label { font-size: 0.65rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Click ripple effect helper */
+        button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.05);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        button:active::after { opacity: 1; }
+
+        .btn-icon { font-size: 1.4rem; line-height: 1; margin-bottom: 2px; }
+        .btn-label { font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Offline State */
         .offline-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(255,255,255,0.95);
-            display: flex;
+            background: rgba(255,255,255,0.85);
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
             padding: 24px;
             z-index: 100;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
-        .offline-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.5; }
+        .offline-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.5; animation: pulse 2s infinite; }
         .offline-overlay h3 { margin: 0 0 6px 0; font-size: 1rem; color: #333; }
         .offline-overlay p { margin: 0; font-size: 0.8rem; color: #666; line-height: 1.4; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
 
     </style>
 </head>
@@ -257,7 +292,7 @@ STORE_ID: dad-sim-01-widget
     </div>
 
     <script>
-        // Keys must match the main app's storage logic
+        // Keys matching the main app
         const STORE_KEY = 'dad-sim-01-state'; 
         const CMD_KEY = 'dad-sim-01-cmd';
         
@@ -274,51 +309,69 @@ STORE_ID: dad-sim-01-widget
             offline: document.getElementById('offline-msg')
         };
 
-        const playSound = () => {
-             const ctx = new (window.AudioContext || window.webkitAudioContext)();
-             const t = ctx.currentTime;
+        // Synthesized Sound Effects
+        const playSound = (type = 'click') => {
+             const AudioContext = window.AudioContext || window.webkitAudioContext;
+             if (!AudioContext) return;
              
-             // Click Sound
+             const ctx = new AudioContext();
+             const t = ctx.currentTime;
              const osc = ctx.createOscillator();
              const gain = ctx.createGain();
-             osc.type = 'sine';
-             osc.frequency.setValueAtTime(800, t);
-             osc.frequency.exponentialRampToValueAtTime(400, t + 0.08);
-             gain.gain.setValueAtTime(0.1, t);
-             gain.gain.linearRampToValueAtTime(0, t + 0.08);
+             
              osc.connect(gain);
              gain.connect(ctx.destination);
-             osc.start(t);
-             osc.stop(t + 0.1);
+
+             if (type === 'click') {
+                 osc.type = 'sine';
+                 osc.frequency.setValueAtTime(600, t);
+                 osc.frequency.exponentialRampToValueAtTime(300, t + 0.1);
+                 gain.gain.setValueAtTime(0.1, t);
+                 gain.gain.linearRampToValueAtTime(0, t + 0.1);
+                 osc.start(t);
+                 osc.stop(t + 0.1);
+             } else if (type === 'success') {
+                 osc.type = 'triangle';
+                 osc.frequency.setValueAtTime(440, t);
+                 osc.frequency.setValueAtTime(554, t + 0.1); // C#
+                 gain.gain.setValueAtTime(0.1, t);
+                 gain.gain.linearRampToValueAtTime(0, t + 0.3);
+                 osc.start(t);
+                 osc.stop(t + 0.3);
+             }
         };
 
         function updateUI(data) {
-            if (!data) return;
+            if (!data) {
+                ui.offline.style.display = 'flex';
+                return;
+            }
+
+            ui.offline.style.display = 'none';
 
             // Format Money
             ui.money.textContent = (data.money || 0) + ' Ft';
             
-            // Format Time (assuming data.gameHour is 0-23)
+            // Format Time
             const h = data.gameHour !== undefined ? data.gameHour : '--';
             ui.clock.textContent = (h < 10 ? '0' + h : h) + ':00';
             
             // Update Bars
-            ui.bars.hunger.style.width = (data.hunger || 0) + '%';
-            ui.bars.energy.style.width = (data.energy || 0) + '%';
-            ui.bars.mood.style.width = (data.mood || 0) + '%';
+            ui.bars.hunger.style.width = Math.min(100, Math.max(0, data.hunger || 0)) + '%';
+            ui.bars.energy.style.width = Math.min(100, Math.max(0, data.energy || 0)) + '%';
+            ui.bars.mood.style.width = Math.min(100, Math.max(0, data.mood || 0)) + '%';
 
-            // Avatar State
-            if (data.isSleeping) {
+            // Avatar State logic
+            const isSleeping = data.isSleeping;
+            if (isSleeping) {
                 ui.avatarBox.classList.add('is-sleeping');
                 ui.avatar.textContent = '😴';
             } else {
                 ui.avatarBox.classList.remove('is-sleeping');
-                if (data.health < 20) ui.avatar.textContent = '🤒';
-                else if (data.mood < 30) ui.avatar.textContent = '😠';
+                if ((data.health || 100) < 30) ui.avatar.textContent = '🤒';
+                else if ((data.mood || 100) < 30) ui.avatar.textContent = '😠';
                 else ui.avatar.textContent = '👨';
             }
-
-            ui.offline.style.display = 'none';
         }
 
         function pollData() {
@@ -326,18 +379,21 @@ STORE_ID: dad-sim-01-widget
                 const raw = localStorage.getItem(STORE_KEY);
                 if (raw) {
                     const data = JSON.parse(raw);
-                    // Check timestamp if available to ensure liveness, otherwise just trust data
                     updateUI(data);
                 } else {
-                    ui.offline.style.display = 'flex';
+                    updateUI(null);
                 }
             } catch (e) {
                 console.error("Widget sync error", e);
+                updateUI(null); // Show offline on error
             }
         }
 
         window.sendCmd = function(action) {
-            playSound();
+            playSound('click');
+            
+            // Basic animation feedback on button press is handled by CSS :active
+            // But we send the command to storage
             const cmd = {
                 action: action,
                 timestamp: Date.now(),
@@ -346,9 +402,11 @@ STORE_ID: dad-sim-01-widget
             localStorage.setItem(CMD_KEY, JSON.stringify(cmd));
         };
 
-        // Polling loop
+        // Polling loop for data sync
         setInterval(pollData, 1000);
-        pollData(); // Initial immediate check
+        
+        // Initial check
+        pollData();
 
     </script>
 </body>
