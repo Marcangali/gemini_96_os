@@ -1,13 +1,10 @@
 {
-  "name": "ApuSzimulátor",
+  "name": "ApuWidget",
   "icon": "https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/ApuSzimultor_1764364763446/icon.png?s=f4b2afb04a8afc715f71cd537a80266eb9be9385",
   "category": "Custom",
-  "description": "Gondoskodj Apuról ebben a vicces tamagotchi játékban! Etess, itass, szerelj!",
-  "width": 380,
-  "height": 650,
-  "capabilities": [
-    "widgets"
-  ],
+  "description": "Mini vezérlő Apuhoz. Etess, dolgozz vagy aludj a tálcáról!",
+  "width": 220,
+  "height": 300,
   "id": "ApuSzimultor_1764364763446",
-  "version": "v40"
+  "version": "v42"
 }
