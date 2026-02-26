@@ -4,3 +4,7 @@ Make the revive animation much better, it is good, but it is not a bit scary
 ---
 [2025. 12. 23. 13:58:52] v38:
 Manual edit
+
+---
+[2026. 02. 26. 10:42:12] v39:
+Add widget support
