@@ -5,6 +5,9 @@
   "description": "Gondoskodj Apuról ebben a vicces tamagotchi játékban! Etess, itass, szerelj!",
   "width": 380,
   "height": 650,
+  "capabilities": [
+    "widgets"
+  ],
   "id": "ApuSzimultor_1764364763446",
-  "version": "v38"
+  "version": "v39"
 }
