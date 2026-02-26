@@ -5,7 +5,7 @@ APP_ICON: https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_
 APP_CATEGORY: Utilities
 WINDOW_WIDTH: 380
 WINDOW_HEIGHT: 650
-VERSION_SUMMARY: Epic and scary resurrection animation added
+VERSION_SUMMARY: Added widget support for OS desktop integration
 STORE_ID: dad-sim-01
 -->
 <!DOCTYPE html>
@@ -1497,6 +1497,9 @@ STORE_ID: dad-sim-01
 
                 this.ui.avatar.innerText = face;
                 
+                // Broadcast state to widget system
+                this.broadcastWidget(face);
+                
                 // Allow animations if not locked, unless sick or locked by event
                 if ((!this.isActionLocked || this.isSick) && !this.isDead) {
                     if(!this.ui.avatarContainer.classList.contains('temp-anim')) {
@@ -1570,6 +1573,22 @@ STORE_ID: dad-sim-01
                     if (this.stats.money < 500) this.ui.btnFeed.disabled = true;
                     if (this.stats.money < 300) this.ui.btnDrink.disabled = true;
                     if (this.stats.money < 200) this.ui.btnFishing.disabled = true;
+                }
+            }
+
+            broadcastWidget(face) {
+                // Send data to OS for widget display
+                const msg = {
+                    type: 'widget_update',
+                    id: 'dad-sim-01',
+                    title: 'Apu',
+                    text: `Kedv: ${Math.round(this.stats.mood)}% | ${this.stats.money} Ft`,
+                    icon: face,
+                    progress: this.stats.health
+                };
+                // Use postMessage to communicate with the parent OS
+                if (window.parent) {
+                    window.parent.postMessage(msg, '*');
                 }
             }
 
