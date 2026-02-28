@@ -1,0 +1,703 @@
+<!--
+APP_NAME: QuizMania
+APP_DESCRIPTION: Test your knowledge with interactive trivia questions!
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 550
+VERSION_SUMMARY: Initial release with dynamic questions and sound.
+STORE_ID: 
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizMania</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        :root {
+            --primary: #0078D4; /* Windows 11 Blue */
+            --primary-hover: #005A9E;
+            --bg-color: #f4f7f9;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --card-border: rgba(255, 255, 255, 0.5);
+            --text-main: #202124;
+            --text-muted: #5f6368;
+            --success: #107c10;
+            --danger: #d13438;
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Glassmorphism Container */
+        #app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+        }
+
+        .view {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .view.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Shared Card Style */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: var(--glass-shadow);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        /* Header / Branding */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #0078D4, #8A2BE2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Start View */
+        #view-start .glass-card {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .icon-container {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #0078D4, #4db8ff);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 16px rgba(0, 120, 212, 0.3);
+            color: white;
+        }
+
+        .icon-container svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .stats-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            width: 100%;
+            justify-content: space-around;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.5);
+            padding: 12px;
+            border-radius: 12px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 120, 212, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Quiz View */
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .score-pill {
+            background: rgba(0, 120, 212, 0.1);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 3px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+
+        .question-text {
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 24px;
+            flex-grow: 1;
+        }
+
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0,0,0,0.08);
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option-btn:hover {
+            background: white;
+            border-color: rgba(0, 120, 212, 0.3);
+            transform: translateX(4px);
+        }
+
+        .option-btn.correct {
+            background: #dff6dd;
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .option-btn.wrong {
+            background: #fde7e9;
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        /* Result View */
+        #view-result .glass-card {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .trophy {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .final-score {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .feedback-text {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+        }
+
+        /* Mobile Mode Adjustments */
+        body.mobile-mode #app-container {
+            padding: 10px;
+        }
+        
+        body.mobile-mode .glass-card {
+            padding: 16px;
+            border-radius: 12px;
+        }
+
+        body.mobile-mode .question-text {
+            font-size: 16px;
+        }
+
+        body.mobile-mode .option-btn {
+            padding: 12px;
+            font-size: 14px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- Start View -->
+        <div id="view-start" class="view active">
+            <div class="glass-card">
+                <div class="icon-container">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <div class="header">
+                    <h1>QuizMania</h1>
+                    <p>Test your knowledge!</p>
+                </div>
+                
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <div class="stat-value" id="high-score-display">0</div>
+                        <div class="stat-label">High Score</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="games-played-display">0</div>
+                        <div class="stat-label">Games Played</div>
+                    </div>
+                </div>
+
+                <button class="btn" id="btn-start">Start Game</button>
+            </div>
+        </div>
+
+        <!-- Quiz View -->
+        <div id="view-quiz" class="view">
+            <div class="glass-card">
+                <div class="quiz-header">
+                    <span id="question-counter">Q: 1/10</span>
+                    <span class="score-pill">Score: <span id="current-score">0</span></span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="timer-bar"></div>
+                </div>
+                
+                <div class="question-text" id="question-text">
+                    Loading question...
+                </div>
+
+                <div class="options-grid" id="options-container">
+                    <!-- Buttons injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Result View -->
+        <div id="view-result" class="view">
+            <div class="glass-card">
+                <div class="trophy">🏆</div>
+                <div class="header">
+                    <h1>Quiz Complete!</h1>
+                </div>
+                <div class="final-score" id="final-score-display">0</div>
+                <div class="feedback-text" id="feedback-text">Great job!</div>
+                
+                <button class="btn" id="btn-restart" style="margin-top: 20px;">Play Again</button>
+                <button class="btn" id="btn-home" style="margin-top: 10px; background: rgba(0,0,0,0.05); color: var(--text-main); box-shadow: none;">Back to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * QuizMania Logic
+         */
+
+        // Question Database
+        const allQuestions = [
+            { q: "What is the capital of Japan?", options: ["Seoul", "Beijing", "Tokyo", "Bangkok"], a: 2 },
+            { q: "Which planet is known as the Red Planet?", options: ["Venus", "Mars", "Jupiter", "Saturn"], a: 1 },
+            { q: "Who wrote 'Romeo and Juliet'?", options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"], a: 1 },
+            { q: "What is the largest ocean on Earth?", options: ["Atlantic", "Indian", "Arctic", "Pacific"], a: 3 },
+            { q: "What is the chemical symbol for Gold?", options: ["Ag", "Fe", "Au", "Cu"], a: 2 },
+            { q: "In what year did the Titanic sink?", options: ["1912", "1905", "1898", "1923"], a: 0 },
+            { q: "What is the hardest natural substance on Earth?", options: ["Iron", "Diamond", "Quartz", "Granite"], a: 1 },
+            { q: "How many colors are there in a rainbow?", options: ["5", "6", "7", "8"], a: 2 },
+            { q: "Which element is said to keep bones strong?", options: ["Iron", "Calcium", "Potassium", "Zinc"], a: 1 },
+            { q: "What is the largest mammal in the world?", options: ["Elephant", "Blue Whale", "Giraffe", "Hippopotamus"], a: 1 },
+            { q: "Who painted the Mona Lisa?", options: ["Vincent van Gogh", "Pablo Picasso", "Leonardo da Vinci", "Claude Monet"], a: 2 },
+            { q: "What is the main ingredient in guacamole?", options: ["Tomato", "Avocado", "Onion", "Lime"], a: 1 },
+            { q: "Which country invented tea?", options: ["India", "England", "China", "Japan"], a: 2 },
+            { q: "How many legs does a spider have?", options: ["6", "8", "10", "12"], a: 1 },
+            { q: "What is the nearest star to Earth?", options: ["Sirius", "Alpha Centauri", "Proxima Centauri", "The Sun"], a: 3 }
+        ];
+
+        // State Variables
+        let currentQuestions = [];
+        let currentQIndex = 0;
+        let score = 0;
+        let timerInterval;
+        let timeLeft;
+        const TIME_PER_QUESTION = 15000; // 15 seconds in ms
+        let isAnswering = false;
+
+        // DOM Elements
+        const views = {
+            start: document.getElementById('view-start'),
+            quiz: document.getElementById('view-quiz'),
+            result: document.getElementById('view-result')
+        };
+        
+        const ui = {
+            highScore: document.getElementById('high-score-display'),
+            gamesPlayed: document.getElementById('games-played-display'),
+            btnStart: document.getElementById('btn-start'),
+            qCounter: document.getElementById('question-counter'),
+            currentScore: document.getElementById('current-score'),
+            timerBar: document.getElementById('timer-bar'),
+            qText: document.getElementById('question-text'),
+            optionsContainer: document.getElementById('options-container'),
+            finalScore: document.getElementById('final-score-display'),
+            feedbackText: document.getElementById('feedback-text'),
+            btnRestart: document.getElementById('btn-restart'),
+            btnHome: document.getElementById('btn-home')
+        };
+
+        // Audio System (Web Audio API)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            
+            if (type === 'click') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'correct') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now); // A4
+                osc.frequency.setValueAtTime(554.37, now + 0.1); // C#5
+                osc.frequency.setValueAtTime(659.25, now + 0.2); // E5
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'timeout') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.setValueAtTime(150, now + 0.1);
+                gainNode.gain.setValueAtTime(0.05, now);
+                gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+        }
+
+        // Utility: Shuffle Array
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        // Navigation
+        function showView(viewName) {
+            Object.values(views).forEach(v => v.classList.remove('active'));
+            views[viewName].classList.add('active');
+        }
+
+        // Initialize App
+        function init() {
+            loadStats();
+            
+            ui.btnStart.addEventListener('click', () => {
+                playSound('click');
+                startGame();
+            });
+            
+            ui.btnRestart.addEventListener('click', () => {
+                playSound('click');
+                startGame();
+            });
+            
+            ui.btnHome.addEventListener('click', () => {
+                playSound('click');
+                loadStats();
+                showView('start');
+            });
+        }
+
+        // Load Stats from LocalStorage
+        function loadStats() {
+            const high = localStorage.getItem('quizmania_highscore') || 0;
+            const played = localStorage.getItem('quizmania_played') || 0;
+            ui.highScore.innerText = high;
+            ui.gamesPlayed.innerText = played;
+        }
+
+        // Save Stats
+        function saveStats() {
+            const high = parseInt(localStorage.getItem('quizmania_highscore') || 0);
+            if (score > high) {
+                localStorage.setItem('quizmania_highscore', score);
+            }
+            const played = parseInt(localStorage.getItem('quizmania_played') || 0);
+            localStorage.setItem('quizmania_played', played + 1);
+        }
+
+        // Game Flow
+        function startGame() {
+            // Pick 10 random questions
+            currentQuestions = shuffle([...allQuestions]).slice(0, 10);
+            currentQIndex = 0;
+            score = 0;
+            ui.currentScore.innerText = score;
+            showView('quiz');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswering = false;
+            const q = currentQuestions[currentQIndex];
+            
+            ui.qCounter.innerText = `Q: ${currentQIndex + 1}/${currentQuestions.length}`;
+            ui.qText.innerText = q.q;
+            
+            ui.optionsContainer.innerHTML = '';
+            
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(index, btn);
+                ui.optionsContainer.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            let startTime = Date.now();
+            ui.timerBar.style.width = '100%';
+            ui.timerBar.style.backgroundColor = 'var(--primary)';
+
+            timerInterval = setInterval(() => {
+                let elapsedTime = Date.now() - startTime;
+                let remaining = TIME_PER_QUESTION - elapsedTime;
+                
+                let percentage = (remaining / TIME_PER_QUESTION) * 100;
+                
+                if (percentage <= 0) {
+                    clearInterval(timerInterval);
+                    ui.timerBar.style.width = '0%';
+                    handleTimeout();
+                } else {
+                    ui.timerBar.style.width = `${percentage}%`;
+                    if(percentage < 25) {
+                        ui.timerBar.style.backgroundColor = 'var(--danger)';
+                    } else if (percentage < 50) {
+                        ui.timerBar.style.backgroundColor = '#fca130'; // Warning orange
+                    }
+                }
+            }, 50);
+        }
+
+        function handleAnswer(selectedIndex, btnElement) {
+            if (isAnswering) return;
+            isAnswering = true;
+            clearInterval(timerInterval);
+            
+            const q = currentQuestions[currentQIndex];
+            const isCorrect = selectedIndex === q.a;
+            
+            const allBtns = ui.optionsContainer.querySelectorAll('.option-btn');
+            
+            if (isCorrect) {
+                playSound('correct');
+                btnElement.classList.add('correct');
+                
+                // Calculate score based on time left (max 100 per question)
+                let timeRatio = parseFloat(ui.timerBar.style.width) / 100;
+                let points = 50 + Math.floor(50 * timeRatio);
+                score += points;
+                
+                animateScore(score);
+            } else {
+                playSound('wrong');
+                btnElement.classList.add('wrong');
+                allBtns[q.a].classList.add('correct'); // Show correct answer
+            }
+
+            // Disable all buttons
+            allBtns.forEach(b => b.style.pointerEvents = 'none');
+
+            setTimeout(nextQuestion, 1500);
+        }
+
+        function handleTimeout() {
+            if (isAnswering) return;
+            isAnswering = true;
+            playSound('timeout');
+            
+            const q = currentQuestions[currentQIndex];
+            const allBtns = ui.optionsContainer.querySelectorAll('.option-btn');
+            
+            allBtns[q.a].classList.add('correct');
+            allBtns.forEach(b => b.style.pointerEvents = 'none');
+            
+            setTimeout(nextQuestion, 1500);
+        }
+
+        function animateScore(newScore) {
+            ui.currentScore.style.transform = 'scale(1.5)';
+            ui.currentScore.style.color = 'var(--success)';
+            ui.currentScore.innerText = newScore;
+            
+            setTimeout(() => {
+                ui.currentScore.style.transform = 'scale(1)';
+                ui.currentScore.style.color = 'inherit';
+            }, 300);
+        }
+
+        function nextQuestion() {
+            currentQIndex++;
+            if (currentQIndex < currentQuestions.length) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            saveStats();
+            ui.finalScore.innerText = score;
+            
+            let maxPossible = currentQuestions.length * 100;
+            let percentage = score / maxPossible;
+            
+            if (percentage > 0.8) {
+                ui.feedbackText.innerText = "Outstanding! You're a trivia master!";
+            } else if (percentage > 0.5) {
+                ui.feedbackText.innerText = "Good job! Solid knowledge.";
+            } else {
+                ui.feedbackText.innerText = "Nice try! Better luck next time.";
+            }
+            
+            showView('result');
+            playSound('correct'); // celebratory
+        }
+
+        // Start
+        window.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
