@@ -1,2 +1,6 @@
 [2025. 12. 22. 22:02:15] v2:
 Fix that when you restart it is not showing the creature just plays the sound
+
+---
+[2026. 02. 28. 21:34:44] v5:
+Maje the effect EVEN MIRE SCARIER
