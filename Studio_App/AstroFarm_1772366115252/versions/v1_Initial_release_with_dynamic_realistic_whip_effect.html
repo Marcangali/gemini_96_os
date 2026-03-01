@@ -1,0 +1,808 @@
+<!--
+APP_NAME: Astro Farm
+APP_DESCRIPTION: Keep the alien farm workers awake with your trusty energy whip!
+APP_CATEGORY: Games
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Initial release with dynamic realistic whip effects.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Astro Farm</title>
+    <style>
+        :root {
+            --ui-bg: rgba(255, 255, 255, 0.8);
+            --ui-border: rgba(255, 255, 255, 0.4);
+            --text-main: #1e293b;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --glass-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #0f172a; /* Space/Night farm vibe */
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-main);
+        }
+
+        /* Background Art */
+        .farm-background {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(circle at 50% 100%, #1e293b 0%, #0f172a 80%);
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .stars {
+            position: absolute;
+            width: 100%; height: 50%;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 90px 40px, #fff, rgba(0,0,0,0));
+            background-size: 100px 100px;
+            opacity: 0.3;
+        }
+
+        .crops {
+            position: absolute;
+            bottom: 0; left: 0; right: 0; height: 30%;
+            background: linear-gradient(0deg, #064e3b 0%, transparent 100%);
+            border-top: 1px solid rgba(16, 185, 129, 0.2);
+            box-shadow: 0 -10px 30px rgba(16, 185, 129, 0.1);
+        }
+
+        /* Gemini 11 UI Overlay */
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--ui-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--ui-border);
+            border-radius: 0 0 16px 16px;
+            box-shadow: var(--glass-shadow);
+            margin: 0 8px;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; }
+        .stat-value { font-size: 20px; font-weight: 800; }
+
+        .productivity-bar {
+            width: 120px; height: 10px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        .productivity-fill {
+            height: 100%;
+            background: var(--success);
+            width: 100%;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Game Area */
+        .game-area {
+            position: relative;
+            flex-grow: 1;
+            z-index: 5;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            padding: 20px;
+            align-items: end;
+            justify-items: center;
+        }
+
+        /* Aliens */
+        .alien-container {
+            width: 100px;
+            height: 120px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .alien-container:active { transform: scale(0.95); }
+
+        .alien-svg {
+            width: 100%; height: 100%;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+            transition: all 0.3s ease;
+        }
+
+        /* Alien States & Animations */
+        @keyframes breath {
+            0%, 100% { transform: scaleY(1) translateY(0); }
+            50% { transform: scaleY(0.95) translateY(5px); }
+        }
+        @keyframes work-tool {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-15deg); }
+        }
+
+        .alien-container.working .alien-svg { animation: breath 2s infinite ease-in-out; }
+        .alien-container.working .tool-group { animation: work-tool 1s infinite ease-in-out; }
+        
+        .alien-container.drowsy .alien-svg { animation: breath 3s infinite ease-in-out; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)) brightness(0.8); }
+        .alien-container.drowsy .eyelid { opacity: 0.5; transition: opacity 1s; }
+        .alien-container.drowsy .tool-group { animation: none; transform: translateY(5px); }
+
+        .alien-container.asleep .alien-svg { animation: breath 4s infinite ease-in-out; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)) brightness(0.5); }
+        .alien-container.asleep .eyelid { opacity: 1; transition: opacity 0.5s; }
+        .alien-container.asleep .tool-group { transform: translateY(15px) rotate(20deg); }
+
+        /* Zzz Particles */
+        .zzz {
+            position: absolute;
+            color: white; font-weight: bold; font-size: 14px;
+            opacity: 0; pointer-events: none;
+        }
+        @keyframes floatZ {
+            0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+            20% { opacity: 1; }
+            100% { transform: translate(20px, -40px) scale(1.5); opacity: 0; }
+        }
+
+        /* Impact Effect */
+        .alien-container.hit .alien-svg {
+            filter: drop-shadow(0 0 20px rgba(255,50,50,0.8)) brightness(1.5);
+            transform: scale(1.1) translateY(-10px);
+            transition: none;
+        }
+        .alien-container.hit .eyelid { opacity: 0 !important; }
+
+        /* Canvas Overlay for Whip and Particles */
+        #fx-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 20;
+            pointer-events: none; /* Let clicks pass through to aliens */
+        }
+
+        /* Screen Shake */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+        .shaking { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+
+        /* Game Over Screen */
+        .overlay-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .overlay-screen.active { opacity: 1; pointer-events: all; }
+        
+        .modal {
+            background: var(--ui-bg);
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            border: 1px solid var(--ui-border);
+            max-width: 80%;
+        }
+        .modal h2 { margin: 0 0 10px 0; color: var(--danger); }
+        .btn {
+            background: #3b82f6; color: white;
+            border: none; padding: 10px 20px;
+            border-radius: 8px; font-weight: bold; font-size: 16px;
+            margin-top: 20px; cursor: pointer;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.95); }
+
+    </style>
+</head>
+<body>
+
+    <div class="farm-background">
+        <div class="stars"></div>
+        <div class="crops"></div>
+    </div>
+
+    <div class="ui-layer">
+        <div class="stat">
+            <span class="stat-label">Score</span>
+            <span class="stat-value" id="score-display">0</span>
+        </div>
+        <div class="stat" style="align-items: flex-end;">
+            <span class="stat-label">Productivity</span>
+            <div class="productivity-bar">
+                <div class="productivity-fill" id="prod-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-area" id="game-area">
+        <!-- Aliens injected here -->
+    </div>
+
+    <canvas id="fx-canvas"></canvas>
+
+    <div class="overlay-screen" id="game-over">
+        <div class="modal">
+            <h2>Farm Halted!</h2>
+            <p>Too many aliens fell asleep.</p>
+            <div class="stat-label">Final Score</div>
+            <div class="stat-value" id="final-score" style="font-size: 32px; margin: 10px 0;">0</div>
+            <button class="btn" onclick="startGame()">Restart Shift</button>
+        </div>
+    </div>
+
+<script>
+    // --- Audio System (Web Audio API) ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playWhipSound() {
+        if (!audioCtx) return;
+        const t = audioCtx.currentTime;
+        
+        // The "Swish" (oscillator dropping in frequency)
+        const swishOsc = audioCtx.createOscillator();
+        const swishGain = audioCtx.createGain();
+        swishOsc.type = 'sine';
+        swishOsc.frequency.setValueAtTime(800, t);
+        swishOsc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+        swishGain.gain.setValueAtTime(0, t);
+        swishGain.gain.linearRampToValueAtTime(0.5, t + 0.05);
+        swishGain.gain.linearRampToValueAtTime(0, t + 0.15);
+        swishOsc.connect(swishGain).connect(audioCtx.destination);
+        swishOsc.start(t);
+        swishOsc.stop(t + 0.15);
+
+        // The "Crack" (Filtered noise burst)
+        const bufferSize = audioCtx.sampleRate * 0.2;
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = buffer;
+        
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 2000;
+        
+        const noiseGain = audioCtx.createGain();
+        noiseGain.gain.setValueAtTime(0, t);
+        // Delay crack slightly after swish starts
+        noiseGain.gain.setValueAtTime(1, t + 0.08); 
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+        
+        noise.connect(filter).connect(noiseGain).connect(audioCtx.destination);
+        noise.start(t + 0.08);
+    }
+
+    function playAlienWakeSound() {
+        if (!audioCtx) return;
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(150 + Math.random()*50, t);
+        osc.frequency.exponentialRampToValueAtTime(300, t + 0.1);
+        
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.3);
+    }
+
+    function playSnore() {
+         if (!audioCtx || Math.random() > 0.1) return; // Throttle snores
+         const t = audioCtx.currentTime;
+         const osc = audioCtx.createOscillator();
+         const gain = audioCtx.createGain();
+         osc.type = 'sawtooth';
+         osc.frequency.setValueAtTime(50, t);
+         osc.frequency.linearRampToValueAtTime(40, t+0.5);
+         
+         const filter = audioCtx.createBiquadFilter();
+         filter.type = 'lowpass';
+         filter.frequency.setValueAtTime(200, t);
+         
+         gain.gain.setValueAtTime(0, t);
+         gain.gain.linearRampToValueAtTime(0.05, t + 0.2);
+         gain.gain.linearRampToValueAtTime(0, t + 0.6);
+         
+         osc.connect(filter).connect(gain).connect(audioCtx.destination);
+         osc.start(t);
+         osc.stop(t+0.6);
+    }
+
+
+    // --- Graphics & Visuals ---
+    
+    // Alien SVG Generator for realistic/detailed 2D look
+    function createAlienSVG(primary, dark, skinLight) {
+        return `
+        <svg viewBox="0 0 100 120" class="alien-svg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <radialGradient id="grad-${primary.replace('#','')}" cx="30%" cy="30%" r="70%">
+                    <stop offset="0%" stop-color="${skinLight}"/>
+                    <stop offset="60%" stop-color="${primary}"/>
+                    <stop offset="100%" stop-color="${dark}"/>
+                </radialGradient>
+                <radialGradient id="eyeGrad" cx="40%" cy="40%" r="60%">
+                    <stop offset="0%" stop-color="#ffffff"/>
+                    <stop offset="100%" stop-color="#cccccc"/>
+                </radialGradient>
+            </defs>
+            
+            <!-- Shadow -->
+            <ellipse cx="50" cy="110" rx="30" ry="10" fill="rgba(0,0,0,0.3)"/>
+            
+            <!-- Body -->
+            <path d="M25,100 C15,60 25,25 50,25 C75,25 85,60 75,100 C65,115 35,115 25,100 Z" fill="url(#grad-${primary.replace('#','')})"/>
+            
+            <!-- Belly details (texture lines) -->
+            <path d="M35,80 Q50,90 65,80" fill="none" stroke="${dark}" stroke-width="2" opacity="0.5"/>
+            <path d="M40,90 Q50,98 60,90" fill="none" stroke="${dark}" stroke-width="2" opacity="0.5"/>
+
+            <!-- Big Single Eye -->
+            <circle cx="50" cy="50" r="18" fill="url(#eyeGrad)" stroke="${dark}" stroke-width="1"/>
+            <circle cx="50" cy="50" r="8" fill="#111"/>
+            <circle cx="47" cy="47" r="3" fill="#fff"/> <!-- catchlight -->
+            
+            <!-- Eyelid (animated) -->
+            <path d="M30,50 Q50,15 70,50 Q50,55 30,50 Z" fill="${dark}" class="eyelid" opacity="0"/>
+            <path d="M30,50 Q50,85 70,50 Z" fill="${dark}" class="eyelid" opacity="0"/>
+
+            <!-- Arms & Tool Group -->
+            <g class="tool-group" transform-origin="50 80">
+                <!-- Tool (Hoe/Pick) -->
+                <rect x="20" y="78" width="60" height="4" fill="#8B4513" rx="2"/>
+                <path d="M20,70 L25,86 L15,86 Z" fill="#ccc" stroke="#999" stroke-width="1"/>
+                
+                <!-- Hands -->
+                <circle cx="35" cy="80" r="7" fill="${primary}"/>
+                <circle cx="65" cy="80" r="7" fill="${primary}"/>
+            </g>
+        </svg>
+        `;
+    }
+
+    const alienColors = [
+        { p: '#10b981', d: '#047857', l: '#34d399' }, // Green
+        { p: '#8b5cf6', d: '#5b21b6', l: '#a78bfa' }, // Purple
+        { p: '#f59e0b', d: '#b45309', l: '#fbbf24' }, // Orange
+        { p: '#3b82f6', d: '#1d4ed8', l: '#60a5fa' }  // Blue
+    ];
+
+    // --- Canvas FX (Whip & Particles) ---
+    const canvas = document.getElementById('fx-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let whips = [];
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x; this.y = y;
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 5 + 2;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed;
+            this.life = 1.0;
+            this.decay = Math.random() * 0.05 + 0.02;
+            this.color = color;
+            this.size = Math.random() * 4 + 2;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += 0.2; // gravity
+            this.life -= this.decay;
+        }
+        draw(ctx) {
+            ctx.globalAlpha = Math.max(0, this.life);
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    class WhipFx {
+        constructor(startX, startY, targetX, targetY) {
+            this.sx = startX; this.sy = startY;
+            this.tx = targetX; this.ty = targetY;
+            this.progress = 0; // 0 to 1
+            this.phase = 0; // 0: pull back, 1: strike, 2: fade
+            
+            // Calculate a point to pull back to (opposite direction of target)
+            const dx = this.tx - this.sx;
+            const dy = this.ty - this.sy;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            this.cx = this.sx - (dx/dist) * 50; 
+            this.cy = this.sy + 100; // Pull down and back
+        }
+        
+        update() {
+            if (this.phase === 0) {
+                this.progress += 0.15;
+                if (this.progress >= 1) { this.phase = 1; this.progress = 0; }
+            } else if (this.phase === 1) {
+                this.progress += 0.3; // Fast strike
+                if (this.progress >= 1) { 
+                    this.phase = 2; 
+                    this.progress = 1;
+                    return true; // Indicates hit frame
+                }
+            } else {
+                this.progress -= 0.1; // Fade out
+            }
+            return false;
+        }
+
+        draw(ctx) {
+            if (this.progress <= 0 && this.phase === 2) return;
+            
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            let curX, curY, cpX, cpY;
+
+            if (this.phase === 0) {
+                // Drawing back
+                curX = this.sx + (this.cx - this.sx) * this.progress;
+                curY = this.sy + (this.cy - this.sy) * this.progress;
+                cpX = this.sx; cpY = this.sy; // straightish line while pulling
+            } else if (this.phase === 1) {
+                // Striking
+                curX = this.cx + (this.tx - this.cx) * this.progress;
+                curY = this.cy + (this.ty - this.cy) * this.progress;
+                
+                // Dynamic control point for the curve based on progress
+                // Creates the "S" shape or arch of a whip
+                const arch = Math.sin(this.progress * Math.PI) * 100;
+                cpX = this.sx + (this.tx - this.sx) * 0.5 + arch;
+                cpY = this.sy + (this.ty - this.sy) * 0.5 - arch;
+            } else {
+                // Fade out at target
+                curX = this.tx; curY = this.ty;
+                cpX = this.sx + (this.tx - this.sx)*0.5;
+                cpY = this.sy + (this.ty - this.sy)*0.5;
+                ctx.globalAlpha = this.progress;
+            }
+
+            // Glow
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#0ff';
+            
+            // Draw tapering line
+            const segments = 10;
+            ctx.beginPath();
+            ctx.moveTo(this.sx, this.sy);
+            
+            for(let i=1; i<=segments; i++) {
+                let t = i/segments;
+                // Bezier calculation
+                let px = Math.pow(1-t, 2)*this.sx + 2*(1-t)*t*cpX + Math.pow(t,2)*curX;
+                let py = Math.pow(1-t, 2)*this.sy + 2*(1-t)*t*cpY + Math.pow(t,2)*curY;
+                
+                ctx.lineTo(px, py);
+            }
+            
+            // Simulate thickness variation
+            ctx.lineWidth = 4 * (1 - (this.phase === 2 ? 0 : this.progress*0.5)); 
+            ctx.strokeStyle = '#a5f3fc'; // Bright cyan
+            ctx.stroke();
+
+            // Inner core
+            ctx.shadowBlur = 0;
+            ctx.lineWidth = 2 * (1 - (this.phase === 2 ? 0 : this.progress*0.5));
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    function spawnParticles(x, y) {
+        // Sparks
+        for(let i=0; i<15; i++) {
+            particles.push(new Particle(x, y, ['#fff', '#0ff', '#f0f'][Math.floor(Math.random()*3)]));
+        }
+        // Dust
+        for(let i=0; i<10; i++) {
+             particles.push(new Particle(x, y, 'rgba(255,255,255,0.5)'));
+        }
+    }
+
+    function animateFx() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Update & Draw Whips
+        for (let i = whips.length - 1; i >= 0; i--) {
+            let hit = whips[i].update();
+            whips[i].draw(ctx);
+            if (hit) {
+                // Trigger effects on exact strike frame
+                spawnParticles(whips[i].tx, whips[i].ty);
+                document.body.classList.add('shaking');
+                setTimeout(() => document.body.classList.remove('shaking'), 300);
+            }
+            if (whips[i].phase === 2 && whips[i].progress <= 0) {
+                whips.splice(i, 1);
+            }
+        }
+
+        // Update & Draw Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            particles[i].draw(ctx);
+            if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+
+        requestAnimationFrame(animateFx);
+    }
+    animateFx();
+
+
+    // --- Game Logic ---
+    let aliens = [];
+    let score = 0;
+    let productivity = 100;
+    let gameLoop;
+    let isGameOver = false;
+
+    const SCORE_EL = document.getElementById('score-display');
+    const PROD_FILL = document.getElementById('prod-fill');
+    const GAME_AREA = document.getElementById('game-area');
+
+    function initAliens() {
+        GAME_AREA.innerHTML = '';
+        aliens = [];
+        for(let i=0; i<4; i++) {
+            const el = document.createElement('div');
+            el.className = 'alien-container working';
+            
+            const colorData = alienColors[i % alienColors.length];
+            el.innerHTML = createAlienSVG(colorData.p, colorData.d, colorData.l);
+            
+            GAME_AREA.appendChild(el);
+            
+            const alien = {
+                id: i,
+                el: el,
+                state: 'working', // working, drowsy, asleep
+                energy: 100 + Math.random() * 50, // Time until sleepy
+                maxEnergy: 100 + Math.random() * 50
+            };
+            
+            // Interaction
+            el.addEventListener('mousedown', (e) => handleStrike(e, alien));
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); handleStrike(e.touches[0], alien); }, {passive: false});
+            
+            aliens.push(alien);
+        }
+    }
+
+    function handleStrike(e, alien) {
+        if(isGameOver) return;
+        initAudio(); // Initialize audio on first interaction
+
+        const rect = alien.el.getBoundingClientRect();
+        const targetX = rect.left + rect.width / 2;
+        const targetY = rect.top + rect.height / 2;
+        
+        // Start whip from bottom center of screen
+        const startX = window.innerWidth / 2;
+        const startY = window.innerHeight;
+
+        whips.push(new WhipFx(startX, startY, targetX, targetY));
+        playWhipSound();
+
+        // Visual Hit on Alien immediately (adds juiciness)
+        alien.el.classList.add('hit');
+        setTimeout(() => alien.el.classList.remove('hit'), 150);
+
+        // State update
+        if (alien.state === 'asleep' || alien.state === 'drowsy') {
+            playAlienWakeSound();
+            score += (alien.state === 'asleep') ? 50 : 10;
+            // Spawn +text
+            createFloatingText(targetX, targetY, `+${(alien.state === 'asleep') ? 50 : 10}`);
+        } else {
+             // Striking a working alien wastes time, slight penalty or just wake sound
+             playAlienWakeSound();
+        }
+
+        alien.state = 'working';
+        alien.energy = alien.maxEnergy;
+        alien.el.className = 'alien-container working';
+        
+        updateUI();
+    }
+
+    function createFloatingText(x, y, text) {
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.position = 'absolute';
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        el.style.color = '#10b981';
+        el.style.fontWeight = 'bold';
+        el.style.fontSize = '20px';
+        el.style.pointerEvents = 'none';
+        el.style.zIndex = '100';
+        el.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
+        el.style.transition = 'all 1s ease-out';
+        el.style.transform = 'translate(-50%, -50%)';
+        document.body.appendChild(el);
+
+        // Force reflow
+        el.getBoundingClientRect();
+
+        el.style.top = (y - 50) + 'px';
+        el.style.opacity = '0';
+
+        setTimeout(() => el.remove(), 1000);
+    }
+
+    function spawnZzz(alienEl) {
+        if(Math.random() > 0.3) return; // limit particles
+        const zzz = document.createElement('div');
+        zzz.textContent = 'z';
+        zzz.className = 'zzz';
+        
+        // Random position near head
+        const rx = 30 + Math.random() * 40;
+        const ry = 10 + Math.random() * 20;
+        
+        zzz.style.left = rx + 'px';
+        zzz.style.top = ry + 'px';
+        zzz.style.animation = `floatZ ${1.5 + Math.random()}s forwards linear`;
+        
+        alienEl.appendChild(zzz);
+        setTimeout(() => { if(alienEl.contains(zzz)) zzz.remove() }, 2000);
+    }
+
+    function updateGame() {
+        if(isGameOver) return;
+
+        let asleepCount = 0;
+
+        aliens.forEach(alien => {
+            alien.energy -= 0.5 + (score / 1000); // gets faster over time
+
+            if (alien.energy <= 0) {
+                if (alien.state !== 'asleep') {
+                    alien.state = 'asleep';
+                    alien.el.className = 'alien-container asleep';
+                }
+            } else if (alien.energy <= alien.maxEnergy * 0.4) {
+                 if (alien.state !== 'drowsy') {
+                    alien.state = 'drowsy';
+                    alien.el.className = 'alien-container drowsy';
+                 }
+            }
+
+            if (alien.state === 'drowsy') {
+                spawnZzz(alien.el);
+            } else if (alien.state === 'asleep') {
+                spawnZzz(alien.el);
+                playSnore();
+                asleepCount++;
+            } else {
+                score += 1; // passive score for working
+            }
+        });
+
+        // Productivity penalty
+        if (asleepCount > 0) {
+            productivity -= (asleepCount * 0.2); // Faster drop if more asleep
+        } else {
+            productivity = Math.min(100, productivity + 0.1); // Recover slowly
+        }
+
+        if (productivity <= 0) {
+            endGame();
+        }
+
+        updateUI();
+    }
+
+    function updateUI() {
+        SCORE_EL.textContent = Math.floor(score);
+        PROD_FILL.style.width = Math.max(0, productivity) + '%';
+        
+        if (productivity > 60) PROD_FILL.style.backgroundColor = 'var(--success)';
+        else if (productivity > 30) PROD_FILL.style.backgroundColor = '#f59e0b';
+        else PROD_FILL.style.backgroundColor = 'var(--danger)';
+    }
+
+    function startGame() {
+        document.getElementById('game-over').classList.remove('active');
+        initAliens();
+        score = 0;
+        productivity = 100;
+        isGameOver = false;
+        updateUI();
+        
+        if(gameLoop) clearInterval(gameLoop);
+        // Run logic 10 times a second
+        gameLoop = setInterval(updateGame, 100);
+    }
+
+    function endGame() {
+        isGameOver = true;
+        clearInterval(gameLoop);
+        document.getElementById('final-score').textContent = Math.floor(score);
+        document.getElementById('game-over').classList.add('active');
+    }
+
+    // Start
+    startGame();
+
+    // Prevent default touch behaviors (scrolling/zooming) on game area
+    document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+
+</script>
+</body>
+</html>
