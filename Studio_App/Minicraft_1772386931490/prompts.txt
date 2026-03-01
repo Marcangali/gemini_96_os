@@ -1,2 +1,6 @@
 [3/1/2026, 6:42:13 PM] v1:
 Minicraft
+
+---
+[3/1/2026, 6:48:29 PM] v2:
+Make blocks and materials placable
