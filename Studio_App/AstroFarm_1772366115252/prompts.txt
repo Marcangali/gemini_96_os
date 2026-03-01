@@ -1,0 +1,2 @@
+[2026. 03. 01. 12:55:16] v1:
+Make a game where aliens are working on the farm, and suddenly falls asleep, our task is tokeep them awake with an ostor legyen az oszornak nagyon jó animációja, különböző színű alienek legyenek az alienek legyenek realisztikusak, meg az ostor effektje is legyen realisztikus, meg az is ahogy rájukcsapunk
