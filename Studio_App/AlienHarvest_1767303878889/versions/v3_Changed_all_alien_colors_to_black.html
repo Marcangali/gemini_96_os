@@ -1,0 +1,698 @@
+<!--
+APP_NAME: Alien Harvest
+APP_DESCRIPTION: Manage a potato farm run by lazy aliens. Keep them working to meet quotas!
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 400
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Changed all alien colors to black.
+STORE_ID: alien-harvest-v1
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien Harvest</title>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --secondary: #8BC34A;
+            --accent: #FF5722;
+            --bg-color: #f4f9f4;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            background: linear-gradient(135deg, #e0f2f1 0%, #a5d6a7 100%);
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* UI Overlay */
+        .ui-header {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            height: 50px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            z-index: 10;
+        }
+
+        .score-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #2e7d32;
+        }
+
+        .timer-display {
+            color: #d32f2f;
+            background: rgba(211, 47, 47, 0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .level-badge {
+            background: var(--accent);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            position: absolute;
+            top: 65px;
+            left: 10px;
+            right: 10px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            z-index: 10;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 0;
+            font-size: 10px;
+            line-height: 18px;
+            font-weight: bold;
+            color: #1b5e20;
+        }
+
+        /* Game Area */
+        .farm-area {
+            flex: 1;
+            position: relative;
+            margin-top: 100px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            padding-bottom: 80px;
+        }
+        .farm-area::-webkit-scrollbar { display: none; }
+
+        /* Alien Card */
+        .alien-plot {
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 0.1s, background 0.3s;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 2px solid transparent;
+        }
+
+        .alien-plot:active { transform: scale(0.95); }
+        .alien-plot.slacking {
+            background: rgba(255, 200, 200, 0.6);
+            border-color: #ffcdd2;
+            animation: pulse-red 2s infinite;
+        }
+
+        .alien-svg {
+            width: 70px;
+            height: 70px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .slacking .alien-svg {
+            filter: grayscale(0.5);
+            transform: scale(0.9) rotate(-5deg);
+            opacity: 0.8;
+        }
+
+        .zzz-bubble {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #3f51b5;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .slacking .zzz-bubble {
+            opacity: 1;
+            animation: floatUp 2s infinite;
+        }
+
+        .whip-effect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(255,87,34,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .whip-effect.active { animation: flash 0.3s ease-out; }
+
+        /* Shop UI */
+        .shop-trigger {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 20px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 20;
+            cursor: pointer;
+        }
+
+        .shop-panel {
+            position: absolute;
+            bottom: -100%;
+            left: 0;
+            width: 100%;
+            height: 70%;
+            background: white;
+            border-radius: 24px 24px 0 0;
+            z-index: 100;
+            transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .shop-panel.open { bottom: 0; }
+
+        .shop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .shop-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: #f8f8f8;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #eee;
+        }
+
+        .shop-item-info h4 { margin: 0; font-size: 0.9rem; }
+        .shop-item-info p { margin: 2px 0 0; font-size: 0.75rem; color: #666; }
+
+        .buy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .buy-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Overlay */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(5px);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .overlay.hidden { display: none; }
+
+        h1 { color: #2e7d32; margin-bottom: 10px; font-size: 1.8rem; }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+
+        /* Animations */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 82, 82, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-20px) translateX(10px); opacity: 0; }
+        }
+        @keyframes flash {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(5deg); }
+            75% { transform: rotate(-5deg); }
+        }
+        .working-anim { animation: workBob 0.8s infinite alternate ease-in-out; }
+        @keyframes workBob {
+            from { transform: translateY(0); }
+            to { transform: translateY(5px); }
+        }
+
+        /* Mobile mode adjustments */
+        body.mobile-mode .farm-area {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ui-header">
+        <div class="score-container">
+            <span>🥔 <span id="scoreDisplay">0</span></span>
+            <span class="timer-display" id="timerDisplay">45s</span>
+        </div>
+        <div class="level-badge" id="levelDisplay">Week 1</div>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-fill" id="progressFill"></div>
+        <div class="progress-text" id="progressText">Quota: 0 / 20</div>
+    </div>
+
+    <div class="farm-area" id="farmGrid"></div>
+
+    <button class="shop-trigger" id="shopBtn">SHOP 🛒</button>
+
+    <!-- Start Screen -->
+    <div class="overlay" id="startScreen">
+        <div style="font-size: 64px; margin-bottom: 20px;">👽🥔</div>
+        <h1>Alien Harvest</h1>
+        <p>Keep the farm running! Meet the potato quota before time runs out. Tap lazy aliens to wake them up!</p>
+        <div id="highScoreDisplay" style="margin-bottom: 20px; color: #666; font-weight: bold;">High Score: 0</div>
+        <button class="btn-primary" onclick="startGame()">Start Level</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div class="overlay hidden" id="gameOverScreen">
+        <div style="font-size: 64px; margin-bottom: 20px;">😵🏚️</div>
+        <h1>Farm Closed!</h1>
+        <p id="gameOverMsg">You didn't meet the quota in time.</p>
+        <button class="btn-primary" onclick="resetGame()">Try Again</button>
+    </div>
+
+    <!-- Shop Panel -->
+    <div class="shop-panel" id="shopPanel">
+        <div class="shop-header">
+            <h3>Potato Shop</h3>
+            <button onclick="toggleShop()" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
+        </div>
+        <div style="overflow-y:auto; flex:1;">
+            <div class="shop-item">
+                <div class="shop-item-info">
+                    <h4>Auto-Wake Alarm</h4>
+                    <p>Wakes one slacker every 8s</p>
+                </div>
+                <button class="buy-btn" id="buyAuto" onclick="buyUpgrade('auto')">50 🥔</button>
+            </div>
+            <div class="shop-item">
+                <div class="shop-item-info">
+                    <h4>Caffeine Batch</h4>
+                    <p>Aliens slack 15% less often</p>
+                </div>
+                <button class="buy-btn" id="buyCoffee" onclick="buyUpgrade('coffee')">75 🥔</button>
+            </div>
+            <div class="shop-item">
+                <div class="shop-item-info">
+                    <h4>Mega-Fertilizer</h4>
+                    <p>Increases potato yields by 20%</p>
+                </div>
+                <button class="buy-btn" id="buyYield" onclick="buyUpgrade('yield')">100 🥔</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Game State ---
+        const gameState = {
+            totalScore: 0,
+            levelScore: 0,
+            quota: 20,
+            timeLeft: 45,
+            level: 1,
+            aliens: [],
+            running: false,
+            highScore: 0,
+            timerInterval: null,
+            upgrades: {
+                auto: 0,
+                coffee: 0,
+                yield: 0
+            }
+        };
+
+        const ALIEN_TYPES = [
+            { name: 'Common', color: '#000000', slackRate: 1.0, yieldRate: 1.0, weight: 60 },
+            { name: 'Sleeper', color: '#000000', slackRate: 1.8, yieldRate: 3.5, weight: 20 },
+            { name: 'Zippy', color: '#000000', slackRate: 0.4, yieldRate: 0.7, weight: 20 }
+        ];
+
+        // --- Audio Engine ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const Sound = {
+            play(freq, type = 'sine', duration = 0.1, vol = 0.1) {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const t = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(vol, t);
+                gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + duration);
+            },
+            whip: () => Sound.play(150, 'square', 0.1, 0.1),
+            squeak: () => Sound.play(800 + Math.random()*200, 'triangle', 0.15, 0.05),
+            pop: () => Sound.play(400, 'sine', 0.05, 0.1),
+            fail: () => Sound.play(100, 'sawtooth', 0.5, 0.1)
+        };
+
+        function createAlienSVG(color) {
+            return `<svg viewBox="0 0 100 100" class="alien-svg">
+                <g transform="translate(50,50)">
+                    <path d="M-30,20 Q-40,-40 0,-50 Q40,-40 30,20 Q20,40 -30,20" fill="${color}" stroke="#333" stroke-width="3" />
+                    <circle cx="-12" cy="-15" r="8" fill="white" stroke="#333" stroke-width="2"/>
+                    <circle cx="-12" cy="-15" r="3" fill="black" />
+                    <circle cx="12" cy="-15" r="8" fill="white" stroke="#333" stroke-width="2"/>
+                    <circle cx="12" cy="-15" r="3" fill="black" />
+                    <path d="M-10,10 Q0,20 10,10" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" />
+                    <line x1="-20" y1="-45" x2="-30" y2="-60" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+                    <circle cx="-30" cy="-60" r="4" fill="${color}" stroke="#333" stroke-width="2"/>
+                    <line x1="20" y1="-45" x2="30" y2="-60" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+                    <circle cx="30" cy="-60" r="4" fill="${color}" stroke="#333" stroke-width="2"/>
+                </g>
+            </svg>`;
+        }
+
+        class Alien {
+            constructor(id) {
+                this.id = id;
+                const rand = Math.random() * 100;
+                let cumulative = 0;
+                this.type = ALIEN_TYPES[0];
+                for(let t of ALIEN_TYPES) {
+                    cumulative += t.weight;
+                    if(rand < cumulative) { this.type = t; break; }
+                }
+
+                this.isSlacking = false;
+                this.element = document.createElement('div');
+                this.element.className = 'alien-plot working-anim';
+                this.element.innerHTML = `${createAlienSVG(this.type.color)}<div class="zzz-bubble">Zzz</div><div class="whip-effect"></div>`;
+                this.element.addEventListener('click', () => this.interact());
+                document.getElementById('farmGrid').appendChild(this.element);
+                this.setRandomSlackTimer();
+            }
+
+            setRandomSlackTimer() {
+                if (this.timer) clearTimeout(this.timer);
+                const coffeeBonus = Math.pow(0.85, gameState.upgrades.coffee);
+                const time = (2000 + Math.random() * 6000) / (this.type.slackRate * (1 / coffeeBonus));
+                this.timer = setTimeout(() => this.goSlack(), time);
+            }
+
+            goSlack() {
+                if (!gameState.running) return;
+                this.isSlacking = true;
+                this.element.classList.add('slacking');
+                this.element.classList.remove('working-anim');
+            }
+
+            interact() {
+                if (!gameState.running) return;
+                if (this.isSlacking) {
+                    this.isSlacking = false;
+                    this.element.classList.remove('slacking');
+                    this.element.classList.add('working-anim');
+                    const effect = this.element.querySelector('.whip-effect');
+                    effect.classList.remove('active');
+                    void effect.offsetWidth;
+                    effect.classList.add('active');
+                    Sound.whip();
+                    setTimeout(() => Sound.squeak(), 50);
+                    this.setRandomSlackTimer();
+                } else {
+                    Sound.squeak();
+                }
+            }
+
+            produce() {
+                if (!this.isSlacking && gameState.running) {
+                    // Production check ~60 times a second
+                    const baseChance = 0.005; 
+                    const yieldBonus = 1 + (gameState.upgrades.yield * 0.2);
+                    if (Math.random() < baseChance) {
+                        incrementScore(this.type.yieldRate * yieldBonus);
+                    }
+                }
+            }
+        }
+
+        // --- Core Logic ---
+
+        function incrementScore(amount) {
+            const rounded = Math.round(amount);
+            gameState.totalScore += rounded;
+            gameState.levelScore += rounded;
+            updateUI();
+            Sound.pop();
+            checkLevelProgress();
+        }
+
+        function checkLevelProgress() {
+            if (gameState.levelScore >= gameState.quota) {
+                nextLevel();
+            }
+        }
+
+        function nextLevel() {
+            gameState.level++;
+            gameState.levelScore = 0;
+            gameState.quota = Math.round(20 * Math.pow(1.5, gameState.level - 1));
+            gameState.timeLeft = Math.max(30, 45 - (gameState.level * 2));
+            
+            // Add alien every 2 levels up to 8
+            if (gameState.aliens.length < 8 && gameState.level % 2 === 0) {
+                gameState.aliens.push(new Alien(gameState.aliens.length));
+            }
+
+            saveGame();
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('scoreDisplay').innerText = gameState.totalScore;
+            document.getElementById('levelDisplay').innerText = `Week ${gameState.level}`;
+            document.getElementById('timerDisplay').innerText = `${Math.ceil(gameState.timeLeft)}s`;
+            
+            const progress = Math.min(100, (gameState.levelScore / gameState.quota) * 100);
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressText').innerText = `Quota: ${gameState.levelScore} / ${gameState.quota}`;
+
+            // Shop Buttons
+            document.getElementById('buyAuto').innerText = `${50 * (gameState.upgrades.auto + 1)} 🥔`;
+            document.getElementById('buyAuto').disabled = gameState.totalScore < 50 * (gameState.upgrades.auto + 1);
+            
+            document.getElementById('buyCoffee').innerText = `${75 * (gameState.upgrades.coffee + 1)} 🥔`;
+            document.getElementById('buyCoffee').disabled = gameState.totalScore < 75 * (gameState.upgrades.coffee + 1);
+
+            document.getElementById('buyYield').innerText = `${100 * (gameState.upgrades.yield + 1)} 🥔`;
+            document.getElementById('buyYield').disabled = gameState.totalScore < 100 * (gameState.upgrades.yield + 1);
+        }
+
+        function tick() {
+            if (!gameState.running) return;
+            gameState.timeLeft -= 1;
+            if (gameState.timeLeft <= 0) {
+                gameOver();
+            }
+            updateUI();
+        }
+
+        function gameOver() {
+            gameState.running = false;
+            clearInterval(gameState.timerInterval);
+            Sound.fail();
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('gameOverMsg').innerText = `You managed ${gameState.levelScore} of ${gameState.quota} potatoes for Week ${gameState.level}.`;
+            
+            if (gameState.totalScore > gameState.highScore) {
+                gameState.highScore = gameState.totalScore;
+                saveGame();
+            }
+        }
+
+        function resetGame() {
+            gameState.totalScore = 0;
+            gameState.levelScore = 0;
+            gameState.level = 1;
+            gameState.quota = 20;
+            gameState.timeLeft = 45;
+            gameState.upgrades = { auto: 0, coffee: 0, yield: 0 };
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            startGame();
+        }
+
+        function startGame() {
+            loadGame();
+            document.getElementById('startScreen').classList.add('hidden');
+            gameState.running = true;
+            gameState.levelScore = 0;
+            gameState.aliens = [];
+            document.getElementById('farmGrid').innerHTML = '';
+            
+            const alienCount = Math.min(8, 3 + Math.floor(gameState.level/2));
+            for(let i=0; i<alienCount; i++) {
+                gameState.aliens.push(new Alien(i));
+            }
+
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            gameState.timerInterval = setInterval(tick, 1000);
+            
+            requestAnimationFrame(gameLoop);
+            updateUI();
+        }
+
+        function gameLoop() {
+            if (!gameState.running) return;
+            gameState.aliens.forEach(a => a.produce());
+            
+            // Auto-waker logic
+            if (gameState.upgrades.auto > 0) {
+                const now = Date.now();
+                const interval = 8000 / gameState.upgrades.auto;
+                if (!gameState.lastAutoWake || now - gameState.lastAutoWake > interval) {
+                    const slacker = gameState.aliens.find(a => a.isSlacking);
+                    if (slacker) slacker.interact();
+                    gameState.lastAutoWake = now;
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Shop Functions ---
+        function toggleShop() {
+            document.getElementById('shopPanel').classList.toggle('open');
+            updateUI();
+        }
+
+        document.getElementById('shopBtn').addEventListener('click', toggleShop);
+
+        function buyUpgrade(type) {
+            let cost = 0;
+            if (type === 'auto') cost = 50 * (gameState.upgrades.auto + 1);
+            if (type === 'coffee') cost = 75 * (gameState.upgrades.coffee + 1);
+            if (type === 'yield') cost = 100 * (gameState.upgrades.yield + 1);
+
+            if (gameState.totalScore >= cost) {
+                gameState.totalScore -= cost;
+                gameState.upgrades[type]++;
+                updateUI();
+                Sound.pop();
+                saveGame();
+            }
+        }
+
+        // --- Storage ---
+        function saveGame() {
+            const data = {
+                highScore: gameState.highScore,
+                level: gameState.level,
+                totalScore: gameState.totalScore,
+                upgrades: gameState.upgrades
+            };
+            localStorage.setItem('alien_harvest_v1', JSON.stringify(data));
+        }
+
+        function loadGame() {
+            const raw = localStorage.getItem('alien_harvest_v1');
+            if (raw) {
+                const data = JSON.parse(raw);
+                gameState.highScore = data.highScore || 0;
+                document.getElementById('highScoreDisplay').innerText = `High Score: ${gameState.highScore}`;
+            }
+        }
+
+        // Initialization
+        loadGame();
+        if (window.innerWidth < 500) document.body.classList.add('mobile-mode');
+    </script>
+</body>
+</html>
