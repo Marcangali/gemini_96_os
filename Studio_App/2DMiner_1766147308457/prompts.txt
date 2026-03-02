@@ -1,2 +1,10 @@
 [2025. 12. 19. 13:28:30] v1:
 2d minecraft
+
+---
+[2026. 03. 02. 13:39:44] v3:
+Tasks:
+- Implement localStorage to save and persist world data between game sessions.
+- Add a lighting system that darkens tiles deeper underground for more atmospheric exploration.
+- Introduce a crafting menu to allow players to combine materials into new block types.
+- Add procedurally generated ore clusters to incentivize players to mine deeper into the world.
