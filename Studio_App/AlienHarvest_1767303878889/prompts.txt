@@ -1,2 +1,11 @@
 [2026. 01. 01. 22:44:40] v1:
 generálj egy játékot ahol különféle színű alienek krumplikat szednek a farmról és az a dolgod ha nem dolgoznak akkor megvered őket egy ostorral, és hangefektek is legyenek de ez csak fikció
+
+---
+[2026. 03. 02. 13:42:29] v2:
+Tasks:
+- Implement a shop system to spend potatoes on productivity upgrades or automated wake-up tools.
+- Add a countdown timer and specific potato quotas per level to create a clear lose condition.
+- Include a visual progress bar indicating how many potatoes remain until the next level-up.
+- Integrate localStorage to save the player's high score and current level between browser sessions.
+- Introduce varied alien types with unique slacking frequencies and production rates for strategic depth.
