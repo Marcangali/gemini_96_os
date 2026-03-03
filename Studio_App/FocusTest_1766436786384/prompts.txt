@@ -4,3 +4,13 @@ Fix that when you restart it is not showing the creature just plays the sound
 ---
 [2026. 02. 28. 21:34:44] v5:
 Maje the effect EVEN MIRE SCARIER
+
+---
+[3/3/2026, 9:31:37 PM] v6:
+UPDATE the existing code to implement the following technical enhancements:
+
+1. **Haptic Feedback Integration:** Utilize the Web Vibration API (`navigator.vibrate`) during the level failure state. Implement a rhythmic vibration pattern (e.g., increasing intensity or frequency) to build tactile tension immediately preceding the final scare sequence.
+2. **Responsive Canvas Scaling:** Refactor the game canvas to utilize a viewbox-based scaling system. Maintain a fixed internal logical resolution (e.g., 1920x1080) while scaling the visual output to fit the container dimensions. This ensures that game physics, speed, and difficulty remain consistent across varying screen sizes and aspect ratios.
+3. **UI Consistency:** Ensure any new failure overlays or UI elements adhere to the Gemini 11 design language, featuring glassmorphism effects (backdrop-filter: blur), subtle border-reflections, and modern typography. 
+
+Do not rewrite the entire application; only modify the rendering logic, the failure state handler, and the initialization code for the canvas.
