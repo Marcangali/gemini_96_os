@@ -4,3 +4,7 @@ Add more fun
 ---
 [2025. 12. 19. 13:42:28] v6:
 Add skins, buyable with coins
+
+---
+[3/4/2026, 10:14:55 AM] v7:
+Add godmode when it is activated
