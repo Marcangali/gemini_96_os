@@ -4,3 +4,150 @@ Minicraft
 ---
 [3/1/2026, 6:48:29 PM] v2:
 Make blocks and materials placable
+
+---
+[04/03/2026, 19:48:12] v3:
+PROMPT:
+
+You are an expert JavaScript game developer and game designer.
+
+I have a small retro-style HTML5 canvas survival game called Minicraft. It currently includes:
+
+Procedurally generated island world (grass, sand, water)
+
+Trees and rocks that can be harvested
+
+Wood and stone resources
+
+Block placement (wood & stone blocks)
+
+3 upgrades (axe, pickaxe, speed boots)
+
+Basic collision and camera
+
+Simple sound effects via Web Audio API
+
+Mobile touch controls
+
+160x160 pixel retro canvas style
+
+Your task is to significantly improve the game while keeping it lightweight and under 1000 lines if possible.
+
+Goals:
+
+Make the game more addictive.
+
+Add meaningful progression.
+
+Add replay value.
+
+Keep performance optimized.
+
+Keep the retro pixel aesthetic.
+
+Add the Following Systems:
+1. Survival Mechanics
+
+Add hunger system (slowly drains over time).
+
+Add health system.
+
+Player takes damage if hunger reaches zero.
+
+Add food source (e.g., berry bushes).
+
+Allow cooking food using a campfire.
+
+2. Enemies
+
+Add simple hostile mobs (e.g., slimes).
+
+Basic AI: wander randomly, chase player if near.
+
+Attack player on contact.
+
+Drop loot when killed.
+
+3. Day/Night Cycle
+
+Gradually darken screen at night.
+
+Enemies spawn more frequently at night.
+
+Add simple torch block that emits light radius.
+
+4. Crafting Expansion
+
+Add new craftable items:
+
+Sword (increased damage)
+
+Campfire
+
+Torch
+
+Furnace (smelt stone into stronger blocks)
+
+Walls that enemies cannot break
+
+5. World Improvements
+
+Add caves (stone-heavy underground areas).
+
+Add rare ore (e.g., iron).
+
+Add small dungeon structure somewhere on the map.
+
+Make world seed-based for replayability.
+
+6. Combat Improvements
+
+Add attack animation.
+
+Add knockback effect.
+
+Add small screen shake when hit.
+
+7. Building Improvements
+
+Allow holding mouse button / touch to continuously place.
+
+Add block preview before placing.
+
+Add rotation for certain blocks.
+
+8. Polish
+
+Add particle effects when breaking blocks.
+
+Add floating damage numbers.
+
+Add simple background music (looped chiptune style).
+
+Add pause menu.
+
+Add save/load using localStorage.
+
+Technical Requirements:
+
+Use vanilla JavaScript (no frameworks).
+
+Keep everything in one HTML file.
+
+Maintain pixelated rendering.
+
+Keep performance optimized for mobile.
+
+Keep the UI minimal and clean.
+
+Output Format:
+
+Explain the design improvements briefly.
+
+Provide modified code sections clearly labeled.
+
+Do not rewrite unchanged code.
+
+Keep code readable and commented.
+
+Avoid unnecessary complexity.+fix block breaking on pc
