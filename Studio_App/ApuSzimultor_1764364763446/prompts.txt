@@ -16,3 +16,7 @@ Add new widget and delete previosus
 ---
 [2026. 02. 26. 13:25:21] v42:
 Remove current widget and add the new type
+
+---
+[3/4/2026, 10:09:22 AM] v45:
+Add the newly added god node, when it is enabled
