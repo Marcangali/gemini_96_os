@@ -8,3 +8,10 @@ Add skins, buyable with coins
 ---
 [3/4/2026, 10:14:55 AM] v7:
 Add godmode when it is activated
+
+---
+[3/4/2026, 10:23:03 AM] v8:
+Tasks:
+- Implement multi-layered parallax backgrounds to create a sense of visual depth during gameplay.
+- Add collectible power-ups such as score multipliers, coin magnets, or temporary invincibility shields.
+- Introduce dynamic obstacles like vertically moving pipes to increase difficulty as the score progresses.
