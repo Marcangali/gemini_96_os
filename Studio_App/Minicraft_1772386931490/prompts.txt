@@ -198,3 +198,33 @@ Most browsers block audio until the user interacts with the page. Since you call
 1. Open the game in your browser.
 2. Press F12 (or Right-click > Inspect) and go to the Console tab.
 3. You will likely see a red error message. Clicking it will take you exactly to the line causing the freeze.
+
+---
+[04/03/2026, 20:09:44] v5:
+The reason you cannot walk is that the player spawns in the center of the map, which the world generator fills with Stone (TILES.STONE), but the isSolid function incorrectly treats regular Stone as a solid wall.
+
+Since you are "inside" a solid block at the start, the collision detection prevents any movement.
+
+### The Fix
+
+In your isSolid function, remove t === TILES.STONE from the return statement. Stone is meant to be the floor for the mountain/cave biome, not a wall.
+
+javascript
+Copy
+isSolid(x, y) {
+    const tx = Math.floor(x/TILE_SIZE), ty = Math.floor(y/TILE_SIZE);
+    if(!this.map[ty] || !this.map[ty][tx]) return true;
+    const t = this.map[ty][tx].type;
+    // REMOVE TILES.STONE from this list:
+    return t === TILES.WATER || t === TILES.TREE || t === TILES.ROCK || 
+           t === TILES.IRON || t === TILES.WOOD_WALL || 
+           t === TILES.STONE_WALL || t === TILES.FURNACE;
+},
+
+
+### Why this happened:
+1. Spawn Location: The generator uses a distance-based formula (1-d) that makes the center of the map have the highest "elevation," resulting in TILES.STONE.
+2. Collision: Because TILES.STONE was in the isSolid list, the game thought you were stuck in a wall the moment the game started.
+3. Stone vs Stone Wall: In games like this, STONE is usually the floor, while STONE_WALL (which you craft) is the actual obstacle.
+
+Note: If you still can't move after this change, clear your "Local Storage" in the browser or change the STORE_ID at the top, as the game might be loading a previously saved "stuck" state.
