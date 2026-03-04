@@ -1,0 +1,667 @@
+<!--
+APP_NAME: Minicraft
+APP_DESCRIPTION: A retro-survival adventure with crafting, building, and hostile slimes.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 550
+VERSION_SUMMARY: Removed TILES.STONE from isSolid to fix spawn block bug.
+STORE_ID: minicraft_core
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minicraft</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            --text-main: #0f172a;
+            --accent: #3b82f6;
+            --border-radius: 12px;
+            --ui-font: 'Inter', sans-serif;
+        }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-color); font-family: var(--ui-font);
+            display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden;
+        }
+        #app-container { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--panel-bg); position: relative; }
+        #top-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; z-index: 10; height: 50px; }
+        .stats { display: flex; flex-direction: column; gap: 2px; font-size: 10px; font-weight: 800; width: 80px; }
+        .stat-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+        .stat-fill { height: 100%; transition: width 0.3s; }
+        .inventory { display: flex; gap: 4px; overflow-x: auto; padding: 4px 0; }
+        .inv-item { 
+            width: 32px; height: 32px; background: #f1f5f9; border: 2px solid transparent; 
+            border-radius: 6px; display: flex; align-items: center; justify-content: center; 
+            font-size: 10px; position: relative; cursor: pointer; flex-shrink: 0;
+        }
+        .inv-item.active { border-color: var(--accent); background: #dbeafe; }
+        .inv-count { position: absolute; bottom: 0; right: 1px; font-weight: 800; pointer-events: none; }
+        
+        #game-area { flex-grow: 1; background: #000; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        canvas { image-rendering: pixelated; width: 100%; height: 100%; object-fit: contain; max-width: 600px; max-height: 600px; cursor: crosshair; }
+        
+        #ui-overlay { position: absolute; top: 10px; right: 10px; color: white; text-shadow: 1px 1px 2px #000; font-size: 12px; font-weight: 600; text-align: right; pointer-events: none; }
+        #message-overlay { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; opacity: 0; transition: opacity 0.3s; z-index: 20; }
+        
+        #modal { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(2px); }
+        .modal-body { background: white; width: 85%; max-height: 80%; border-radius: 12px; padding: 16px; overflow-y: auto; }
+        .recipe { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+        .btn { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; }
+        .btn-primary { background: var(--text-main); color: white; }
+        .btn-craft { background: var(--accent); color: white; }
+        .btn-craft:disabled { background: #cbd5e1; }
+
+        #mobile-controls { display: none; position: absolute; bottom: 20px; left: 0; width: 100%; height: 120px; padding: 0 20px; justify-content: space-between; align-items: flex-end; z-index: 10; pointer-events: none; }
+        body.mobile-mode #mobile-controls { display: flex; }
+        .d-pad { position: relative; width: 100px; height: 100px; pointer-events: auto; }
+        .d-btn { position: absolute; width: 34px; height: 34px; background: rgba(255,255,255,0.3); border-radius: 8px; border: 1px solid rgba(255,255,255,0.5); }
+        .d-up { top: 0; left: 33px; } .d-down { bottom: 0; left: 33px; } .d-left { top: 33px; left: 0; } .d-right { top: 33px; right: 0; }
+        .action-btns { display: flex; gap: 10px; pointer-events: auto; }
+        .act-btn { width: 60px; height: 60px; border-radius: 50%; background: rgba(59,130,246,0.6); color: white; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid white; }
+        
+        #start-screen { position: absolute; inset: 0; background: #fff; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .god-indicator { position: absolute; top: 5px; left: 5px; font-size: 8px; color: #f59e0b; font-weight: 800; display: none; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div id="start-screen">
+        <h1 style="margin:0; font-weight:800; font-size:32px;">MINICRAFT</h1>
+        <p style="color:#64748b; font-size:14px; margin: 10px 0 20px;">Gather, Build, Survive</p>
+        <button class="btn btn-primary" id="btn-start" style="padding: 12px 40px; border-radius: 30px;">Play Now</button>
+        <p style="font-size:10px; color:#94a3b8; margin-top:20px;">W/A/S/D: Move | SPACE: Action | 1-9: Slot | Mouse: Build</p>
+    </div>
+
+    <div class="god-indicator" id="god-mode-ui">GOD MODE ACTIVE</div>
+
+    <div id="top-bar">
+        <div class="stats">
+            <div style="display:flex; justify-content:space-between;">HP <span id="hp-val">10/10</span></div>
+            <div class="stat-bar"><div id="hp-fill" class="stat-fill" style="background:#ef4444; width:100%;"></div></div>
+            <div style="display:flex; justify-content:space-between; margin-top:2px;">HUNGER <span id="hg-val">10/10</span></div>
+            <div class="stat-bar"><div id="hg-fill" class="stat-fill" style="background:#f59e0b; width:100%;"></div></div>
+        </div>
+        <div class="inventory" id="inv-container"></div>
+        <button class="btn btn-primary" id="btn-craft-open">Craft</button>
+    </div>
+
+    <div id="game-area">
+        <canvas id="gameCanvas" width="160" height="160"></canvas>
+        <div id="ui-overlay">
+            <div id="time-display">Day 1</div>
+            <div id="biome-display">Plains</div>
+        </div>
+        <div id="message-overlay">Message</div>
+        
+        <div id="mobile-controls">
+            <div class="d-pad" id="dpad">
+                <div class="d-btn d-up" data-key="w"></div>
+                <div class="d-btn d-down" data-key="s"></div>
+                <div class="d-btn d-left" data-key="a"></div>
+                <div class="d-btn d-right" data-key="d"></div>
+            </div>
+            <div class="action-btns">
+                <div class="act-btn" id="btn-act">ACT</div>
+                <div class="act-btn" id="btn-build" style="background:rgba(16,185,129,0.6)">PLACE</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal">
+        <div class="modal-body">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0;">Crafting & Upgrades</h3>
+                <button class="btn" id="btn-modal-close">X</button>
+            </div>
+            <div id="recipes-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * AUDIO SYSTEM
+ */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const Sound = {
+    play: (f, t, d, v=0.05) => {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = t; osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+        gain.gain.setValueAtTime(v, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + d);
+    },
+    hit: () => Sound.play(150, 'square', 0.1),
+    break: () => Sound.play(100, 'sawtooth', 0.15),
+    place: () => Sound.play(300, 'triangle', 0.1),
+    hurt: () => Sound.play(80, 'sine', 0.3, 0.1),
+    pickup: () => Sound.play(600, 'sine', 0.05),
+    craft: () => Sound.play(400, 'sine', 0.2)
+};
+
+/**
+ * GAME DATA
+ */
+const TILE_SIZE = 16;
+const MAP_SIZE = 128;
+const VIEW_TILES = 10;
+const TILES = {
+    WATER:0, GRASS:1, SAND:2, TREE:3, ROCK:4, BERRY:5, IRON:6, 
+    WOOD_WALL:7, STONE_WALL:8, WOOD_FLOOR:9, FURNACE:10, CAMPFIRE:11, TORCH:12, CAVE:13, STONE:14
+};
+
+const ITEMS = {
+    wood: { name: 'Wood', color: '#854d0e', placeable: TILES.WOOD_WALL },
+    stone: { name: 'Stone', color: '#64748b', placeable: TILES.STONE_WALL },
+    berry: { name: 'Berry', color: '#ef4444', food: 2 },
+    iron: { name: 'Iron Ore', color: '#94a3b8' },
+    sword: { name: 'Sword', color: '#cbd5e1', tool: 'combat' },
+    axe: { name: 'Axe', color: '#78350f', tool: 'wood' },
+    pick: { name: 'Pickaxe', color: '#475569', tool: 'stone' },
+    torch: { name: 'Torch', color: '#f59e0b', placeable: TILES.TORCH },
+    campfire: { name: 'Campfire', color: '#f97316', placeable: TILES.CAMPFIRE },
+    furnace: { name: 'Furnace', color: '#334155', placeable: TILES.FURNACE }
+};
+
+const RECIPES = [
+    { id: 'axe', result: 'axe', cost: { wood: 10 }, label: 'Wood Axe' },
+    { id: 'pick', result: 'pick', cost: { wood: 10, stone: 5 }, label: 'Stone Pick' },
+    { id: 'sword', result: 'sword', cost: { wood: 5, stone: 10 }, label: 'Stone Sword' },
+    { id: 'torch', result: 'torch', count: 4, cost: { wood: 2 }, label: '4x Torches' },
+    { id: 'campfire', result: 'campfire', cost: { wood: 15 }, label: 'Campfire (Cook)' },
+    { id: 'furnace', result: 'furnace', cost: { stone: 20 }, label: 'Furnace' }
+];
+
+/**
+ * GAME ENGINE
+ */
+const Game = {
+    running: false,
+    ctx: null, canvas: null,
+    lastTime: 0,
+    map: [],
+    entities: [],
+    particles: [],
+    player: {
+        x: 0, y: 0, hp: 10, maxHp: 10, hg: 10, maxHg: 10,
+        inv: { wood: 0, stone: 0, berry: 0, iron: 0 },
+        tools: {},
+        activeSlot: 0,
+        dir: 2, // 0U, 1R, 2D, 3L
+        speed: 70,
+        actionCooldown: 0,
+        hurtTimer: 0,
+        shake: 0
+    },
+    world: {
+        day: 1, time: 0, seed: Math.random(),
+        inCave: false
+    },
+    keys: {},
+    isGodMode: false,
+
+    init() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
+        
+        const debugOptions = JSON.parse(localStorage.getItem('gemini96-debugOptions') || '{}');
+        this.isGodMode = debugOptions.flappyGodMode === true;
+        if(this.isGodMode) document.getElementById('god-mode-ui').style.display = 'block';
+
+        this.loadGame();
+        if(!this.map.length) this.generateWorld();
+        this.bindEvents();
+        this.updateUI();
+    },
+
+    generateWorld() {
+        const seed = this.world.seed;
+        const noise = (x, y) => {
+            let n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+            return n - Math.floor(n);
+        };
+        
+        this.map = [];
+        for(let y=0; y<MAP_SIZE; y++) {
+            this.map[y] = [];
+            for(let x=0; x<MAP_SIZE; x++) {
+                let d = Math.sqrt((x-MAP_SIZE/2)**2 + (y-MAP_SIZE/2)**2) / (MAP_SIZE/2.2);
+                let v = noise(x*0.1, y*0.1) * 0.2 + (1-d);
+                let type = TILES.WATER;
+                if(v > 0.45) type = TILES.SAND;
+                if(v > 0.52) type = TILES.GRASS;
+                if(v > 0.85) type = TILES.STONE;
+
+                this.map[y][x] = { type, hp: 5 };
+                
+                if(type === TILES.GRASS) {
+                    let r = Math.random();
+                    if(r < 0.08) { this.map[y][x].type = TILES.TREE; this.map[y][x].hp = 4; }
+                    else if(r < 0.10) { this.map[y][x].type = TILES.ROCK; this.map[y][x].hp = 6; }
+                    else if(r < 0.12) { this.map[y][x].type = TILES.BERRY; this.map[y][x].hp = 1; }
+                } else if(type === TILES.STONE) {
+                    if(Math.random() < 0.05) { this.map[y][x].type = TILES.IRON; this.map[y][x].hp = 10; }
+                    if(Math.random() < 0.01) { this.map[y][x].type = TILES.CAVE; }
+                }
+            }
+        }
+        this.player.x = MAP_SIZE/2 * TILE_SIZE;
+        this.player.y = MAP_SIZE/2 * TILE_SIZE;
+        this.entities = [];
+    },
+
+    bindEvents() {
+        window.onkeydown = e => this.keys[e.key.toLowerCase()] = true;
+        window.onkeyup = e => this.keys[e.key.toLowerCase()] = false;
+        
+        document.getElementById('btn-start').onclick = () => {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('start-screen').style.display = 'none';
+            this.running = true;
+            this.lastTime = performance.now();
+            requestAnimationFrame(t => this.loop(t));
+        };
+
+        document.getElementById('btn-craft-open').onclick = () => {
+            document.getElementById('modal').style.display = 'flex';
+            this.renderRecipes();
+        };
+        document.getElementById('btn-modal-close').onclick = () => document.getElementById('modal').style.display = 'none';
+
+        this.canvas.onmousedown = e => this.handlePointer(e, true);
+        
+        // Mobile
+        document.querySelectorAll('.d-btn').forEach(b => {
+            b.ontouchstart = e => { e.preventDefault(); this.keys[b.dataset.key] = true; };
+            b.ontouchend = e => { e.preventDefault(); this.keys[b.dataset.key] = false; };
+        });
+        document.getElementById('btn-act').ontouchstart = e => { e.preventDefault(); this.interact(); };
+        document.getElementById('btn-build').ontouchstart = e => { e.preventDefault(); this.tryBuild(); };
+    },
+
+    handlePointer(e, isDown) {
+        if(!this.running) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const scale = 160 / rect.width;
+        const mx = (e.clientX - rect.left) * scale;
+        const my = (e.clientY - rect.top) * scale;
+        
+        const camX = this.player.x + 5 - 80;
+        const camY = this.player.y + 5 - 80;
+        
+        const worldX = mx + camX;
+        const worldY = my + camY;
+        const tx = Math.floor(worldX / TILE_SIZE);
+        const ty = Math.floor(worldY / TILE_SIZE);
+        
+        this.interact(tx, ty);
+    },
+
+    updateUI() {
+        const inv = document.getElementById('inv-container');
+        inv.innerHTML = '';
+        const items = Object.keys(ITEMS).filter(k => this.player.inv[k] > 0 || this.player.tools[k]);
+        items.forEach((key, i) => {
+            const div = document.createElement('div');
+            div.className = `inv-item ${this.player.activeSlot === i ? 'active' : ''}`;
+            div.style.background = ITEMS[key].color;
+            div.innerHTML = `<span class="inv-count">${this.player.inv[key] || ''}</span>`;
+            div.onclick = () => { this.player.activeSlot = i; this.updateUI(); };
+            inv.appendChild(div);
+        });
+
+        document.getElementById('hp-fill').style.width = (this.player.hp / this.player.maxHp * 100) + '%';
+        document.getElementById('hp-val').innerText = `${Math.ceil(this.player.hp)}/${this.player.maxHp}`;
+        document.getElementById('hg-fill').style.width = (this.player.hg / this.player.maxHg * 100) + '%';
+        document.getElementById('hg-val').innerText = `${Math.ceil(this.player.hg)}/${this.player.maxHg}`;
+        
+        document.getElementById('time-display').innerText = `Day ${this.world.day} (${Math.floor(this.world.time)}%)`;
+    },
+
+    renderRecipes() {
+        const list = document.getElementById('recipes-list');
+        list.innerHTML = '';
+        RECIPES.forEach(r => {
+            const canCraft = Object.entries(r.cost).every(([k, v]) => this.player.inv[k] >= v);
+            const div = document.createElement('div');
+            div.className = 'recipe';
+            div.innerHTML = `<div><strong>${r.label}</strong><br/><small>${Object.entries(r.cost).map(([k,v]) => v+' '+k).join(', ')}</small></div>`;
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-craft';
+            btn.innerText = 'Craft';
+            btn.disabled = !canCraft;
+            btn.onclick = () => this.craft(r);
+            div.appendChild(btn);
+            list.appendChild(div);
+        });
+    },
+
+    craft(r) {
+        Object.entries(r.cost).forEach(([k, v]) => this.player.inv[k] -= v);
+        if(ITEMS[r.result].tool) this.player.tools[r.result] = true;
+        else this.player.inv[r.result] = (this.player.inv[r.result] || 0) + (r.count || 1);
+        Sound.craft();
+        this.showMessage("Crafted " + r.label);
+        this.updateUI();
+        this.renderRecipes();
+    },
+
+    showMessage(txt) {
+        const m = document.getElementById('message-overlay');
+        m.innerText = txt; m.style.opacity = 1;
+        setTimeout(() => m.style.opacity = 0, 1500);
+    },
+
+    spawnSlime() {
+        if(this.entities.length > 15) return;
+        const x = this.player.x + (Math.random()-0.5) * 200;
+        const y = this.player.y + (Math.random()-0.5) * 200;
+        this.entities.push({ type: 'slime', x, y, hp: 3, maxHp: 3, speed: 20 + Math.random()*20, hurt: 0 });
+    },
+
+    loop(t) {
+        if(!this.running) return;
+        let dt = (t - this.lastTime) / 1000;
+        if(dt > 0.1) dt = 0.1;
+        this.lastTime = t;
+
+        this.update(dt, t);
+        this.render();
+        requestAnimationFrame(t => this.loop(t));
+    },
+
+    update(dt, t) {
+        // Survival
+        if(!this.isGodMode) {
+            this.player.hg -= dt * 0.05;
+            if(this.player.hg <= 0) { this.player.hg = 0; this.player.hp -= dt * 0.5; }
+            if(this.player.hg > 8 && this.player.hp < this.player.maxHp) this.player.hp += dt * 0.2;
+            if(this.player.hp <= 0) this.gameOver();
+        }
+
+        // Time
+        this.world.time += dt * 1.5;
+        if(this.world.time >= 100) { this.world.time = 0; this.world.day++; this.saveGame(); }
+        
+        // Spawn mobs at night
+        if(this.world.time > 70 || this.world.time < 20) {
+            if(Math.random() < 0.01) this.spawnSlime();
+        }
+
+        // Move
+        let dx=0, dy=0;
+        if(this.keys.w) { dy--; this.player.dir=0; }
+        if(this.keys.s) { dy++; this.player.dir=2; }
+        if(this.keys.a) { dx--; this.player.dir=3; }
+        if(this.keys.d) { dx++; this.player.dir=1; }
+        
+        if(dx || dy) {
+            const mag = Math.sqrt(dx*dx+dy*dy);
+            const speed = this.player.speed * (this.isGodMode ? 2.5 : 1);
+            const nx = this.player.x + (dx/mag) * speed * dt;
+            const ny = this.player.y + (dy/mag) * speed * dt;
+            
+            if(!this.isSolid(nx, this.player.y)) this.player.x = nx;
+            if(!this.isSolid(this.player.x, ny)) this.player.y = ny;
+        }
+
+        if(this.keys[' ']) this.interact();
+        
+        // Entities
+        this.entities.forEach((en, i) => {
+            if(en.type === 'slime') {
+                const dist = Math.hypot(this.player.x - en.x, this.player.y - en.y);
+                if(dist < 80) {
+                    const ang = Math.atan2(this.player.y - en.y, this.player.x - en.x);
+                    en.x += Math.cos(ang) * en.speed * dt;
+                    en.y += Math.sin(ang) * en.speed * dt;
+                    if(dist < 8 && this.player.hurtTimer <= 0) {
+                        this.player.hp -= 1; this.player.hurtTimer = 0.5; this.player.shake = 5;
+                        Sound.hurt();
+                        this.updateUI();
+                    }
+                }
+                if(en.hurt > 0) en.hurt -= dt;
+            }
+        });
+        
+        this.player.hurtTimer -= dt;
+        if(this.player.shake > 0) this.player.shake -= dt * 10;
+        
+        this.particles = this.particles.filter(p => {
+            p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+            return p.life > 0;
+        });
+
+        // Numeric keys
+        for(let i=1; i<=9; i++) if(this.keys[i]) { this.player.activeSlot = i-1; this.updateUI(); }
+        
+        if(t % 1000 < 20) this.updateUI();
+    },
+
+    isSolid(x, y) {
+        const tx = Math.floor(x/TILE_SIZE), ty = Math.floor(y/TILE_SIZE);
+        if(!this.map[ty] || !this.map[ty][tx]) return true;
+        const t = this.map[ty][tx].type;
+        return t === TILES.WATER || t === TILES.TREE || t === TILES.ROCK || t === TILES.IRON || t === TILES.WOOD_WALL || t === TILES.STONE_WALL || t === TILES.FURNACE;
+    },
+
+    interact(tx, ty) {
+        if(this.player.actionCooldown > 0) return;
+        this.player.actionCooldown = 0.25;
+
+        // If no coords, use direction
+        if(tx === undefined) {
+            tx = Math.floor(this.player.x / TILE_SIZE);
+            ty = Math.floor(this.player.y / TILE_SIZE);
+            if(this.player.dir === 0) ty--; else if(this.player.dir === 1) tx++; else if(this.player.dir === 2) ty++; else if(this.player.dir === 3) tx--;
+        }
+
+        // Check enemies first
+        let hitEnemy = false;
+        const reach = 20;
+        this.entities.forEach((en, i) => {
+            const d = Math.hypot(en.x - (tx*TILE_SIZE+8), en.y - (ty*TILE_SIZE+8));
+            if(d < reach) {
+                let dmg = this.player.tools.sword ? 2 : 1;
+                if(this.isGodMode) dmg = 99;
+                en.hp -= dmg; en.hurt = 0.2;
+                const ang = Math.atan2(en.y - this.player.y, en.x - this.player.x);
+                en.x += Math.cos(ang) * 15; en.y += Math.sin(ang) * 15;
+                this.addParticle(en.x, en.y, '#fff');
+                this.addDamageNum(en.x, en.y, dmg);
+                Sound.hit();
+                if(en.hp <= 0) {
+                    this.entities.splice(i, 1);
+                    this.player.inv.berry = (this.player.inv.berry || 0) + 1;
+                    this.showMessage("Slime dropped Berry!");
+                    this.updateUI();
+                }
+                hitEnemy = true;
+            }
+        });
+        if(hitEnemy) return;
+
+        const tile = this.map[ty]?.[tx];
+        if(!tile) return;
+
+        // Build if holding placeable
+        const items = Object.keys(ITEMS).filter(k => this.player.inv[k] > 0 || this.player.tools[k]);
+        const activeKey = items[this.player.activeSlot];
+        const activeItem = ITEMS[activeKey];
+
+        if(activeItem?.placeable && (tile.type === TILES.GRASS || tile.type === TILES.SAND || tile.type === TILES.STONE)) {
+            const dist = Math.hypot(this.player.x - tx*TILE_SIZE, this.player.y - ty*TILE_SIZE);
+            if(dist < 40) {
+                tile.type = activeItem.placeable;
+                tile.hp = 5;
+                this.player.inv[activeKey]--;
+                Sound.place();
+                this.updateUI();
+                return;
+            }
+        }
+        
+        if(activeItem?.food && this.player.hg < this.player.maxHg) {
+            this.player.hg = Math.min(this.player.maxHg, this.player.hg + activeItem.food);
+            this.player.inv[activeKey]--;
+            Sound.pickup();
+            this.updateUI();
+            return;
+        }
+
+        // Harvesting
+        if([TILES.TREE, TILES.ROCK, TILES.IRON, TILES.BERRY, TILES.STONE, TILES.WOOD_WALL, TILES.STONE_WALL, TILES.FURNACE].includes(tile.type)) {
+            let dmg = 1;
+            if(tile.type === TILES.TREE && this.player.tools.axe) dmg = 3;
+            if((tile.type === TILES.ROCK || tile.type === TILES.IRON || tile.type === TILES.STONE) && this.player.tools.pick) dmg = 3;
+            if(this.isGodMode) dmg = 10;
+            
+            tile.hp -= dmg;
+            Sound.hit();
+            this.addParticle(tx*16+8, ty*16+8, '#fff');
+
+            if(tile.hp <= 0) {
+                if(tile.type === TILES.TREE) this.player.inv.wood = (this.player.inv.wood || 0) + 3;
+                else if(tile.type === TILES.ROCK || tile.type === TILES.STONE) this.player.inv.stone = (this.player.inv.stone || 0) + 2;
+                else if(tile.type === TILES.IRON) this.player.inv.iron = (this.player.inv.iron || 0) + 1;
+                else if(tile.type === TILES.BERRY) this.player.inv.berry = (this.player.inv.berry || 0) + 2;
+                
+                tile.type = (ty > MAP_SIZE*0.7) ? TILES.STONE : TILES.GRASS;
+                Sound.break();
+                this.updateUI();
+            }
+        }
+    },
+
+    addParticle(x, y, color) {
+        for(let i=0; i<5; i++)
+            this.particles.push({ x, y, vx: (Math.random()-0.5)*50, vy: (Math.random()-0.5)*50, life: 0.3, color });
+    },
+
+    addDamageNum(x, y, val) {
+        this.particles.push({ x, y, vx: 0, vy: -20, life: 0.5, text: val, color: '#ff0' });
+    },
+
+    render() {
+        const c = this.ctx;
+        c.fillStyle = '#000';
+        c.fillRect(0, 0, 160, 160);
+
+        let camX = Math.floor(this.player.x + 5 - 80);
+        let camY = Math.floor(this.player.y + 5 - 80);
+        if(this.player.shake > 0) { camX += (Math.random()-0.5)*this.player.shake; camY += (Math.random()-0.5)*this.player.shake; }
+
+        c.save();
+        c.translate(-camX, -camY);
+
+        const x0 = Math.floor(camX / 16), y0 = Math.floor(camY / 16);
+        for(let y=y0; y<y0+12; y++) {
+            for(let x=x0; x<x0+12; x++) {
+                if(!this.map[y] || !this.map[y][x]) continue;
+                const t = this.map[y][x];
+                let color = '#4ade80';
+                if(t.type === TILES.WATER) color = '#3b82f6';
+                else if(t.type === TILES.SAND) color = '#fde047';
+                else if(t.type === TILES.STONE) color = '#94a3b8';
+                
+                c.fillStyle = color;
+                c.fillRect(x*16, y*16, 16, 16);
+
+                // Objects
+                if(t.type === TILES.TREE) { c.fillStyle = '#78350f'; c.fillRect(x*16+6, y*16+10, 4, 6); c.fillStyle = '#166534'; c.fillRect(x*16+2, y*16+2, 12, 10); }
+                else if(t.type === TILES.ROCK) { c.fillStyle = '#475569'; c.fillRect(x*16+3, y*16+5, 10, 8); }
+                else if(t.type === TILES.IRON) { c.fillStyle = '#475569'; c.fillRect(x*16+3, y*16+5, 10, 8); c.fillStyle = '#cbd5e1'; c.fillRect(x*16+6, y*16+7, 3, 3); }
+                else if(t.type === TILES.BERRY) { c.fillStyle = '#166534'; c.fillRect(x*16+4, y*16+6, 8, 8); c.fillStyle = '#ef4444'; c.fillRect(x*16+6, y*16+8, 2, 2); c.fillRect(x*16+9, y*16+10, 2, 2); }
+                else if(t.type === TILES.WOOD_WALL) { c.fillStyle = '#854d0e'; c.fillRect(x*16+1, y*16+1, 14, 14); }
+                else if(t.type === TILES.STONE_WALL) { c.fillStyle = '#334155'; c.fillRect(x*16+1, y*16+1, 14, 14); }
+                else if(t.type === TILES.TORCH) { c.fillStyle = '#78350f'; c.fillRect(x*16+7, y*16+6, 2, 8); c.fillStyle = '#f59e0b'; c.fillRect(x*16+6, y*16+4, 4, 4); }
+                else if(t.type === TILES.CAMPFIRE) { c.fillStyle = '#78350f'; c.fillRect(x*16+4, y*16+10, 8, 3); c.fillStyle = '#f97316'; c.fillRect(x*16+6, y*16+6, 4, 6); }
+                else if(t.type === TILES.FURNACE) { c.fillStyle = '#1e293b'; c.fillRect(x*16+2, y*16+2, 12, 12); c.fillStyle = '#f59e0b'; c.fillRect(x*16+5, y*16+8, 6, 4); }
+                else if(t.type === TILES.CAVE) { c.fillStyle = '#000'; c.fillRect(x*16+4, y*16+4, 8, 8); }
+            }
+        }
+
+        // Entities
+        this.entities.forEach(en => {
+            if(en.type === 'slime') {
+                c.fillStyle = en.hurt > 0 ? '#fff' : '#22c55e';
+                c.fillRect(en.x-4, en.y-4, 8, 8);
+                c.fillStyle = '#000'; c.fillRect(en.x-2, en.y-2, 1, 1); c.fillRect(en.x+1, en.y-2, 1, 1);
+            }
+        });
+
+        // Player
+        c.fillStyle = this.player.hurtTimer > 0 ? '#fff' : '#ef4444';
+        c.fillRect(this.player.x, this.player.y, 10, 10);
+        c.fillStyle = '#000';
+        if(this.player.dir === 2) { c.fillRect(this.player.x+2, this.player.y+3, 2, 2); c.fillRect(this.player.x+6, this.player.y+3, 2, 2); }
+        
+        // Tool animation
+        if(this.player.actionCooldown > 0.1) {
+            c.fillStyle = '#fff';
+            let tx=this.player.x, ty=this.player.y;
+            if(this.player.dir===0) ty-=8; else if(this.player.dir===1) tx+=10; else if(this.player.dir===2) ty+=10; else if(this.player.dir===3) tx-=8;
+            c.fillRect(tx, ty, 8, 8);
+        }
+
+        // Particles
+        this.particles.forEach(p => {
+            if(p.text) { c.fillStyle = p.color; c.font = '6px Arial'; c.fillText(p.text, p.x, p.y); }
+            else { c.fillStyle = p.color; c.fillRect(p.x, p.y, 2, 2); }
+        });
+
+        c.restore();
+
+        // Day/Night Overlay
+        let alpha = 0;
+        if(this.world.time > 70) alpha = (this.world.time - 70) / 30 * 0.6;
+        else if(this.world.time < 20) alpha = (20 - this.world.time) / 20 * 0.6;
+        if(alpha > 0) {
+            c.fillStyle = `rgba(0, 0, 50, ${alpha})`;
+            c.fillRect(0, 0, 160, 160);
+        }
+    },
+
+    gameOver() {
+        this.running = false;
+        alert("You died! Day reached: " + this.world.day);
+        localStorage.removeItem('minicraft_save');
+        location.reload();
+    },
+
+    saveGame() {
+        const data = { player: this.player, world: this.world, map: this.map, entities: this.entities };
+        localStorage.setItem('minicraft_save', JSON.stringify(data));
+    },
+
+    loadGame() {
+        const raw = localStorage.getItem('minicraft_save');
+        if(!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            this.player = data.player;
+            this.world = data.world;
+            this.map = data.map;
+            this.entities = data.entities;
+        } catch(e) { console.error("Load failed", e); }
+    }
+};
+
+window.onload = () => {
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('mobile-mode');
+    Game.init();
+};
+</script>
+</body>
+</html>
