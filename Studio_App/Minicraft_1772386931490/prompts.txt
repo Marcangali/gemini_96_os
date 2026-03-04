@@ -151,3 +151,50 @@ Do not rewrite unchanged code.
 Keep code readable and commented.
 
 Avoid unnecessary complexity.+fix block breaking on pc
+
+---
+[04/03/2026, 19:52:08] v4:
+The game is freezing primarily due to a ReferenceError in the update function, and potentially a SyntaxError because the code context you provided contains the entire script twice.
+
+Here are the specific fixes:
+
+### 1. Fix the ReferenceError (Variable t)
+In your loop function, you receive a timestamp t, but you call this.update(dt) without passing t along. Inside update, the code tries to use t, which causes the game to crash immediately.
+
+Change your loop and update calls like this:
+
+javascript
+Copy
+// Inside the loop function, pass 't' to update
+loop(t) {
+    if(!this.running) return;
+    let dt = (t - this.lastTime) / 1000;
+    if(dt > 0.1) dt = 0.1;
+    this.lastTime = t;
+
+    this.update(dt, t); // Pass t here
+    this.render();
+    requestAnimationFrame(t => this.loop(t));
+}
+
+// Update the function signature to accept 't'
+update(dt, t) { 
+    // ... existing survival/movement code ...
+
+    // Now 't' is defined and this won't crash
+    if(t % 1000 < 20) this.updateUI();
+}
+
+
+### 2. Remove Duplicated Code
+Your current file has the entire HTML structure and <script> block pasted twice (one after the other). Because you use const to define Game, ITEMS, TILES, etc., the browser will throw a SyntaxError: *"Identifier 'Game' has already been declared"*.
+
+* Check your file: Ensure you don't have two <!DOCTYPE html> tags or two const Game = ... blocks. Delete everything after the first </html> tag.
+
+### 3. Audio Context Note
+Most browsers block audio until the user interacts with the page. Since you call Sound.play on start, make sure the audioCtx.resume() logic (which you have) is triggered by the "Play Now" button. Your current code does this inside Sound.play, but if it still feels "stuck," it might be waiting for that first interaction.
+
+### How to debug this yourself:
+1. Open the game in your browser.
+2. Press F12 (or Right-click > Inspect) and go to the Console tab.
+3. You will likely see a red error message. Clicking it will take you exactly to the line causing the freeze.
