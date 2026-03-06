@@ -1,0 +1,11 @@
+{
+  "highScore": 51,
+  "coins": 78,
+  "inventory": [
+    "skin_default",
+    "skin_blue"
+  ],
+  "equippedSkin": "skin_blue",
+  "equippedMap": "map_default",
+  "activePowerups": []
+}
