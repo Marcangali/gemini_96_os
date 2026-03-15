@@ -18,3 +18,7 @@ Do not rewrite the entire application; only modify the rendering logic, the fail
 ---
 [3/15/2026, 11:48:51 AM] v7:
 Add the god mode
+
+---
+[3/15/2026, 11:55:34 AM] v8:
+The app is not working
