@@ -216,5 +216,13 @@
     "name": "ZenCalendar",
     "folderPath": "Studio_App/ZenCalendar_1764591908508",
     "lastModified": 1764591908508
+  },
+  {
+    "id": "PumpIron3D_1776947489843",
+    "name": "Pump Iron 3D",
+    "folderPath": "Studio_App/PumpIron3D_1776947489843",
+    "lastModified": 1776947494003,
+    "icon": "",
+    "initialPrompt": "Gym 3d"
   }
 ]
