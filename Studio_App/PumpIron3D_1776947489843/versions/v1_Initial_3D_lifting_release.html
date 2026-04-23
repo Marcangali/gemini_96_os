@@ -1,0 +1,712 @@
+<!--
+APP_NAME: Pump Iron 3D
+APP_DESCRIPTION: A 3D idle lifting simulator. Get huge!
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Initial 3D lifting release.
+STORE_ID: 
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pump Iron 3D</title>
+    <!-- Using Three.js CDN as it's absolutely necessary for a 3D application requirement -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg-color: rgba(255, 255, 255, 0.7);
+            --border-color: rgba(255, 255, 255, 0.4);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --text-main: #333;
+            --accent: #0078D4;
+            --accent-hover: #005a9e;
+            --danger: #d13438;
+            --success: #107c10;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism Container */
+        #app {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin: 8px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Header / Stats */
+        #header {
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.5);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: #666;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        #level-val { color: var(--success); }
+
+        /* God Mode Badge */
+        #god-mode-badge {
+            display: none;
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(45deg, #ff00cc, #3333ff);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 20;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+            100% { transform: translateX(-50%) scale(1); }
+        }
+
+        /* 3D Canvas Container */
+        #canvas-container {
+            flex: 1;
+            width: 100%;
+            position: relative;
+            background: radial-gradient(circle, #ffffff 0%, #e0e6ed 100%);
+            overflow: hidden;
+        }
+
+        /* Progress Bars */
+        #bars {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.3);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .bar-container {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            margin-top: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.1s linear, background-color 0.3s;
+        }
+
+        #energy-fill { background: #ffd700; }
+        #xp-fill { background: var(--success); }
+        
+        .bar-label-wrapper {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        /* Controls */
+        #controls {
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 10;
+        }
+
+        button {
+            flex: 1;
+            padding: 16px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:active {
+            transform: scale(0.95);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        #btn-lift {
+            background: linear-gradient(135deg, var(--accent), #005a9e);
+        }
+
+        #btn-lift.disabled {
+            background: #ccc;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #btn-rest {
+            background: linear-gradient(135deg, #888, #666);
+        }
+
+        #btn-rest.active {
+            background: linear-gradient(135deg, var(--success), #0c5e0c);
+            animation: breathe 1.5s infinite alternate;
+        }
+
+        @keyframes breathe {
+            from { box-shadow: 0 0 5px var(--success); }
+            to { box-shadow: 0 0 15px var(--success); }
+        }
+
+        /* Overlay Messages */
+        #level-up-msg {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--success);
+            text-shadow: 2px 2px 0px white, -2px -2px 0px white, 0px 4px 10px rgba(0,0,0,0.3);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 30;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #level-up-msg.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        /* Mobile Mode Adjustments */
+        body.mobile-mode #app {
+            margin: 0;
+            border-radius: 0;
+            border: none;
+        }
+        body.mobile-mode button {
+            padding: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="god-mode-badge">GOD MODE ENABLED</div>
+    
+    <div id="header">
+        <div class="stat-group">
+            <span class="stat-label">Reps</span>
+            <span class="stat-value" id="reps-val">0</span>
+        </div>
+        <div class="stat-group" style="align-items: flex-end;">
+            <span class="stat-label">Level</span>
+            <span class="stat-value" id="level-val">1</span>
+        </div>
+    </div>
+
+    <div id="bars">
+        <div class="bar-label-wrapper">
+            <span>Energy</span>
+            <span id="energy-text">100%</span>
+        </div>
+        <div class="bar-container">
+            <div id="energy-fill"></div>
+        </div>
+        
+        <div class="bar-label-wrapper" style="margin-top: 8px;">
+            <span>Next Level</span>
+        </div>
+        <div class="bar-container">
+            <div id="xp-fill" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <div id="level-up-msg">LEVEL UP!</div>
+    </div>
+
+    <div id="controls">
+        <button id="btn-lift">LIFT</button>
+        <button id="btn-rest">REST</button>
+    </div>
+</div>
+
+<script>
+    /**
+     * PUMP IRON 3D - Game Logic & Rendering
+     */
+
+    // --- State ---
+    const state = {
+        reps: 0,
+        level: 1,
+        xp: 0,
+        xpReq: 10,
+        energy: 100,
+        maxEnergy: 100,
+        isResting: false,
+        isLifting: false,
+        muscleScale: 1.0,
+        liftTargetRotation: 0,
+        currentArmRotation: 0
+    };
+
+    // --- God Mode Check ---
+    const debugOptions = JSON.parse(localStorage.getItem('gemini96-debugOptions') || '{}');
+    const isGodMode = debugOptions.flappyGodMode === true;
+
+    if (isGodMode) {
+        document.getElementById('god-mode-badge').style.display = 'block';
+    }
+
+    // --- Audio System (Web Audio API Synthesizer) ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new AudioContext();
+        }
+    }
+
+    function playSound(type) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'lift') {
+            // Low grunt
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(120, now);
+            osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } else if (type === 'error') {
+            // Buzz
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, now);
+            gainNode.gain.setValueAtTime(0.2, now);
+            gainNode.gain.linearRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        } else if (type === 'levelup') {
+            // Chime
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(660, now + 0.1);
+            osc.frequency.setValueAtTime(880, now + 0.2);
+            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.6);
+            osc.start(now);
+            osc.stop(now + 0.6);
+        } else if (type === 'click') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(300, now);
+            gainNode.gain.setValueAtTime(0.1, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        }
+    }
+
+    // --- DOM Elements ---
+    const elReps = document.getElementById('reps-val');
+    const elLevel = document.getElementById('level-val');
+    const elEnergyFill = document.getElementById('energy-fill');
+    const elEnergyText = document.getElementById('energy-text');
+    const elXpFill = document.getElementById('xp-fill');
+    const btnLift = document.getElementById('btn-lift');
+    const btnRest = document.getElementById('btn-rest');
+    const elLevelUpMsg = document.getElementById('level-up-msg');
+    const container = document.getElementById('canvas-container');
+
+    // --- Three.js Setup ---
+    const scene = new THREE.Scene();
+    
+    // Camera
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+    camera.position.set(0, 2, 8);
+    camera.lookAt(0, 1, 0);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 7);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    scene.add(dirLight);
+
+    // Materials
+    const skinMat = new THREE.MeshLambertMaterial({ color: 0xffd1b3 });
+    const shirtMat = new THREE.MeshLambertMaterial({ color: 0x0078D4 });
+    const pantsMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.8, roughness: 0.2 });
+
+    // --- Character Construction ---
+    const character = new THREE.Group();
+    scene.add(character);
+
+    // Floor
+    const floorGeo = new THREE.PlaneGeometry(20, 20);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.8 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Torso (Shirt)
+    const torsoGeo = new THREE.BoxGeometry(1.2, 1.5, 0.8);
+    const torso = new THREE.Mesh(torsoGeo, shirtMat);
+    torso.position.y = 0.75;
+    torso.castShadow = true;
+    character.add(torso);
+
+    // Head
+    const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const head = new THREE.Mesh(headGeo, skinMat);
+    head.position.y = 2.0;
+    head.castShadow = true;
+    character.add(head);
+
+    // Legs
+    const legGeo = new THREE.BoxGeometry(0.5, 1.5, 0.5);
+    const legL = new THREE.Mesh(legGeo, pantsMat);
+    legL.position.set(-0.35, -0.75, 0);
+    legL.castShadow = true;
+    torso.add(legL);
+
+    const legR = new THREE.Mesh(legGeo, pantsMat);
+    legR.position.set(0.35, -0.75, 0);
+    legR.castShadow = true;
+    torso.add(legR);
+
+    // Arms Architecture (Needs pivot at shoulder)
+    const armPivotL = new THREE.Group();
+    armPivotL.position.set(-0.8, 0.6, 0); // Shoulder position relative to torso
+    torso.add(armPivotL);
+
+    const armPivotR = new THREE.Group();
+    armPivotR.position.set(0.8, 0.6, 0);
+    torso.add(armPivotR);
+
+    // Arm Mesh (Offset so pivot is at top)
+    const armGeo = new THREE.BoxGeometry(0.4, 1.2, 0.4);
+    armGeo.translate(0, -0.5, 0); // Shift down
+
+    const armL = new THREE.Mesh(armGeo, skinMat);
+    armL.castShadow = true;
+    armPivotL.add(armL);
+
+    const armR = new THREE.Mesh(armGeo, skinMat);
+    armR.castShadow = true;
+    armPivotR.add(armR);
+
+    // Dumbbells
+    const createDumbbell = () => {
+        const dbGroup = new THREE.Group();
+        const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.4), ironMat);
+        handle.rotation.z = Math.PI / 2;
+        const weightGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.15, 16);
+        const w1 = new THREE.Mesh(weightGeo, ironMat);
+        w1.rotation.z = Math.PI / 2;
+        w1.position.x = -0.2;
+        const w2 = new THREE.Mesh(weightGeo, ironMat);
+        w2.rotation.z = Math.PI / 2;
+        w2.position.x = 0.2;
+        dbGroup.add(handle, w1, w2);
+        return dbGroup;
+    };
+
+    const dbL = createDumbbell();
+    dbL.position.set(0, -1.0, 0); // Hand position
+    armPivotL.add(dbL);
+
+    const dbR = createDumbbell();
+    dbR.position.set(0, -1.0, 0);
+    armPivotR.add(dbR);
+
+    // Array to hold meshes that grow
+    const muscleGroups = [armL, armR, torso];
+    const initialTorsoScale = {x: 1, y: 1, z: 1};
+    
+    // Initial pose
+    armPivotL.rotation.x = Math.PI / 8;
+    armPivotR.rotation.x = Math.PI / 8;
+
+    // --- Interaction Logic ---
+
+    function updateUI() {
+        elReps.textContent = Math.floor(state.reps);
+        elLevel.textContent = state.level;
+        
+        const ePct = Math.max(0, Math.min(100, (state.energy / state.maxEnergy) * 100));
+        elEnergyFill.style.width = `${ePct}%`;
+        elEnergyText.textContent = `${Math.floor(ePct)}%`;
+        
+        if (ePct < 20) {
+            elEnergyFill.style.background = varDanger = '#d13438';
+        } else {
+            elEnergyFill.style.background = '#ffd700'; // Gold
+        }
+
+        const xPct = Math.min(100, (state.xp / state.xpReq) * 100);
+        elXpFill.style.width = `${xPct}%`;
+
+        if (state.energy <= 0 && !isGodMode) {
+            btnLift.classList.add('disabled');
+        } else {
+            btnLift.classList.remove('disabled');
+        }
+
+        if (state.isResting) {
+            btnRest.classList.add('active');
+            btnRest.textContent = "RESTING...";
+            btnLift.classList.add('disabled');
+        } else {
+            btnRest.classList.remove('active');
+            btnRest.textContent = "REST";
+        }
+    }
+
+    function checkLevelUp() {
+        if (state.xp >= state.xpReq) {
+            state.level++;
+            state.xp = 0;
+            state.xpReq = Math.floor(state.xpReq * 1.5);
+            state.maxEnergy = 100 + (state.level * 10);
+            state.energy = state.maxEnergy;
+            
+            // Visual growth
+            state.muscleScale = 1.0 + (state.level * 0.05);
+            
+            playSound('levelup');
+            
+            // Show message
+            elLevelUpMsg.classList.add('show');
+            setTimeout(() => {
+                elLevelUpMsg.classList.remove('show');
+            }, 1500);
+        }
+    }
+
+    function performLift() {
+        initAudio();
+        if (state.isResting) {
+            stopResting();
+        }
+
+        const energyCost = 5 + (state.level * 0.5);
+
+        if (state.energy >= energyCost || isGodMode) {
+            // Success Lift
+            state.isLifting = true;
+            if (!isGodMode) {
+                state.energy -= energyCost;
+            }
+            
+            const repGain = isGodMode ? 100 : 1 + (state.level * 0.2);
+            state.reps += repGain;
+            state.xp += repGain;
+
+            playSound('lift');
+            checkLevelUp();
+            updateUI();
+
+            // Trigger animation
+            state.liftTargetRotation = -Math.PI / 1.5; // Arms up
+
+            // Reset lift animation flag after brief delay
+            clearTimeout(window.liftTimeout);
+            window.liftTimeout = setTimeout(() => {
+                state.isLifting = false;
+                state.liftTargetRotation = Math.PI / 8; // Arms down
+            }, 150);
+
+        } else {
+            // Not enough energy
+            playSound('error');
+            // Shake UI
+            elEnergyFill.parentElement.style.transform = 'translateX(5px)';
+            setTimeout(() => elEnergyFill.parentElement.style.transform = 'translateX(-5px)', 50);
+            setTimeout(() => elEnergyFill.parentElement.style.transform = 'translateX(0)', 100);
+        }
+    }
+
+    function toggleRest() {
+        initAudio();
+        playSound('click');
+        if (state.isResting) {
+            stopResting();
+        } else {
+            startResting();
+        }
+    }
+
+    function startResting() {
+        state.isResting = true;
+        updateUI();
+    }
+
+    function stopResting() {
+        state.isResting = false;
+        updateUI();
+    }
+
+    // --- Game Loop ---
+    let lastTime = 0;
+    function animate(time) {
+        requestAnimationFrame(animate);
+
+        const delta = (time - lastTime) / 1000;
+        lastTime = time;
+
+        // Energy Regeneration
+        if (state.isResting) {
+            state.energy += (state.maxEnergy * 0.2) * delta; // Restore 20% per sec
+            if (state.energy >= state.maxEnergy) {
+                state.energy = state.maxEnergy;
+                stopResting();
+            }
+            updateUI();
+        } else if (!state.isLifting && state.energy < state.maxEnergy && !isGodMode) {
+            // Passive slow regen
+            state.energy += (state.maxEnergy * 0.02) * delta;
+            updateUI();
+        }
+
+        // Animate Arms
+        const rotDiff = state.liftTargetRotation - state.currentArmRotation;
+        state.currentArmRotation += rotDiff * 15 * delta; // LERP
+
+        armPivotL.rotation.x = state.currentArmRotation;
+        armPivotR.rotation.x = state.currentArmRotation;
+
+        // Animate Body slightly
+        if (state.isLifting) {
+            torso.position.y = 0.75 + Math.sin(time * 0.02) * 0.05;
+        } else {
+            torso.position.y = 0.75;
+        }
+
+        // Apply Muscle Growth (smoothly)
+        armL.scale.lerp(new THREE.Vector3(state.muscleScale, 1, state.muscleScale), 0.1);
+        armR.scale.lerp(new THREE.Vector3(state.muscleScale, 1, state.muscleScale), 0.1);
+        
+        // Torso grows wider/thicker but not necessarily taller
+        const targetTorsoScale = new THREE.Vector3(
+            initialTorsoScale.x * state.muscleScale, 
+            initialTorsoScale.y, 
+            initialTorsoScale.z * (1 + (state.muscleScale-1)*0.5)
+        );
+        torso.scale.lerp(targetTorsoScale, 0.1);
+
+
+        renderer.render(scene, camera);
+    }
+
+    // --- Events ---
+    btnLift.addEventListener('mousedown', performLift);
+    btnLift.addEventListener('touchstart', (e) => { e.preventDefault(); performLift(); }, {passive: false});
+    
+    btnRest.addEventListener('click', toggleRest);
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    // Handle visibility to pause/resume audio context cleanly if needed
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden && audioCtx && audioCtx.state === 'running') {
+            audioCtx.suspend();
+        } else if (!document.hidden && audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    });
+
+    // Start
+    updateUI();
+    requestAnimationFrame(animate);
+
+</script>
+</body>
+</html>
