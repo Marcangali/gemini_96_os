@@ -159,5 +159,12 @@
     "content": "Mi a neved?",
     "timestamp": 1777055084954,
     "type": "text"
+  },
+  {
+    "id": "1777055096700",
+    "sender": "Guest_644",
+    "content": "Kecske vagok, és te?",
+    "timestamp": 1777055096700,
+    "type": "text"
   }
 ]
