@@ -192,3 +192,7 @@ To prevent the player from clipping through walls at high speeds, resolve collis
     "Count": "uint8 (Current stack size from 0 to 64)",
     "Durability": "uint16 (Tracks remaining tool uses, 0 if non-durable block)"
   }
+
+---
+[22/05/2026, 17:44:29] v2:
+fix that no thing is on the screen just the inventory
