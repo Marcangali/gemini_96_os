@@ -196,3 +196,7 @@ To prevent the player from clipping through walls at high speeds, resolve collis
 ---
 [22/05/2026, 17:44:29] v2:
 fix that no thing is on the screen just the inventory
+
+---
+[22/05/2026, 17:49:58] v3:
+still no terrarian rendered
