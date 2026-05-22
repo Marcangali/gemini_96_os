@@ -1,0 +1,194 @@
+[22/05/2026, 17:38:59] v1:
+You are the Lead Principal Game Engine Architect and Systems Engineer specializing in high-performance voxel-based simulation engines. Your objective is to generate the comprehensive structural architecture, complete data models, and foundational implementation code for a production-grade, highly realistic 3D Minecraft clone. You must adhere strictly to the technical specifications, data schemas, mathematical formulations, and algorithmic constraints defined below. No systems may be omitted, abstractly mocked, or left as an exercise for the reader.
+
+---
+
+### SYSTEM 1: VOXEL DATA ARCHITECTURE & MEMORY MANAGEMENT
+
+1.1 CHUNK SEGMENTATION MATRIX
+- The game world is an infinite grid of distinct, addressable spatial structures called "Chunks".
+- Dimensionality: A single Chunk must measure exactly 16 blocks horizontally along the X-axis, 16 blocks horizontally along the Z-axis, and 384 blocks vertically along the Y-axis (ranging from Y = -64 to Y = 319).
+- Sub-Chunk Partitioning: To optimize memory allocation and rendering routines, partition each 16x384x16 chunk vertically into 24 distinct "Sub-Chunks", each measuring 16x16x16 blocks.
+
+1.2 COMPACT BLOCK STORAGE SCHEMA
+- You must not instantiate individual objects or actors per block.
+- Representation: Represent each Sub-Chunk as a single flattened, one-dimensional array of 16-bit unsigned integers (uint16_t), containing exactly 4,096 elements ($16 \times 16 \times 16$). 
+- Array Index Mapping: Convert 3D local coordinates $(x, y, z)$ within a Sub-Chunk to a 1D array index $I$ using the following strict bitwise layout to maximize CPU cache locality:
+  $$I = (y \ll 8) | (z \ll 4) | x$$
+- Voxel Bit Allocation: The 16-bit unsigned integer value at index $I$ constitutes the Block Data State, allocated as follows:
+  * Bits 0-9 (10 bits): Block ID (Supports up to 1,024 unique block types).
+  * Bits 10-13 (4 bits): Block Metadata (Orientation states for logs/stairs, chest directions, growth stages for crops).
+  * Bits 14-15 (2 bits): Block Light/State flags (e.g., Waterlogged flag, active state).
+
+1.3 CHUNK MANAGEMENT SYSTEM & BI-DIRECTIONAL MEMORY PIPELINE
+- Chunk Map: Maintain a thread-safe Hash Map tracking active chunks in memory, where the key is a 64-bit composite integer representing the chunk's global 2D spatial coordinate:
+  $$\text{Key} = ((\text{uint64\_t})X_{\text{chunk}} \ll 32) | ((\text{uint64\_t})Z_{\text{chunk}} \& \text{0xFFFFFFFF})$$
+- Dynamic View Distance Lifecycle: Implement an asynchronous chunk loading loop based on player position $(P_x, P_z)$. Given a view distance radius $R$, the system must automatically:
+  1. Spatially identify chunks where $|X_{\text{chunk}} - P_x| > R$ or $|Z_{\text{chunk}} - P_z| > R$.
+  2. Serialize the block arrays of out-of-bounds chunks into an asynchronous disk write-buffer using an uncompressed region-file format.
+  3. Evict evicted chunks cleanly from RAM.
+  4. Instantiate new empty chunks within the view radius and queue them into the Terrain Generation Pipeline.
+
+---
+
+### SYSTEM 2: COMPLETE BLOCK TYPE REGISTRY & STATE MACHINE
+
+Every Block ID must map directly to a static property configuration array. You must implement the following foundational block definitions, mapping out their properties explicitly:
+
+2.1 SYSTEM-CRITICAL DEFAULT BLOCKS
+- ID 0: Air (IsSolid: False, IsTransparent: True, LightOpacity: 0, LightEmission: 0, ToolType: None, Hardness: 0.0)
+- ID 1: Stone (IsSolid: True, IsTransparent: False, LightOpacity: 15, LightEmission: 0, ToolType: Pickaxe, Hardness: 1.5)
+- ID 2: Grass Block (IsSolid: True, IsTransparent: False, LightOpacity: 15, LightEmission: 0, ToolType: Shovel, Hardness: 0.6. Custom behavior: Randomly ticks to spread to adjacent ID 3 Dirt blocks if exposed to light level >= 4, reverts to Dirt if covered by solid block).
+- ID 3: Dirt (IsSolid: True, IsTransparent: False, LightOpacity: 15, LightEmission: 0, ToolType: Shovel, Hardness: 0.5)
+- ID 4: Oak Wood Log (IsSolid: True, IsTransparent: False, LightOpacity: 15, LightEmission: 0, ToolType: Axe, Hardness: 2.0. Metadata bits 10-11 define axis orientation: 00 = Vertical Y, 01 = Horizontal X, 10 = Horizontal Z).
+- ID 5: Oak Leaves (IsSolid: True, IsTransparent: True, LightOpacity: 1, LightEmission: 0, ToolType: Shears, Hardness: 0.2. Custom behavior: If flag bit 12 is set to "unnatural/placed", ignore decay. Otherwise, check for connected Log IDs within a Manhattan distance of 6 blocks on random tick; if none found, change ID to 0 Air).
+- ID 6: Glass (IsSolid: True, IsTransparent: True, LightOpacity: 0, LightEmission: 0, ToolType: Pickaxe, Hardness: 0.3. Does not cull faces of adjacent Glass blocks).
+
+2.2 UTILITY & INTERACTIVE BLOCKS
+- ID 7: Glowstone (IsSolid: True, IsTransparent: False, LightOpacity: 0, LightEmission: 15, ToolType: Pickaxe, Hardness: 0.3)
+- ID 8: Torch (IsSolid: False, IsTransparent: True, LightOpacity: 0, LightEmission: 14, ToolType: None, Hardness: 0.0. Requires solid attachment surface. Metadata bits 10-12 denote attachment direction: 0=Floor, 1=Wall West, 2=Wall East, 3=Wall North, 4=Wall South. If supporting block is destroyed, drop item and change ID to 0).
+- ID 9: Crafting Table (IsSolid: True, IsTransparent: False, LightOpacity: 15, LightEmission: 0, ToolType: Axe, Hardness: 2.5)
+- ID 10: Chest (IsSolid: True, IsTransparent: True, LightOpacity: 0, LightEmission: 0, ToolType: Axe, Hardness: 2.5. Metadata bits 10-11 store facing orientation. Contains an explicit reference map linking its 3D block coordinate to a 27-slot Inventory Data Structure).
+
+2.3 DYNAMIC FLUID & LIQUID SYSTEM
+- ID 11: Water Source (IsSolid: False, IsTransparent: True, LightOpacity: 2, LightEmission: 0, Hardness: 0.0)
+- ID 12: Flowing Water (IsSolid: False, IsTransparent: True, LightOpacity: 2, LightEmission: 0, Hardness: 0.0. Metadata bits 10-13 denote fluid level from 7 down to 0).
+- Fluid Simulation Routine: On a regular cellular-automata tick (every 50ms), water blocks check adjacent spaces:
+  1. If the block directly below is Air (ID 0) or Flowing Water with a lower level, instantiate/update a Flowing Water block below at full depth/level.
+  2. If the block below is solid, check horizontal neighbors. Spread horizontally to adjacent air blocks, setting the new block's fluid level to $CurrentLevel - 1$. If fluid level reaches 0, spreading ceases.
+  3. If a Water block meets a Lava block, dynamically calculate the reaction: if a source block is hit, overwrite with Obsidian (ID 13); if flowing liquid is hit, overwrite with Cobblestone (ID 14).
+
+---
+
+### SYSTEM 3: ASYNCHRONOUS TERRAIN GENERATION PIPELINE
+
+To achieve organic, realistic terrain contours, the generation pipeline must stream chunks through four strict, isolated pipeline phases running concurrently on background threads:
+
+3.1 PHASE 1: NOISE-BASED SHAPING (HEIGHTMAP GENERATION)
+- Utilize a deterministic seeding system where seed value $S$ instantiates multiple independent layered Coherent Noise Generators (Simplex or 3D Perlin Noise).
+- Define base terrain height $H$ at local horizontal grid column $(X_{\text{global}}, Z_{\text{global}})$ via Fractal Brownian Motion (fBm) using 5 distinct octaves:
+  $$H(x, z) = \sum_{i=0}^{4} \text{amplitude}_i \cdot \text{Noise}(x \cdot \text{frequency}_i, z \cdot \text{frequency}_i)$$
+  * Settings: Persistence = 0.5, Lacunarity = 2.0. Base elevation offset = 64 blocks.
+- Biome Distribution: Generate secondary and tertiary continuous 2D noise maps calculating Temperature ($T$) and Moisture ($M$). Evaluate conditions per column:
+  * Desert: If $T > 0.7$ and $M < 0.3$.
+  * Plains: If $0.3 \le T \le 0.7$ and $0.4 \le M \le 0.7$.
+  * Mountains: Driven by an explicit clamping function that amplifies $H(x,z)$ when a separate, high-contrast ridge noise map exceeds a threshold of 0.75.
+
+3.2 PHASE 2: STRATIGRAPHIC VEXEL POPULATION
+- Based on the evaluated biome and height $H$, fill the vertical block column from $Y = -64$ to $Y = 319$:
+  * $Y \le -60$: Populate completely with Bedrock (ID 15).
+  * $-59 \le Y < H - 4$: Populate completely with Stone (ID 1).
+  * $H - 4 \le Y < H$: Populate with Sub-surface block (e.g., Dirt ID 3; or Sand ID 16 for Desert).
+  * $Y = \text{floor}(H)$: Populate with Surface block (e.g., Grass Block ID 2; or Sand ID 16 for Desert).
+  * If surface height $H < 62$ (Sea Level), fill columns from $Y = \text{floor}(H) + 1$ up to $Y = 62$ with Water Source (ID 11).
+
+3.3 PHASE 3: 3D CARVING SYSTEMS (CAVES & TUNNELS)
+- Cave Generation: Evaluate every 3D coordinate $(x, y, z)$ within the chunk utilizing two independent 3D Perlin Noise networks, WormNoiseA and WormNoiseB.
+- Threshold Function: A block is carved out and replaced with Air (ID 0) if and only if:
+  $$|\text{WormNoiseA}(x,y,z)| < 0.05 \quad \text{AND} \quad |\text{WormNoiseB}(x,y,z)| < 0.05$$
+  * Restraint: Do not carve out blocks if $Y \le -60$ (protect bedrock) or if the block above is a liquid source (prevents underwater cave flooding glitches).
+
+3.4 PHASE 4: DECORATION & FEATURE PLACEMENT (DECORATION POOL)
+- Scan surface blocks to run feature-placement checks using a local pseudo-random number generator bound to the chunk coordinates.
+- Tree Generation Rules (Plains/Forest biomes with a 2% chance per surface block):
+  * Verify target block is Grass (ID 2). Replace it with Dirt (ID 3).
+  * Generate a vertical column of Oak Wood Logs (ID 4) from $Y = H+1$ to $Y = H+5$.
+  * Generate a leafy canopy cluster of Oak Leaves (ID 5) spanning a 5x5 horizontal grid centered around log height $H+4$ and $H+5$, and a 3x3 horizontal grid at log height $H+6$.
+
+---
+
+### SYSTEM 4: HIGH-PERFORMANCE RENDERING ENGINE & GREEDY MESHING
+
+To achieve extreme graphics performance, the system must translate voxel data arrays into unified GPU vertex buffers using optimized geometry techniques.
+
+4.1 HIDDEN FACE CULLING ALGORITHM
+- The mesh generator must iterate through every single index of a Sub-Chunk's 1D block array.
+- For each non-air block found, check its six direct face neighbors: Top $(y+1)$, Bottom $(y-1)$, North $(z+1)$, South $(z-1)$, East $(x+1)$, and West $(x-1)$.
+- Spatial Border Resolution: If a block sits on a border of a Sub-Chunk (e.g., $x=15$), the algorithm must read the adjacent neighbor chunk's boundary index data to evaluate the state of the neighboring block.
+- Execution: Generate quad vertex data for a face if and only if the neighboring block has property `IsTransparent == True` or `ID == 0` (Air). If the neighboring block is fully solid, immediately cull the face.
+
+4.2 GREEDY MESHING ALGORITHM
+- Maximize vertex reduction by combining individual square faces into large rectangular quads. Loop through each of the 3 dimensional axes (X, Y, Z). For each axis, use a 2D sweeping plane to process slices of the chunk:
+  1. Maintain a boolean tracking array representing the faces on the current slice that need to be rendered.
+  2. Iterate through the slice. Find the first unvisited face, note its block type/ID, and determine its maximum width by scanning along the current row until a block of a different type, an already visited face, or a culled face is encountered.
+  3. Expand that row vertically down the adjacent columns of the slice to determine the maximum height, ensuring that all faces within the extended rectangle share identical attributes and block IDs.
+  4. Emit a single combined quad vertex set spanning the computed width and height. Mark all included block faces as visited.
+  5. Format the output into a single interleaved interleaved GPU vertex layout:
+     * Position: `vec3(x, y, z)` (3 $\times$ float32)
+     * Texture Coordinates: `vec2(u, v)` (2 $\times$ float32)
+     * Light Data: `vec2(block_light, sky_light)` (2 $\times$ float32)
+     * Normal Mapping Index: `uint8` (1 byte, identifying which of the 6 faces the vertex belongs to for shading calculations).
+
+---
+
+### SYSTEM 5: BITWISE CELLULAR LIGHTING ENGINE (VOXEL PROPAGATION)
+
+Lighting does not use real-time ray-traced shadows. It uses a bitwise voxel-propagation technique across dual light networks: Sunlight (SkyLight) and BlockLight. Light levels range integers from 15 (maximum illumination) down to 0 (complete darkness).
+
+5.1 INITIALIZATION ROUTINE
+- SkyLight Initialization: For every chunk, perform a vertical top-down scan starting at $Y = 319$. Maintain a current light value of 15. As you step down each block:
+  * If the block's `LightOpacity == 0`, assign its SkyLight value as 15.
+  * The moment a block is encountered where `LightOpacity > 0`, the current light value diminishes by that opacity value. Write this reduced value to the block, and the remaining blocks downward enter the propagation queue.
+- BlockLight Initialization: Scan the chunk data array. If a block has property `LightEmission > 0` (e.g., Glowstone ID 7 emits 15, Torch ID 8 emits 14), write that value directly into its local BlockLight nibble data, and add its 3D coordinates to the BlockLight BFS propagation queue.
+
+5.2 BREADTH-FIRST SEARCH (BFS) PROPAGATION ENGINE
+- Implement a 3D Breadth-First Search queue to handle light updates when blocks break or are placed:
+  1. Dequeue a coordinate $(x, y, z)$ and retrieve its current light level $L$.
+  2. Evaluate all 6 adjacent orthogonal neighbor blocks. For each neighbor:
+     * Calculate expected light level: $L_{\text{expected}} = L - \text{Neighbor's LightOpacity} - 1$.
+     * If $L_{\text{expected}} > \text{Neighbor's Current Light Level}$, update the neighbor's light value to $L_{\text{expected}}$, and enqueue the neighbor's 3D coordinate to propagate the change further.
+3. Light Removal Loop (When a light-obstructing solid block is placed):
+   * If a light source is blocked, set its position to 0 in the map. Enqueue its neighbors into a "Light Removal Queue".
+   * Unwind the queue: check adjacent cells. If their light value was derived from the old source, reset them to 0 and push them deeper down the removal queue. If a neighbor has an independent light level from a different source ($\ge 1$), instantly re-queue it into the standard propagation engine to recalculate the newly exposed boundaries.
+
+---
+
+### SYSTEM 6: ACCURATE PLAYER PHYSICS, COLLISION & RAYCASTING
+
+6.1 AXIS-ALIGNED BOUNDING BOX (AABB) CALCULATIONS
+- Represent the player entity as a physical bounding box defined by a minimum 3D vector point and a maximum 3D vector point:
+  $$\text{Player AABB} = \{\mathbf{Min}: (X_p - 0.3, Y_p, Z_p - 0.3), \, \mathbf{Max}: (X_p + 0.3, Y_p + 1.8, Z_p + 0.3)\}$$
+- Implement a rigid frame-by-frame movement loop tracking player position, velocity vector $\mathbf{V} = (V_x, V_y, V_z)$, and gravity acceleration ($G = -32.0 \text{ m/s}^2$).
+
+6.2 THREE-STEP DISCRETE RESOLUTION ALGORITHM
+To prevent the player from clipping through walls at high speeds, resolve collisions along each spatial axis independently:
+1. Apply X velocity: $X_{\text{new}} = X_p + V_x \cdot dt$. Recompute the temporary Player AABB. Gather all solid blocks intersecting this expanded volume by converting float bounding positions to integer block coordinates. If an overlap occurs with any solid block, stop horizontal movement along X, set $V_x = 0$, and snap $X_{\text{new}}$ exactly to the touching face of the blocking cube.
+2. Apply Z velocity: $Z_{\text{new}} = Z_p + V_z \cdot dt$. Recompute the temporary AABB using the resolved $X_{\text{new}}$. Check against nearby solid blocks. If an overlap occurs, stop horizontal movement along Z, set $V_z = 0$, and snap $Z_{\text{new}}$ exactly to the touching face of the blocking cube.
+3. Apply Y velocity (Gravity/Jumping): $Y_{\text{new}} = Y_p + V_y \cdot dt$. Recompute the temporary AABB using the resolved $X_{\text{new}}$ and $Z_{\text{new}}$. Check against nearby solid blocks.
+   * If colliding while moving downward ($V_y < 0$): Stop vertical descent, set $V_y = 0$, snap $Y_{\text{new}}$ to the top surface of the block beneath, and toggle the state flag `IsGrounded = True`.
+   * If colliding while moving upward ($V_y > 0$): Stop ascent, set $V_y = 0$, and snap the player's head to the bottom face of the ceiling block.
+
+6.3 STEPPING MECHANIC MECHANISM
+- While walking, if a horizontal collision occurs along the X or Z axis, check if the obstruction can be stepped over:
+  * Check if a 1-block high step is possible: Temporarily offset the player's bounding box upward by exactly 1.05 blocks along the Y axis.
+  * Move the box forward past the obstacle along the original movement axis.
+  * If no collisions occur at this elevated height, allow the player to step up automatically. Commit the upward position shift, enabling smooth movement up stairs or uneven terrain without needing to press the jump key.
+
+6.4 AMANATIDES & WOO VOXEL RAYCASTING ENGINE
+- To break or place blocks, track the player's camera look vector. Run an exact fast voxel traversal raycast algorithm:
+  * Inputs: Camera origin point $\mathbf{O} = (O_x, O_y, O_z)$, Normalized Direction Vector $\mathbf{D} = (D_x, D_y, D_z)$, Max Reach = 5.0 meters.
+  * Initialize integer block coordinates: $X = \text{floor}(O_x)$, $Y = \text{floor}(O_y)$, $Z = \text{floor}(O_z)$.
+  * Determine step directions: $\text{Step}_x = (D_x > 0) ? 1 : -1$, and similarly for Y and Z.
+  * Calculate initial boundary distances ($t_{\text{Max}_x}$, $t_{\text{Max}_y}$, $t_{\text{Max}_z}$) and step sizes ($t_{\Delta_x}$, $t_{\Delta_y}$, $t_{\Delta_z}$):
+    $$t_{\Delta_x} = \left| \frac{1}{D_x} \right|$$
+    $$t_{\text{Max}_x} = (D_x > 0) ? \frac{\text{floor}(O_x) + 1.0 - O_x}{D_x} : \frac{O_x - \text{floor}(O_x)}{-D_x}$$
+  * Core Loop: In a standard while-loop running up to the maximum reach distance:
+    1. Compare $t_{\text{Max}}$ values. Step along the lowest value axis. For example, if $t_{\text{Max}_x} < t_{\text{Max}_y}$ and $t_{\text{Max}_x} < t_{\text{Max}_z}$:
+       * Update distance tracking: $t_{\text{Max}_x} += t_{\Delta_x}$.
+       * Step the voxel coordinate: $X += \text{Step}_x$.
+       * Store the face normal vector pointing back toward the face the ray just entered: $\mathbf{N} = (-\text{Step}_x, 0, 0)$.
+    2. Query the block type at the current voxel coordinate $(X, Y, Z)$.
+    3. If the retrieved Block ID $\ne 0$ (Air): Break the loop. Return **Target Block Coordinate** $(X, Y, Z)$ and **Target Face Normal Coordinate** $\mathbf{N}$.
+
+---
+
+### SYSTEM 7: INVENTORY SYSTEM, METADATA & GRID SCHEMAS
+
+7.1 ITEM STACK DATA STRUCTURE
+- Define a solid representation for items held in storage. Every individual item slot must be modeled precisely as an explicit data object:
+```json
+  {
+    "ItemID": "uint16 (0 for empty, matching Block IDs or custom item IDs like 500 for Iron Ingot)",
+    "Count": "uint8 (Current stack size from 0 to 64)",
+    "Durability": "uint16 (Tracks remaining tool uses, 0 if non-durable block)"
+  }
