@@ -1,0 +1,1090 @@
+<!--
+APP_NAME: Kő Szimulátor
+APP_DESCRIPTION: A legrealisztikusabb kő élmény. Várj a szélre. 1 az 1000-hez esély.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 520
+VERSION_SUMMARY: Ultra-premium glassmorphism splash effect added
+STORE_ID: rock-sim-hu
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kő Szimulátor</title>
+    <style>
+        :root {
+            --bg-color: #eef2f5;
+            --text-color: #2d3436;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            --primary: #0984e3;
+        }
+
+        /* Cherry Blossom Biome (Default) */
+        [data-biome="cherry"] {
+            --sky-top: #fbc2eb;
+            --sky-bot: #a6c1ee;
+            --sun-1: #fff0f5;
+            --sun-2: #ffb6c1;
+            --cliff-1: #b5839b;
+            --cliff-2: #cca2b6;
+            --grass-1: #e2a9be;
+            --grass-2: #c4829a;
+            --grass-border: #a35d79;
+            --ocean-1: #8ec5fc;
+            --ocean-2: #e0c3fc;
+            --rock-1: #a4b0be;
+            --rock-2: #747d8c;
+            --wave-opacity: 0.6;
+        }
+
+        /* Mystic Forest Biome */
+        [data-biome="mystic"] {
+            --sky-top: #141e30;
+            --sky-bot: #243b55;
+            --sun-1: #e0eafc;
+            --sun-2: #9fb8ad;
+            --cliff-1: #2c3e50;
+            --cliff-2: #34495e;
+            --grass-1: #1abc9c;
+            --grass-2: #16a085;
+            --grass-border: #0e6655;
+            --ocean-1: #4ca1af;
+            --ocean-2: #2c3e50;
+            --rock-1: #7f8c8d;
+            --rock-2: #34495e;
+            --wave-opacity: 0.3;
+        }
+
+        /* Desert Oasis Biome */
+        [data-biome="desert"] {
+            --sky-top: #ff7e5f;
+            --sky-bot: #feb47b;
+            --sun-1: #ffe259;
+            --sun-2: #ffa751;
+            --cliff-1: #d4a373;
+            --cliff-2: #e9c46a;
+            --grass-1: #f4a261;
+            --grass-2: #e76f51;
+            --grass-border: #c85a44;
+            --ocean-1: #00b4db;
+            --ocean-2: #0083b0;
+            --rock-1: #d2b48c;
+            --rock-2: #8b4513;
+            --wave-opacity: 0.4;
+        }
+
+        /* Classic Biome */
+        [data-biome="classic"] {
+            --sky-top: #4facfe;
+            --sky-bot: #00f2fe;
+            --sun-1: #fff9c4;
+            --sun-2: #fbc02d;
+            --cliff-1: #546e7a;
+            --cliff-2: #78909c;
+            --grass-1: #7cb342;
+            --grass-2: #558b2f;
+            --grass-border: #33691e;
+            --ocean-1: #2980b9;
+            --ocean-2: #1a5276;
+            --rock-1: #b2bec3;
+            --rock-2: #636e72;
+            --wave-opacity: 0.5;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Biome Selector Panel */
+        .biome-panel {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            padding: 5px 10px;
+            z-index: 50;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+        }
+        
+        .biome-panel select {
+            background: transparent;
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .biome-panel select option {
+            background: white;
+            color: #2d3436;
+        }
+
+        /* Landscape / Scene */
+        .scene {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bot) 100%);
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            transition: background 0.8s ease;
+        }
+
+        /* Particle Overlay */
+        .particle-canvas {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%;
+            z-index: 6;
+            pointer-events: none;
+        }
+
+        /* Sun */
+        .sun {
+            position: absolute;
+            top: 40px;
+            right: 50px;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, var(--sun-1) 0%, var(--sun-2) 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 50px var(--sun-2), 0 0 100px var(--sun-1);
+            z-index: 0;
+            transition: all 0.8s ease;
+        }
+
+        /* Clouds */
+        .cloud {
+            position: absolute;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            z-index: 1;
+        }
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+        }
+        
+        .cloud-1 {
+            width: 80px; height: 30px;
+            top: 60px; left: -120px;
+            animation: floatCloud 35s linear infinite;
+        }
+        .cloud-1::before { width: 40px; height: 40px; top: -20px; left: 10px; }
+        .cloud-1::after { width: 30px; height: 30px; top: -10px; right: 10px; }
+
+        .cloud-2 {
+            width: 60px; height: 20px;
+            top: 30px; left: -100px;
+            animation: floatCloud 25s linear infinite;
+            animation-delay: -15s;
+            opacity: 0.8;
+        }
+        .cloud-2::before { width: 30px; height: 30px; top: -15px; left: 10px; }
+        .cloud-2::after { width: 20px; height: 20px; top: -10px; right: 10px; }
+
+        .cloud-3 {
+            width: 100px; height: 35px;
+            top: 100px; left: -150px;
+            animation: floatCloud 45s linear infinite;
+            animation-delay: -5s;
+            opacity: 0.6;
+        }
+        .cloud-3::before { width: 50px; height: 50px; top: -25px; left: 15px; }
+        .cloud-3::after { width: 40px; height: 40px; top: -15px; right: 15px; }
+
+        @keyframes floatCloud {
+            0% { transform: translateX(0); left: -150px; }
+            100% { transform: translateX(0); left: 120%; }
+        }
+
+        /* The Cliff */
+        .cliff {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50%;
+            height: 40%;
+            background: linear-gradient(to right, var(--cliff-1), var(--cliff-2));
+            border-top-right-radius: 15px;
+            box-shadow: inset -15px -15px 50px rgba(0,0,0,0.3), 5px 0 15px rgba(0,0,0,0.2);
+            z-index: 2;
+            overflow: hidden;
+            transition: background 0.8s ease;
+        }
+        
+        .grass {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 15px;
+            background: linear-gradient(to bottom, var(--grass-1), var(--grass-2));
+            border-bottom: 3px solid var(--grass-border);
+            transition: all 0.8s ease;
+        }
+        
+        .cliff-texture {
+            position: absolute;
+            top: 18px;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(0,0,0,0.06) 20px, rgba(0,0,0,0.06) 40px),
+                        repeating-linear-gradient(-45deg, transparent, transparent 20px, rgba(255,255,255,0.04) 20px, rgba(255,255,255,0.04) 40px);
+        }
+
+        /* Cherry Tree */
+        .tree-container {
+            position: absolute;
+            bottom: 39%;
+            left: 2%;
+            width: 140px;
+            height: 180px;
+            z-index: 2;
+            pointer-events: none;
+            display: none;
+            transition: opacity 0.5s;
+        }
+        
+        [data-biome="cherry"] .tree-container {
+            display: block;
+            animation: fadeIn 1s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* The Ocean */
+        .ocean {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 60%;
+            height: 35%;
+            background: linear-gradient(to bottom, var(--ocean-1), var(--ocean-2));
+            z-index: 4;
+            overflow: hidden;
+            border-top-left-radius: 5px;
+            transition: background 0.8s ease;
+        }
+        
+        /* Wobbling Water Effect specific to Cherry Biome */
+        [data-biome="cherry"] .ocean {
+            filter: url(#wobble);
+        }
+
+        .wave {
+            position: absolute;
+            left: 0;
+            width: 200%;
+            height: 40px;
+            background-size: 50% 100%;
+            opacity: var(--wave-opacity);
+            transition: opacity 0.8s ease;
+        }
+        .wave1 {
+            top: -5px;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="%23ffffff" fill-opacity="1"/></svg>');
+            animation: waveFlow 6s linear infinite;
+        }
+        .wave2 {
+            top: 0px;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="%23ffffff" fill-opacity="1"/></svg>');
+            animation: waveFlow 5s linear infinite reverse;
+        }
+        .wave3 {
+            top: 5px;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="%23ffffff" fill-opacity="1"/></svg>');
+            animation: waveFlow 4s linear infinite;
+        }
+        
+        @keyframes waveFlow {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* THE ROCK */
+        .rock-container {
+            position: absolute;
+            bottom: 40%; 
+            left: 35%;
+            width: 60px;
+            height: 50px;
+            z-index: 3;
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .rock {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 35% 35%, var(--rock-1), var(--rock-2), #2d3436);
+            border-radius: 62% 38% 30% 70% / 60% 40% 60% 40%;
+            box-shadow: -8px 8px 15px rgba(0,0,0,0.3), inset 6px -6px 12px rgba(0,0,0,0.2), inset -4px 4px 10px rgba(255,255,255,0.4);
+            position: relative;
+            overflow: hidden;
+            transition: background 0.8s ease;
+        }
+        
+        .rock::after {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 15%;
+            width: 35%;
+            height: 25%;
+            background: radial-gradient(ellipse, rgba(255,255,255,0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: rotate(-20deg);
+        }
+
+        .face {
+            position: absolute;
+            top: 55%;
+            left: 60%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.8;
+            z-index: 2;
+        }
+        .eye {
+            width: 5px;
+            height: 5px;
+            background: #111;
+            border-radius: 50%;
+            box-shadow: -1px -1px 0 rgba(255,255,255,0.4) inset;
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(3deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(-3deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes fall {
+            0% { transform: translate(0, 0) rotate(0); }
+            15% { transform: translate(20px, -25px) rotate(30deg); }
+            100% { transform: translate(140px, 220px) rotate(200deg); }
+        }
+
+        /* Ultra-Premium Splash Effect */
+        .splash-container {
+            position: absolute;
+            bottom: 32%;
+            right: 28%;
+            width: 50px;
+            height: 25px;
+            z-index: 5;
+            display: none;
+            pointer-events: none;
+        }
+        .splash-container.active {
+            display: block;
+        }
+
+        /* Primary refractive glass ripple */
+        .splash-glass-wave {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 30px; height: 15px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px) brightness(1.1);
+            -webkit-backdrop-filter: blur(12px) brightness(1.1);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.4), inset 0 0 20px rgba(255,255,255,0.3);
+            will-change: transform, opacity, filter;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.1);
+        }
+
+        /* Secondary crisp ring */
+        .splash-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 20px; height: 10px;
+            border: 2px solid rgba(255,255,255,0.9);
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255,255,255,0.8), inset 0 0 10px rgba(255,255,255,0.8);
+            will-change: transform, opacity;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.1);
+        }
+
+        /* Tertiary delayed ring */
+        .splash-ring-2 {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 20px; height: 10px;
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 50%;
+            will-change: transform, opacity;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.1);
+        }
+
+        .splash-container.active .splash-glass-wave {
+            animation: glassWaveAnim 2.5s cubic-bezier(0.15, 0.85, 0.3, 1) forwards;
+        }
+        .splash-container.active .splash-ring {
+            animation: crispRingAnim 1.8s cubic-bezier(0.15, 0.85, 0.3, 1) forwards;
+        }
+        .splash-container.active .splash-ring-2 {
+            animation: crispRingAnim 2s cubic-bezier(0.15, 0.85, 0.3, 1) 0.15s forwards;
+        }
+
+        @keyframes glassWaveAnim {
+            0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(25); opacity: 0; }
+        }
+        @keyframes crispRingAnim {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(15); opacity: 0; }
+        }
+
+        /* Glowing ambient drops */
+        .splash-drop {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 6px; height: 6px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 12px 2px #ffffff;
+            will-change: transform, opacity;
+            opacity: 0;
+        }
+        
+        .splash-container.active .splash-drop-1 { animation: d1 0.9s cubic-bezier(0.15, 0.85, 0.3, 1) forwards; }
+        .splash-container.active .splash-drop-2 { animation: d2 1.1s cubic-bezier(0.15, 0.85, 0.3, 1) forwards; }
+        .splash-container.active .splash-drop-3 { animation: d3 1.0s cubic-bezier(0.15, 0.85, 0.3, 1) forwards; }
+        .splash-container.active .splash-drop-4 { animation: d4 0.95s cubic-bezier(0.15, 0.85, 0.3, 1) forwards; }
+        .splash-container.active .splash-drop-5 { animation: d5 1.05s cubic-bezier(0.15, 0.85, 0.3, 1) forwards; }
+
+        @keyframes d1 { 0% { transform: translate(-50%, -50%) scale(1); opacity:1; } 100% { transform: translate(-40px, -60px) scale(0); opacity:0; } }
+        @keyframes d2 { 0% { transform: translate(-50%, -50%) scale(1.5); opacity:1; } 100% { transform: translate(15px, -80px) scale(0); opacity:0; } }
+        @keyframes d3 { 0% { transform: translate(-50%, -50%) scale(1.2); opacity:1; } 100% { transform: translate(45px, -45px) scale(0); opacity:0; } }
+        @keyframes d4 { 0% { transform: translate(-50%, -50%) scale(0.8); opacity:1; } 100% { transform: translate(-25px, -85px) scale(0); opacity:0; } }
+        @keyframes d5 { 0% { transform: translate(-50%, -50%) scale(1.1); opacity:1; } 100% { transform: translate(35px, -65px) scale(0); opacity:0; } }
+
+        /* UI Panel */
+        .ui-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid var(--glass-border);
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            box-shadow: var(--shadow);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.5);
+            padding: 10px 15px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+            margin: 0 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #636e72;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-color);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .log-area {
+            height: 60px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #2d3436;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            opacity: 0.8;
+        }
+        .log-entry.highlight {
+            color: #d63031;
+            font-weight: bold;
+            opacity: 1;
+        }
+        .log-entry.win {
+            color: #00b894;
+            font-weight: bold;
+            opacity: 1;
+        }
+
+        .status-header {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #b2bec3;
+            transition: background 0.3s;
+        }
+        .status-dot.active { background: #fdcb6e; box-shadow: 0 0 8px #fdcb6e; }
+        .status-dot.won { background: #00b894; box-shadow: 0 0 8px #00b894; }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #0984e3, #00cec9);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 15px rgba(9, 132, 227, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-reset.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        .btn-reset:hover {
+            background: linear-gradient(135deg, #00cec9, #0984e3);
+            box-shadow: 0 6px 20px rgba(9, 132, 227, 0.4);
+            transform: translateY(-2px);
+        }
+        .btn-reset:active {
+            transform: translateY(1px);
+        }
+
+        /* Mobile Adjustments */
+        body.mobile-mode .biome-panel {
+            transform: scale(1.1);
+            transform-origin: top left;
+        }
+    </style>
+</head>
+<body data-biome="cherry">
+
+    <!-- Wobble SVG Filter for Water Effect -->
+    <svg style="width:0; height:0; position:absolute; z-index:-1;">
+        <filter id="wobble">
+            <feTurbulence type="fractalNoise" baseFrequency="0.015 0.05" numOctaves="2" result="warp" />
+            <feDisplacementMap in="SourceGraphic" in2="warp" scale="8" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+    </svg>
+
+    <div class="scene">
+        <div class="biome-panel">
+            <select id="biomeSelect" onchange="changeBiome(this.value)">
+                <option value="cherry">🌸 Cherry Blossom</option>
+                <option value="mystic">🌲 Mystic Forest</option>
+                <option value="desert">🏜️ Desert Oasis</option>
+                <option value="classic">🪨 Classic</option>
+            </select>
+        </div>
+
+        <canvas id="particleCanvas" class="particle-canvas"></canvas>
+
+        <div class="sun"></div>
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+        
+        <div class="cliff">
+            <div class="grass"></div>
+            <div class="cliff-texture"></div>
+        </div>
+
+        <!-- The Cherry Tree -->
+        <div class="tree-container" id="cherryTree">
+            <svg viewBox="0 0 200 200" width="100%" height="100%">
+                <!-- Trunk and branches -->
+                <path d="M100,200 Q90,150 100,100 Q110,130 115,200" fill="#4a3629" />
+                <path d="M100,120 Q80,100 50,70" stroke="#4a3629" stroke-width="8" stroke-linecap="round" fill="none"/>
+                <path d="M100,100 Q130,80 150,50" stroke="#4a3629" stroke-width="7" stroke-linecap="round" fill="none"/>
+                <path d="M70,85 Q60,60 40,40" stroke="#4a3629" stroke-width="5" stroke-linecap="round" fill="none"/>
+                <path d="M130,70 Q150,50 170,40" stroke="#4a3629" stroke-width="5" stroke-linecap="round" fill="none"/>
+                <!-- Blossoms -->
+                <g opacity="0.9">
+                    <circle cx="100" cy="50" r="45" fill="#fbc2eb"/>
+                    <circle cx="50" cy="70" r="40" fill="#ffb7c5"/>
+                    <circle cx="150" cy="50" r="35" fill="#ffb7c5"/>
+                    <circle cx="70" cy="30" r="35" fill="#ffa6b9"/>
+                    <circle cx="130" cy="25" r="30" fill="#ffa6b9"/>
+                    <circle cx="100" cy="80" r="40" fill="#ffc8d2"/>
+                    <circle cx="40" cy="40" r="25" fill="#ffc8d2"/>
+                    <circle cx="170" cy="40" r="25" fill="#ffc8d2"/>
+                </g>
+            </svg>
+        </div>
+        
+        <div class="rock-container" id="rock">
+            <div class="rock">
+                <div class="face">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ocean">
+            <div class="wave wave1"></div>
+            <div class="wave wave2"></div>
+            <div class="wave wave3"></div>
+        </div>
+
+        <div class="splash-container" id="splash">
+            <div class="splash-glass-wave"></div>
+            <div class="splash-ring"></div>
+            <div class="splash-ring-2"></div>
+            <div class="splash-drop splash-drop-1"></div>
+            <div class="splash-drop splash-drop-2"></div>
+            <div class="splash-drop splash-drop-3"></div>
+            <div class="splash-drop splash-drop-4"></div>
+            <div class="splash-drop splash-drop-5"></div>
+        </div>
+
+        <div id="godModeIndicator" style="display:none; position:absolute; top:15px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#ffd700; padding:4px 10px; font-size:11px; border-radius:12px; font-weight:bold; z-index:100; letter-spacing:1px; backdrop-filter:blur(4px);">GOD MODE ACTIVE</div>
+    </div>
+
+    <div class="ui-panel">
+        <div class="status-header">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="mainStatus">Állapot: Létezés</span>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-label">Eltelt Idő</div>
+                <div class="stat-value" id="timeDisplay">00:00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Esély / mp</div>
+                <div class="stat-value" id="chanceDisplay">0.1%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Próbálkozások</div>
+                <div class="stat-value" id="attemptsDisplay">0</div>
+            </div>
+        </div>
+
+        <div class="log-area" id="logArea">
+            <div class="log-entry">Kő inicializálása...</div>
+            <div class="log-entry">Várakozás a sorsra...</div>
+        </div>
+
+        <button class="btn-reset" id="resetBtn" onclick="resetGame()">Újra Kő Leszek</button>
+    </div>
+
+    <script>
+        // Game State
+        const STATE = {
+            playing: true,
+            attempts: 0,
+            seconds: 0,
+            winChance: 0.001, // 1 in 1000
+            interval: null,
+            timerInterval: null,
+            biome: 'cherry'
+        };
+
+        // DOM Elements
+        const elRock = document.getElementById('rock');
+        const elLog = document.getElementById('logArea');
+        const elAttempts = document.getElementById('attemptsDisplay');
+        const elTime = document.getElementById('timeDisplay');
+        const elStatus = document.getElementById('mainStatus');
+        const elDot = document.getElementById('statusDot');
+        const elSplash = document.getElementById('splash');
+        const elReset = document.getElementById('resetBtn');
+
+        // Biome Management
+        function changeBiome(biome) {
+            document.body.setAttribute('data-biome', biome);
+            STATE.biome = biome;
+            log(`Környezet frissítve: ${biome}`, 'highlight');
+            particles = []; // Clear particles on change
+            ripples = [];
+        }
+
+        // God Mode Integration
+        const debugOptions = JSON.parse(localStorage.getItem('gemini96-debugOptions') || '{}');
+        const isGodMode = debugOptions.flappyGodMode === true;
+        
+        if (isGodMode) {
+            STATE.winChance = 0.5;
+            document.getElementById('godModeIndicator').style.display = 'block';
+            const chanceDisplay = document.getElementById('chanceDisplay');
+            if (chanceDisplay) {
+                chanceDisplay.textContent = '50.0%';
+                chanceDisplay.style.color = '#d35400';
+            }
+        }
+
+        // Audio Context (Synthesized sounds)
+        let audioCtx;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playWindSound(intensity = 0.5) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createBufferSource();
+            const bufferSize = audioCtx.sampleRate * 0.5; // 0.5 sec burst
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            osc.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400 + (intensity * 400);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.05 * intensity, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+        }
+
+        function playWinSound() {
+            if (!audioCtx) return;
+            // Splash sound
+            const osc = audioCtx.createBufferSource();
+            const bufferSize = audioCtx.sampleRate * 1;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            
+            osc.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+            filter.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+
+            // Success chime
+            const osc2 = audioCtx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc2.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+            
+            const gain2 = audioCtx.createGain();
+            gain2.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+            
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start();
+        }
+
+        // Particle System for Cherry Blossom
+        const pCanvas = document.getElementById('particleCanvas');
+        const pCtx = pCanvas.getContext('2d');
+        let particles = [];
+        let ripples = [];
+        
+        function resizeCanvas() {
+            pCanvas.width = pCanvas.offsetWidth;
+            pCanvas.height = pCanvas.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Petal {
+            constructor() {
+                this.x = Math.random() * (pCanvas.width * 0.6); // Spawn mainly left side
+                this.y = -20;
+                this.size = Math.random() * 2.5 + 2.5;
+                this.speedY = Math.random() * 0.8 + 0.5;
+                this.speedX = Math.random() * 0.5 + 0.3; 
+                this.angle = Math.random() * Math.PI * 2;
+                this.spin = (Math.random() - 0.5) * 0.05;
+                this.oscSpeed = Math.random() * 0.002 + 0.001;
+                this.oscOffset = Math.random() * Math.PI * 2;
+                this.color = `rgba(255, 183, 197, ${Math.random() * 0.4 + 0.6})`;
+            }
+            update(time) {
+                this.y += this.speedY;
+                this.x += this.speedX + Math.sin(time * this.oscSpeed + this.oscOffset) * 1.2;
+                this.angle += this.spin;
+                
+                // Ocean boundaries setup
+                const oceanLeft = pCanvas.width * 0.4;
+                const oceanTop = pCanvas.height * 0.65;
+                
+                if (this.x > oceanLeft && this.y > oceanTop) {
+                    ripples.push(new Ripple(this.x, this.y));
+                    return false; // Remove petal, trigger ripple
+                }
+                if (this.y > pCanvas.height || this.x > pCanvas.width) return false;
+                return true;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Ripple {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 1;
+                this.maxRadius = 10 + Math.random() * 10;
+                this.opacity = 0.6;
+                this.speed = 0.3;
+            }
+            update() {
+                this.radius += this.speed;
+                this.opacity -= 0.6 / (this.maxRadius / this.speed);
+                return this.opacity > 0;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, this.radius, this.radius * 0.4, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function renderParticles(time) {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            
+            if (STATE.biome === 'cherry' && STATE.playing) {
+                if (Math.random() < 0.05) {
+                    particles.push(new Petal());
+                }
+            }
+            
+            particles = particles.filter(p => p.update(time));
+            particles.forEach(p => p.draw(pCtx));
+            
+            ripples = ripples.filter(r => r.update());
+            ripples.forEach(r => r.draw(pCtx));
+            
+            requestAnimationFrame(renderParticles);
+        }
+        requestAnimationFrame(renderParticles);
+
+        // Logging
+        function log(msg, type = '') {
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            div.textContent = `[${STATE.seconds}s] ${msg}`;
+            elLog.appendChild(div);
+            elLog.scrollTop = elLog.scrollHeight;
+            
+            // Limit log size
+            if (elLog.children.length > 5) {
+                elLog.removeChild(elLog.firstChild);
+            }
+        }
+
+        function formatTime(s) {
+            const mins = Math.floor(s / 60).toString().padStart(2, '0');
+            const secs = (s % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        // Game Loop
+        function gameTick() {
+            if (!STATE.playing) return;
+
+            STATE.attempts++;
+            elAttempts.textContent = STATE.attempts;
+
+            // Visual feedback of "wind check"
+            elDot.classList.add('active');
+            setTimeout(() => elDot.classList.remove('active'), 200);
+
+            // Logic
+            const roll = Math.random();
+            const isWin = roll < STATE.winChance;
+            
+            // Random tiny shake for ambiance
+            if (Math.random() < 0.1) {
+                elRock.style.animation = 'shake 0.5s ease';
+                playWindSound(0.3);
+                log("Enyhe szellő...", 'normal');
+                setTimeout(() => elRock.style.animation = '', 500);
+            } else if (Math.random() < 0.05) {
+                log("Nincs szél.", 'normal');
+            }
+
+            if (isWin) {
+                winGame();
+            }
+        }
+
+        function winGame() {
+            STATE.playing = false;
+            clearInterval(STATE.interval);
+            clearInterval(STATE.timerInterval);
+
+            log("BEFÚJT A SZÉL!", 'win');
+            elStatus.textContent = "Állapot: VIZES KŐ";
+            elStatus.style.color = "#00b894";
+            elDot.classList.add('won');
+
+            // Animation
+            elRock.style.animation = 'fall 1.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards';
+            
+            playWinSound();
+
+            setTimeout(() => {
+                elSplash.classList.add('active');
+                log("Csobbanás!", 'win');
+                // Trigger massive ripple on canvas
+                if(pCanvas.width > 0) {
+                    ripples.push(new Ripple(pCanvas.width * 0.7, pCanvas.height * 0.75));
+                    ripples[ripples.length-1].maxRadius = 40;
+                    ripples[ripples.length-1].opacity = 1;
+                }
+            }, 1100);
+
+            setTimeout(() => {
+                elReset.classList.add('visible');
+            }, 2000);
+        }
+
+        function resetGame() {
+            STATE.playing = true;
+            STATE.attempts = 0;
+            STATE.seconds = 0;
+            
+            // Reset UI
+            elRock.style.animation = '';
+            elRock.style.transform = ''; // Clear forwards state
+            elSplash.classList.remove('active');
+            elReset.classList.remove('visible');
+            elStatus.textContent = "Állapot: Létezés";
+            elStatus.style.color = "var(--text-color)";
+            elDot.classList.remove('won');
+            
+            elAttempts.textContent = '0';
+            elTime.textContent = '00:00';
+            elLog.innerHTML = '';
+            log("Újrakezdés. Sok sikert.");
+
+            startLoops();
+        }
+
+        function startLoops() {
+            // Logic loop
+            STATE.interval = setInterval(gameTick, 1000);
+            
+            // Timer loop
+            STATE.timerInterval = setInterval(() => {
+                STATE.seconds++;
+                elTime.textContent = formatTime(STATE.seconds);
+            }, 1000);
+        }
+
+        // Initialize interaction for Audio Context
+        document.body.addEventListener('click', initAudio, { once: true });
+        
+        // Start
+        startLoops();
+
+    </script>
+</body>
+</html>
