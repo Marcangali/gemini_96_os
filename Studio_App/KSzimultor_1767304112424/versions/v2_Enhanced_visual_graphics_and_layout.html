@@ -1,0 +1,722 @@
+<!--
+APP_NAME: Kő Szimulátor
+APP_DESCRIPTION: A legrealisztikusabb kő élmény. Várj a szélre. 1 az 1000-hez esély.
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 520
+VERSION_SUMMARY: Enhanced visual graphics and layout
+STORE_ID: rock-sim-hu
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kő Szimulátor</title>
+    <style>
+        :root {
+            --bg-color: #eef2f5;
+            --text-color: #2d3436;
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            --primary: #0984e3;
+            --rock-color: #636e72;
+            --cliff-color: #b2bec3;
+            --ocean-color: #74b9ff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Landscape / Scene */
+        .scene {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        /* Sun */
+        .sun {
+            position: absolute;
+            top: 40px;
+            right: 50px;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, #fff9c4 0%, #fbc02d 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 50px #fbc02d, 0 0 100px #fff9c4;
+            z-index: 0;
+        }
+
+        /* Clouds */
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            z-index: 1;
+        }
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        .cloud-1 {
+            width: 80px; height: 30px;
+            top: 60px; left: -120px;
+            animation: floatCloud 35s linear infinite;
+        }
+        .cloud-1::before { width: 40px; height: 40px; top: -20px; left: 10px; }
+        .cloud-1::after { width: 30px; height: 30px; top: -10px; right: 10px; }
+
+        .cloud-2 {
+            width: 60px; height: 20px;
+            top: 30px; left: -100px;
+            animation: floatCloud 25s linear infinite;
+            animation-delay: -15s;
+            opacity: 0.8;
+        }
+        .cloud-2::before { width: 30px; height: 30px; top: -15px; left: 10px; }
+        .cloud-2::after { width: 20px; height: 20px; top: -10px; right: 10px; }
+
+        .cloud-3 {
+            width: 100px; height: 35px;
+            top: 100px; left: -150px;
+            animation: floatCloud 45s linear infinite;
+            animation-delay: -5s;
+            opacity: 0.6;
+        }
+        .cloud-3::before { width: 50px; height: 50px; top: -25px; left: 15px; }
+        .cloud-3::after { width: 40px; height: 40px; top: -15px; right: 15px; }
+
+        @keyframes floatCloud {
+            0% { transform: translateX(0); left: -150px; }
+            100% { transform: translateX(0); left: 120%; }
+        }
+
+        /* The Cliff */
+        .cliff {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50%;
+            height: 40%;
+            background: linear-gradient(to right, #546e7a, #78909c);
+            border-top-right-radius: 15px;
+            box-shadow: inset -15px -15px 50px rgba(0,0,0,0.3), 5px 0 15px rgba(0,0,0,0.2);
+            z-index: 2;
+            overflow: hidden;
+        }
+        
+        .grass {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 15px;
+            background: linear-gradient(to bottom, #7cb342, #558b2f);
+            border-bottom: 3px solid #33691e;
+        }
+        
+        .cliff-texture {
+            position: absolute;
+            top: 18px;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(0,0,0,0.06) 20px, rgba(0,0,0,0.06) 40px),
+                        repeating-linear-gradient(-45deg, transparent, transparent 20px, rgba(255,255,255,0.04) 20px, rgba(255,255,255,0.04) 40px);
+        }
+
+        /* The Ocean */
+        .ocean {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 60%;
+            height: 35%;
+            background: linear-gradient(to bottom, #2980b9, #1a5276);
+            z-index: 4;
+            overflow: hidden;
+            border-top-left-radius: 5px;
+        }
+        .wave {
+            position: absolute;
+            left: 0;
+            width: 200%;
+            height: 40px;
+            background-size: 50% 100%;
+        }
+        .wave1 {
+            top: -5px;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="%23ffffff" fill-opacity="0.3"/></svg>');
+            animation: waveFlow 6s linear infinite;
+        }
+        .wave2 {
+            top: 0px;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="%23ffffff" fill-opacity="0.5"/></svg>');
+            animation: waveFlow 5s linear infinite reverse;
+        }
+        .wave3 {
+            top: 5px;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" fill="%23ffffff" fill-opacity="0.8"/></svg>');
+            animation: waveFlow 4s linear infinite;
+        }
+        
+        @keyframes waveFlow {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* THE ROCK */
+        .rock-container {
+            position: absolute;
+            bottom: 40%; 
+            left: 35%;
+            width: 60px;
+            height: 50px;
+            z-index: 3;
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .rock {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 35% 35%, #b2bec3, #636e72, #2d3436);
+            border-radius: 62% 38% 30% 70% / 60% 40% 60% 40%;
+            box-shadow: -8px 8px 15px rgba(0,0,0,0.3), inset 6px -6px 12px rgba(0,0,0,0.2), inset -4px 4px 10px rgba(255,255,255,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .rock::after {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 15%;
+            width: 35%;
+            height: 25%;
+            background: radial-gradient(ellipse, rgba(255,255,255,0.3) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: rotate(-20deg);
+        }
+
+        .face {
+            position: absolute;
+            top: 55%;
+            left: 60%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            display: flex;
+            justify-content: space-between;
+            opacity: 0.8;
+            z-index: 2;
+        }
+        .eye {
+            width: 5px;
+            height: 5px;
+            background: #111;
+            border-radius: 50%;
+            box-shadow: -1px -1px 0 rgba(255,255,255,0.4) inset;
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(3deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(-3deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes fall {
+            0% { transform: translate(0, 0) rotate(0); }
+            15% { transform: translate(20px, -25px) rotate(30deg); }
+            100% { transform: translate(140px, 220px) rotate(200deg); }
+        }
+
+        /* Splash Effect */
+        .splash-container {
+            position: absolute;
+            bottom: 32%;
+            right: 28%;
+            width: 50px;
+            height: 25px;
+            z-index: 5;
+            display: none;
+        }
+        .splash-container.active {
+            display: block;
+        }
+        .splash-ring {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%);
+            border-radius: 50%;
+        }
+        .splash-container.active .splash-ring {
+            animation: splashRingAnim 0.8s ease-out forwards;
+        }
+        @keyframes splashRingAnim {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+
+        .splash-drop {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 6px; height: 6px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0;
+        }
+        .splash-container.active .splash-drop-1 { animation: dropAnim1 0.6s ease-out forwards; }
+        .splash-container.active .splash-drop-2 { animation: dropAnim2 0.7s ease-out forwards; }
+        .splash-container.active .splash-drop-3 { animation: dropAnim3 0.6s ease-out forwards; }
+
+        @keyframes dropAnim1 { 0% { transform: translate(-50%, -50%) scale(1); opacity:1; } 100% { transform: translate(-30px, -40px) scale(0); opacity:0; } }
+        @keyframes dropAnim2 { 0% { transform: translate(-50%, -50%) scale(1.5); opacity:1; } 100% { transform: translate(0px, -60px) scale(0); opacity:0; } }
+        @keyframes dropAnim3 { 0% { transform: translate(-50%, -50%) scale(1); opacity:1; } 100% { transform: translate(30px, -35px) scale(0); opacity:0; } }
+
+        /* UI Panel */
+        .ui-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid var(--glass-border);
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            box-shadow: var(--shadow);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.5);
+            padding: 10px 15px;
+            border-radius: 12px;
+            text-align: center;
+            flex: 1;
+            margin: 0 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #636e72;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-color);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .log-area {
+            height: 60px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #2d3436;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            opacity: 0.8;
+        }
+        .log-entry.highlight {
+            color: #d63031;
+            font-weight: bold;
+            opacity: 1;
+        }
+        .log-entry.win {
+            color: #00b894;
+            font-weight: bold;
+            opacity: 1;
+        }
+
+        .status-header {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #b2bec3;
+            transition: background 0.3s;
+        }
+        .status-dot.active { background: #fdcb6e; box-shadow: 0 0 8px #fdcb6e; }
+        .status-dot.won { background: #00b894; box-shadow: 0 0 8px #00b894; }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #0984e3, #00cec9);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 4px 15px rgba(9, 132, 227, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-reset.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        .btn-reset:hover {
+            background: linear-gradient(135deg, #00cec9, #0984e3);
+            box-shadow: 0 6px 20px rgba(9, 132, 227, 0.4);
+            transform: translateY(-2px);
+        }
+        .btn-reset:active {
+            transform: translateY(1px);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scene">
+        <div class="sun"></div>
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+        
+        <div class="cliff">
+            <div class="grass"></div>
+            <div class="cliff-texture"></div>
+        </div>
+        
+        <div class="rock-container" id="rock">
+            <div class="rock">
+                <div class="face">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="ocean">
+            <div class="wave wave1"></div>
+            <div class="wave wave2"></div>
+            <div class="wave wave3"></div>
+        </div>
+
+        <div class="splash-container" id="splash">
+            <div class="splash-ring"></div>
+            <div class="splash-drop splash-drop-1"></div>
+            <div class="splash-drop splash-drop-2"></div>
+            <div class="splash-drop splash-drop-3"></div>
+        </div>
+
+        <div id="godModeIndicator" style="display:none; position:absolute; top:15px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); color:#ffd700; padding:4px 10px; font-size:11px; border-radius:12px; font-weight:bold; z-index:100; letter-spacing:1px; backdrop-filter:blur(4px);">GOD MODE ACTIVE</div>
+    </div>
+
+    <div class="ui-panel">
+        <div class="status-header">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="mainStatus">Állapot: Létezés</span>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-label">Eltelt Idő</div>
+                <div class="stat-value" id="timeDisplay">00:00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Esély / mp</div>
+                <div class="stat-value" id="chanceDisplay">0.1%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Próbálkozások</div>
+                <div class="stat-value" id="attemptsDisplay">0</div>
+            </div>
+        </div>
+
+        <div class="log-area" id="logArea">
+            <div class="log-entry">Kő inicializálása...</div>
+            <div class="log-entry">Várakozás a sorsra...</div>
+        </div>
+
+        <button class="btn-reset" id="resetBtn" onclick="resetGame()">Újra Kő Leszek</button>
+    </div>
+
+    <script>
+        // Game State
+        const STATE = {
+            playing: true,
+            attempts: 0,
+            seconds: 0,
+            winChance: 0.001, // 1 in 1000
+            interval: null,
+            timerInterval: null
+        };
+
+        // DOM Elements
+        const elRock = document.getElementById('rock');
+        const elLog = document.getElementById('logArea');
+        const elAttempts = document.getElementById('attemptsDisplay');
+        const elTime = document.getElementById('timeDisplay');
+        const elStatus = document.getElementById('mainStatus');
+        const elDot = document.getElementById('statusDot');
+        const elSplash = document.getElementById('splash');
+        const elReset = document.getElementById('resetBtn');
+
+        // God Mode Integration
+        const debugOptions = JSON.parse(localStorage.getItem('gemini96-debugOptions') || '{}');
+        const isGodMode = debugOptions.flappyGodMode === true;
+        
+        if (isGodMode) {
+            STATE.winChance = 0.5;
+            document.getElementById('godModeIndicator').style.display = 'block';
+            const chanceDisplay = document.getElementById('chanceDisplay');
+            if (chanceDisplay) {
+                chanceDisplay.textContent = '50.0%';
+                chanceDisplay.style.color = '#d35400';
+            }
+        }
+
+        // Audio Context (Synthesized sounds)
+        let audioCtx;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playWindSound(intensity = 0.5) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createBufferSource();
+            const bufferSize = audioCtx.sampleRate * 0.5; // 0.5 sec burst
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            osc.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 400 + (intensity * 400);
+
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.05 * intensity, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+        }
+
+        function playWinSound() {
+            if (!audioCtx) return;
+            // Splash sound
+            const osc = audioCtx.createBufferSource();
+            const bufferSize = audioCtx.sampleRate * 1;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            
+            osc.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+            filter.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+
+            // Success chime
+            const osc2 = audioCtx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc2.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1);
+            
+            const gain2 = audioCtx.createGain();
+            gain2.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+            
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start();
+        }
+
+        // Logging
+        function log(msg, type = '') {
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            div.textContent = `[${STATE.seconds}s] ${msg}`;
+            elLog.appendChild(div);
+            elLog.scrollTop = elLog.scrollHeight;
+            
+            // Limit log size
+            if (elLog.children.length > 5) {
+                elLog.removeChild(elLog.firstChild);
+            }
+        }
+
+        function formatTime(s) {
+            const mins = Math.floor(s / 60).toString().padStart(2, '0');
+            const secs = (s % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        // Game Loop
+        function gameTick() {
+            if (!STATE.playing) return;
+
+            STATE.attempts++;
+            elAttempts.textContent = STATE.attempts;
+
+            // Visual feedback of "wind check"
+            elDot.classList.add('active');
+            setTimeout(() => elDot.classList.remove('active'), 200);
+
+            // Logic
+            const roll = Math.random();
+            const isWin = roll < STATE.winChance;
+            
+            // Random tiny shake for ambiance
+            if (Math.random() < 0.1) {
+                elRock.style.animation = 'shake 0.5s ease';
+                playWindSound(0.3);
+                log("Enyhe szellő...", 'normal');
+                setTimeout(() => elRock.style.animation = '', 500);
+            } else if (Math.random() < 0.05) {
+                log("Nincs szél.", 'normal');
+            }
+
+            if (isWin) {
+                winGame();
+            }
+        }
+
+        function winGame() {
+            STATE.playing = false;
+            clearInterval(STATE.interval);
+            clearInterval(STATE.timerInterval);
+
+            log("BEFÚJT A SZÉL!", 'win');
+            elStatus.textContent = "Állapot: VIZES KŐ";
+            elStatus.style.color = "#00b894";
+            elDot.classList.add('won');
+
+            // Animation
+            elRock.style.animation = 'fall 1.5s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards';
+            
+            playWinSound();
+
+            setTimeout(() => {
+                elSplash.classList.add('active');
+                log("Csobbanás!", 'win');
+            }, 1100);
+
+            setTimeout(() => {
+                elReset.classList.add('visible');
+            }, 2000);
+        }
+
+        function resetGame() {
+            STATE.playing = true;
+            STATE.attempts = 0;
+            STATE.seconds = 0;
+            
+            // Reset UI
+            elRock.style.animation = '';
+            elRock.style.transform = ''; // Clear forwards state
+            elSplash.classList.remove('active');
+            elReset.classList.remove('visible');
+            elStatus.textContent = "Állapot: Létezés";
+            elStatus.style.color = "var(--text-color)";
+            elDot.classList.remove('won');
+            
+            elAttempts.textContent = '0';
+            elTime.textContent = '00:00';
+            elLog.innerHTML = '';
+            log("Újrakezdés. Sok sikert.");
+
+            startLoops();
+        }
+
+        function startLoops() {
+            // Logic loop
+            STATE.interval = setInterval(gameTick, 1000);
+            
+            // Timer loop
+            STATE.timerInterval = setInterval(() => {
+                STATE.seconds++;
+                elTime.textContent = formatTime(STATE.seconds);
+            }, 1000);
+        }
+
+        // Initialize interaction for Audio Context
+        document.body.addEventListener('click', initAudio, { once: true });
+        
+        // Start
+        startLoops();
+
+    </script>
+</body>
+</html>
