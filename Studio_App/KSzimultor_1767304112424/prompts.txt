@@ -48,3 +48,9 @@ Please implement the following technical and visual enhancements:
 2. **Randomization Logic:** Integrate a robust randomized selection algorithm (using JavaScript's `Math.random()`) to determine which splash type is spawned or collected, ensuring equal or weighted probability distribution.
 3. **State & Local Storage:** Ensure the existing state management system is updated to seamlessly track, save, and load these 5 new collectible types via `localStorage` alongside the existing ones.
 4. **Performance & Animation:** Use CSS hardware-accelerated transitions (transform, opacity) to animate the collection of these new splash types smoothly at 60fps without causing layout shifts.
+
+---
+[18/06/2026, 19:06:07] v6:
+Tasks:
+- Include a global high-score leaderboard using public API integration for fastest fall times.
+- Implement a visual day-night cycle synced with the user's local system time.
