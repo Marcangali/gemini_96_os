@@ -38,3 +38,13 @@ Implement the following enhancements to align with the Gemini 11 design language
 2. **Physics & Motion:** Use the Web Animations API or GPU-accelerated CSS transitions with an elastic, spring-physics-inspired easing curve (e.g., `cubic-bezier(0.15, 0.85, 0.3, 1)`) to make the ripple propagation feel tactile, responsive, and incredibly satisfying.
 3. **Performance:** Ensure flawless performance by utilizing GPU-friendly properties (`will-change: transform, opacity, filter`) and optimizing any canvas or SVG displacement maps to maintain a locked 60/120 FPS.
 4. **Seamless Integration:** Overlay this enhanced effect seamlessly onto the existing interactive triggers, ensuring all original state, event listeners, and core application logic remain fully intact.
+
+---
+[6/18/2026, 10:38:07 AM] v5:
+UPDATE the existing code of the application to introduce 5 new collectible splash types, ensuring you do NOT perform a full rewrite of the existing codebase. 
+
+Please implement the following technical and visual enhancements:
+1. **New Splash Types:** Add 5 distinct, visually striking splash themes/variants (e.g., "Aurora Borealis", "Liquid Mercury", "Cosmic Dust", "Cyberpunk Neon", and "Holographic Prism") that align with the Gemini 11 modern glassmorphic aesthetic (utilizing `backdrop-filter: blur()`, subtle semi-transparent borders, vibrant radial gradients, and soft glow effects).
+2. **Randomization Logic:** Integrate a robust randomized selection algorithm (using JavaScript's `Math.random()`) to determine which splash type is spawned or collected, ensuring equal or weighted probability distribution.
+3. **State & Local Storage:** Ensure the existing state management system is updated to seamlessly track, save, and load these 5 new collectible types via `localStorage` alongside the existing ones.
+4. **Performance & Animation:** Use CSS hardware-accelerated transitions (transform, opacity) to animate the collection of these new splash types smoothly at 60fps without causing layout shifts.
