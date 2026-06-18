@@ -4,3 +4,27 @@ egy kő vagy, és nem tudsz semmit csinálni, de úgy nyersz ha szerencsés vagy
 ---
 [6/18/2026, 10:05:01 AM] v2:
 Add better graphics
+
+---
+[6/18/2026, 10:30:25 AM] v3:
+UPDATE the existing code to implement a multi-biome selection system for the map, featuring a premium, calm, and visually stunning "Cherry Blossom" biome as the flagship option.
+
+### **1. UI & State Management (Gemini 11 Aesthetics)**
+*   **Biome Selector Control:** Add a sleek, glassmorphic control panel (using `backdrop-filter: blur()`, thin semi-transparent borders, and soft shadows) to switch between different biomes.
+*   **Biome Options:** Provide at least three biome options: "Cherry Blossom", "Mystic Forest", and "Desert Oasis".
+*   **State Integration:** Update the app state to handle active biome themes dynamically, updating all relevant map colors, assets, and active rendering systems seamlessly without page reloads.
+
+### **2. Cherry Blossom Biome Implementation**
+*   **Aesthetic & Color Palette:** Use a calming, beautiful pastel palette consisting of soft pinks, deep magentas, tranquil blues, and gentle purples.
+*   **The Cherry Tree:** Render a stylized, elegant cherry blossom tree at a prominent location on the map (using HTML5 Canvas or CSS vector graphics).
+*   **Falling Blossom Particle System:** 
+    *   Implement a high-performance particle system for falling cherry blossom petals.
+    *   Petals should drift gracefully with a natural wind effect (using sine-wave horizontal oscillation), rotating slowly as they fall.
+*   **Wobbling Water Effect:** 
+    *   Implement a tranquil water surface rendering at the base of the tree.
+    *   Add a "wobbily" water wave/ripple effect using an interactive sine/cosine wave algorithm or an SVG displacement/turbulence filter to make the water feel deep, calm, and alive.
+    *   Ensure when falling petals reach the water surface, they trigger a gentle, localized ripple animation before fading out.
+
+### **3. Technical Constraints & Code preservation**
+*   **UPDATE the existing code only.** Do not rewrite the entire map logic or discard existing features. Integrate the new biome themes and background rendering hooks into the existing rendering loop.
+*   Ensure smooth performance (60 FPS) for the particle systems and water shaders by optimizing draw calls and utilizing requestAnimationFrame.
