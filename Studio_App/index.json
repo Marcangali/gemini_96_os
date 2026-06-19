@@ -12,5 +12,13 @@
     "folderPath": "Studio_App/KSzimultor_1767304112424",
     "lastModified": 1781802369249,
     "icon": "https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/KSzimultor_1767304112424/icon.png?s=1baeb78a36ce3d6d3b0cee21376da1f6389a919f"
+  },
+  {
+    "id": "Patknyvadsz_1781861095396",
+    "name": "Patkányvadász",
+    "folderPath": "Studio_App/Patknyvadsz_1781861095396",
+    "lastModified": 1781861098735,
+    "icon": "",
+    "initialPrompt": "Patkány gyikkos szimulátor, ahol ki kell nyírni az utcán futó animált patkányokat, új eszközöket venni"
   }
 ]
