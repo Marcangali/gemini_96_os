@@ -4,3 +4,7 @@ Patkány gyikkos szimulátor, ahol ki kell nyírni az utcán futó animált patk
 ---
 [6/19/2026, 11:26:51 AM] v2:
 Amikor kattintasz jelenjen meg a táryg amit éppen
+
+---
+[6/19/2026, 11:33:04 AM] v3:
+Add hozzá a kóbormacskát a játékhoz, ne csak egy láthatatlan dolog sebezzen. Csináld izgalmasabbá ajátékot ad hozzá +50 új grafikai tárgyat a háttérben és 50 ún mechanikát, gyorsabb egereket, potion effectes egereket, öreg sétabotos egereket, a macska meg kergesse és csak utána kapja el valami animacioval
