@@ -1,0 +1,753 @@
+<!--
+APP_NAME: Patkányvadász
+APP_DESCRIPTION: Győzd le az utcai patkányokat és vegyél új fegyvereket!
+APP_ICON: 
+APP_CATEGORY: Games
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Initial release with shop, audio, and god mode.
+STORE_ID: 
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patkányvadász</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+    :root {
+        --bg-color: #f0f0f0;
+        --glass-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.5);
+        --text-color: #1a1a1a;
+        --accent: #e63946;
+        --accent-hover: #d62828;
+        --street-bg: #3a3a3c;
+    }
+
+    * {
+        box-sizing: border-box;
+        user-select: none;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    #app-container {
+        width: 100%;
+        max-width: 400px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-color);
+        position: relative;
+    }
+
+    /* Glassmorphic Header */
+    header {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--glass-border);
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 10;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .stats {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .coins {
+        font-size: 24px;
+        font-weight: 800;
+        color: #e0a96d;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .damage-stat {
+        font-size: 12px;
+        color: #666;
+        font-weight: 600;
+    }
+
+    #god-mode-badge {
+        display: none;
+        background: linear-gradient(45deg, #ff0000, #ff8c00);
+        color: white;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 4px 8px;
+        border-radius: 12px;
+        animation: pulse 1.5s infinite;
+        box-shadow: 0 0 10px rgba(255,0,0,0.5);
+    }
+
+    /* Game Area (Street) */
+    #game-area {
+        flex-grow: 1;
+        background: var(--street-bg);
+        position: relative;
+        overflow: hidden;
+        cursor: crosshair;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .road-line {
+        position: absolute;
+        width: 100%;
+        height: 4px;
+        background: repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 20px,
+            #fca311 20px,
+            #fca311 40px
+        );
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.5;
+    }
+
+    .sidewalk {
+        position: absolute;
+        width: 100%;
+        height: 20px;
+        background: #555;
+        border-top: 2px solid #222;
+        border-bottom: 2px solid #222;
+    }
+    .sidewalk.top { top: 0; }
+    .sidewalk.bottom { bottom: 0; }
+
+    /* Rats */
+    .rat {
+        position: absolute;
+        font-size: 32px;
+        cursor: crosshair;
+        transition: transform 0.1s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.5));
+    }
+
+    .rat:active {
+        transform: scale(0.8);
+    }
+
+    .rat .hp-bar {
+        width: 30px;
+        height: 4px;
+        background: #ff0000;
+        border-radius: 2px;
+        margin-bottom: 2px;
+        display: none;
+    }
+
+    .rat[data-max-hp] .hp-bar {
+        display: block;
+    }
+
+    .rat .hp-fill {
+        height: 100%;
+        background: #00ff00;
+        width: 100%;
+        border-radius: 2px;
+        transition: width 0.1s;
+    }
+
+    /* Particles */
+    .blood {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        background: radial-gradient(circle, #cc0000 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: splat 0.5s forwards;
+        transform: translate(-50%, -50%);
+        z-index: 5;
+    }
+
+    .damage-text {
+        position: absolute;
+        color: white;
+        font-weight: 800;
+        font-size: 16px;
+        pointer-events: none;
+        text-shadow: 0 0 4px #000;
+        animation: floatUp 0.8s forwards;
+        z-index: 6;
+        transform: translate(-50%, -50%);
+    }
+
+    /* Shop Area */
+    #shop {
+        height: 220px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-top: 1px solid var(--glass-border);
+        padding: 10px;
+        overflow-y: auto;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+    }
+
+    .shop-title {
+        font-size: 14px;
+        font-weight: 800;
+        margin: 0 0 10px 5px;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .upgrade-item {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+        transition: transform 0.1s, box-shadow 0.1s;
+    }
+
+    .upgrade-item:active {
+        transform: scale(0.98);
+    }
+
+    .upgrade-item.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
+    .upgrade-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .u-name {
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .u-desc {
+        font-size: 11px;
+        color: #666;
+        margin-top: 2px;
+    }
+
+    .buy-btn {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
+        transition: background 0.2s;
+    }
+
+    .buy-btn:hover {
+        background: var(--accent-hover);
+    }
+
+    /* Start Screen Overlay */
+    #start-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(255,255,255,0.8);
+        backdrop-filter: blur(5px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .start-btn {
+        margin-top: 20px;
+        padding: 12px 24px;
+        font-size: 18px;
+        font-weight: 800;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(230, 57, 70, 0.4);
+    }
+
+    /* Animations */
+    @keyframes splat {
+        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+    }
+
+    @keyframes floatUp {
+        0% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        100% { transform: translate(-50%, -30px) scale(1.5); opacity: 0; }
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    /* Responsive/Mobile Mode */
+    body.mobile-mode #app-container {
+        max-width: 100%;
+        border-radius: 0;
+    }
+    
+    body.mobile-mode .upgrade-item {
+        padding: 15px;
+    }
+    
+    body.mobile-mode .buy-btn {
+        padding: 12px 16px;
+    }
+</style>
+</head>
+<body>
+
+<div id="app-container">
+    <!-- Start Overlay for Audio Context Init -->
+    <div id="start-overlay">
+        <h1 style="margin:0; font-size: 28px; color:#1a1a1a;">Patkányvadász</h1>
+        <p style="color:#555; margin-top:10px;">Tisztítsd meg az utcákat!<br>Kattints a patkányokra a kiiktatásukhoz.</p>
+        <button class="start-btn" onclick="startGame()">JÁTÉK INDÍTÁSA</button>
+    </div>
+
+    <header>
+        <div class="stats">
+            <div class="coins"><span id="coin-count">0</span> 🪙</div>
+            <div class="damage-stat">Sebzés: <span id="dmg-count">1</span> | Auto: <span id="auto-count">0</span>/mp</div>
+        </div>
+        <div id="god-mode-badge">ISTENI MÓD</div>
+    </header>
+
+    <div id="game-area" onclick="missClick(event)">
+        <div class="sidewalk top"></div>
+        <div class="road-line"></div>
+        <div class="sidewalk bottom"></div>
+        <!-- Rats will spawn here -->
+    </div>
+
+    <div id="shop">
+        <div class="shop-title">Fegyverbolt</div>
+        <div id="shop-items">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // Game State
+    let state = {
+        coins: 0,
+        clickDamage: 1,
+        autoDamage: 0,
+        running: false,
+        godMode: false
+    };
+
+    // Upgrades Data
+    const upgrades = [
+        { id: 'swatter', name: 'Légycsapó', desc: '+1 Sebzés', cost: 15, type: 'click', value: 1, count: 0 },
+        { id: 'broom', name: 'Utcai Seprű', desc: '+3 Sebzés', cost: 50, type: 'click', value: 3, count: 0 },
+        { id: 'cat', name: 'Kóbor Macska', desc: 'Auto vadászat (1/mp)', cost: 100, type: 'auto', value: 1, count: 0 },
+        { id: 'trap', name: 'Medvecsapda', desc: '+10 Sebzés', cost: 250, type: 'click', value: 10, count: 0 },
+        { id: 'dog', name: 'Kiképzett Kutya', desc: 'Auto vadászat (5/mp)', cost: 500, type: 'auto', value: 5, count: 0 },
+        { id: 'poison', name: 'Mérgesgáz', desc: '+50 Sebzés', cost: 2000, type: 'click', value: 50, count: 0 }
+    ];
+
+    // Audio Engine
+    let audioCtx;
+    
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function playSound(type) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'hit') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+            gainNode.gain.setValueAtTime(0.3, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } else if (type === 'kill') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+            gainNode.gain.setValueAtTime(0.5, now);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        } else if (type === 'coin') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1000, now);
+            osc.frequency.linearRampToValueAtTime(1500, now + 0.1);
+            gainNode.gain.setValueAtTime(0.2, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        } else if (type === 'error') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            gainNode.gain.setValueAtTime(0.2, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+        }
+    }
+
+    // God Mode Check
+    function checkGodMode() {
+        try {
+            const debugOptions = JSON.parse(localStorage.getItem('gemini96-debugOptions') || '{}');
+            if (debugOptions.flappyGodMode === true) {
+                state.godMode = true;
+                state.coins = 9999999;
+                state.clickDamage = 9999;
+                document.getElementById('god-mode-badge').style.display = 'block';
+                updateUI();
+            }
+        } catch (e) {
+            console.error("God mode check failed", e);
+        }
+    }
+
+    // Core Logic
+    function startGame() {
+        initAudio();
+        document.getElementById('start-overlay').style.display = 'none';
+        state.running = true;
+        checkGodMode();
+        renderShop();
+        updateUI();
+        gameLoop();
+        
+        // Auto damage loop
+        setInterval(() => {
+            if (state.autoDamage > 0) {
+                dealAutoDamage();
+            }
+        }, 1000);
+    }
+
+    const gameArea = document.getElementById('game-area');
+    let activeRats = [];
+
+    function spawnRat() {
+        if (!state.running) return;
+
+        // Rat variations
+        const isFat = Math.random() > 0.8;
+        const isFast = Math.random() > 0.7 && !isFat;
+        
+        let hp = 1;
+        let size = 32;
+        let speed = Math.random() * 2 + 2; // base speed
+        let reward = 1;
+        let icon = '🐀';
+
+        if (isFat) {
+            hp = 10 + (state.clickDamage * 2); // scales a bit
+            size = 48;
+            speed = speed * 0.5;
+            reward = 10;
+            icon = '🦫'; // fat rat/beaver lookalike
+        } else if (isFast) {
+            speed = speed * 2;
+            reward = 3;
+            size = 24;
+            icon = '🐁'; // white mouse
+        }
+
+        const ratEl = document.createElement('div');
+        ratEl.className = 'rat';
+        ratEl.style.fontSize = `${size}px`;
+        
+        // Random Y position within street (avoiding very top/bottom borders)
+        const minY = 30;
+        const maxY = gameArea.clientHeight - size - 30;
+        const startY = Math.random() * (maxY - minY) + minY;
+        
+        // Direction
+        const fromLeft = Math.random() > 0.5;
+        let startX = fromLeft ? -50 : gameArea.clientWidth + 50;
+        
+        if (!fromLeft) {
+            ratEl.style.transform = 'scaleX(-1)';
+        }
+
+        ratEl.style.left = `${startX}px`;
+        ratEl.style.top = `${startY}px`;
+        
+        // HP Bar
+        ratEl.innerHTML = `
+            <div class="hp-bar"><div class="hp-fill"></div></div>
+            <div>${icon}</div>
+        `;
+        if (hp > 1) {
+            ratEl.setAttribute('data-max-hp', hp);
+        }
+
+        const ratObj = {
+            el: ratEl,
+            hp: hp,
+            maxHp: hp,
+            speed: speed,
+            fromLeft: fromLeft,
+            x: startX,
+            y: startY,
+            reward: reward
+        };
+
+        ratEl.onmousedown = (e) => {
+            e.stopPropagation();
+            hitRat(ratObj, state.clickDamage, e.clientX, e.clientY);
+        };
+        ratEl.ontouchstart = (e) => {
+            e.stopPropagation();
+            const touch = e.touches[0];
+            hitRat(ratObj, state.clickDamage, touch.clientX, touch.clientY);
+        };
+
+        gameArea.appendChild(ratEl);
+        activeRats.push(ratObj);
+    }
+
+    function hitRat(rat, damage, clientX, clientY) {
+        if (rat.hp <= 0) return;
+        
+        rat.hp -= damage;
+        playSound('hit');
+        
+        // Update HP Bar
+        if (rat.maxHp > 1) {
+            const pct = Math.max(0, (rat.hp / rat.maxHp) * 100);
+            rat.el.querySelector('.hp-fill').style.width = `${pct}%`;
+        }
+
+        // Show damage text
+        showFloatingText(clientX, clientY, `-${damage}`, '#fff');
+
+        if (rat.hp <= 0) {
+            killRat(rat, clientX, clientY);
+        } else {
+            // Visual hit feedback
+            rat.el.style.filter = 'brightness(2) sepia(1) hue-rotate(-50deg) saturate(5)';
+            setTimeout(() => {
+                if (rat.el) rat.el.style.filter = 'drop-shadow(0 4px 4px rgba(0,0,0,0.5))';
+            }, 100);
+        }
+    }
+
+    function killRat(rat, x, y) {
+        playSound('kill');
+        state.coins += rat.reward;
+        updateUI();
+        
+        // Create blood splat
+        const rect = gameArea.getBoundingClientRect();
+        const localX = x ? (x - rect.left) : rat.x + 20;
+        const localY = y ? (y - rect.top) : rat.y + 20;
+
+        const splat = document.createElement('div');
+        splat.className = 'blood';
+        splat.style.left = `${localX}px`;
+        splat.style.top = `${localY}px`;
+        gameArea.appendChild(splat);
+        setTimeout(() => splat.remove(), 500);
+
+        // Remove rat
+        rat.el.remove();
+        activeRats = activeRats.filter(r => r !== rat);
+    }
+
+    function dealAutoDamage() {
+        if (activeRats.length === 0) return;
+        
+        // Find rat with highest HP or just random
+        const target = activeRats[0];
+        
+        const rect = target.el.getBoundingClientRect();
+        const x = rect.left + rect.width/2;
+        const y = rect.top + rect.height/2;
+
+        hitRat(target, state.autoDamage, x, y);
+    }
+
+    function missClick(e) {
+        // Just empty click on the street
+        const rect = gameArea.getBoundingClientRect();
+        showFloatingText(e.clientX, e.clientY, "Mellé!", "#aaa");
+    }
+
+    function showFloatingText(x, y, text, color) {
+        const el = document.createElement('div');
+        el.className = 'damage-text';
+        el.innerText = text;
+        el.style.color = color;
+        
+        const rect = gameArea.getBoundingClientRect();
+        el.style.left = `${x - rect.left}px`;
+        el.style.top = `${y - rect.top}px`;
+        
+        gameArea.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    }
+
+    let lastTime = performance.now();
+    let spawnTimer = 0;
+
+    function gameLoop(time) {
+        if (!state.running) return;
+
+        const dt = (time - lastTime) / 1000 || 0;
+        lastTime = time;
+
+        // Move rats
+        for (let i = activeRats.length - 1; i >= 0; i--) {
+            const rat = activeRats[i];
+            
+            if (rat.fromLeft) {
+                rat.x += rat.speed * 60 * dt;
+                if (rat.x > gameArea.clientWidth + 100) {
+                    rat.el.remove();
+                    activeRats.splice(i, 1);
+                }
+            } else {
+                rat.x -= rat.speed * 60 * dt;
+                if (rat.x < -100) {
+                    rat.el.remove();
+                    activeRats.splice(i, 1);
+                }
+            }
+            if (rat.el) {
+                rat.el.style.left = `${rat.x}px`;
+            }
+        }
+
+        // Spawn logic
+        spawnTimer += dt;
+        // Spawn faster as you get stronger, but cap it
+        const spawnRate = Math.max(0.5, 2.0 - (state.clickDamage * 0.05));
+        if (spawnTimer > spawnRate) {
+            spawnTimer = 0;
+            if (activeRats.length < 15) { // Max rats on screen
+                spawnRat();
+            }
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Shop Logic
+    function renderShop() {
+        const container = document.getElementById('shop-items');
+        container.innerHTML = '';
+        
+        upgrades.forEach((upg, index) => {
+            const el = document.createElement('div');
+            el.className = `upgrade-item ${state.coins < upg.cost ? 'disabled' : ''}`;
+            el.id = `upg-${index}`;
+            
+            el.innerHTML = `
+                <div class="upgrade-info">
+                    <span class="u-name">${upg.name} (${upg.count})</span>
+                    <span class="u-desc">${upg.desc}</span>
+                </div>
+                <button class="buy-btn" onclick="buyUpgrade(${index})">${upg.cost} 🪙</button>
+            `;
+            container.appendChild(el);
+        });
+    }
+
+    window.buyUpgrade = function(index) {
+        initAudio();
+        const upg = upgrades[index];
+        if (state.coins >= upg.cost) {
+            state.coins -= upg.cost;
+            upg.count++;
+            
+            if (upg.type === 'click') {
+                state.clickDamage += upg.value;
+            } else if (upg.type === 'auto') {
+                state.autoDamage += upg.value;
+            }
+            
+            // Increase cost by 30% for next purchase
+            upg.cost = Math.floor(upg.cost * 1.3);
+            
+            playSound('coin');
+            updateUI();
+            renderShop(); // Full re-render to update texts and costs
+        } else {
+            playSound('error');
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('coin-count').innerText = Math.floor(state.coins);
+        document.getElementById('dmg-count').innerText = state.clickDamage;
+        document.getElementById('auto-count').innerText = state.autoDamage;
+        
+        // Update shop buttons state without full re-render for performance
+        upgrades.forEach((upg, index) => {
+            const el = document.getElementById(`upg-${index}`);
+            if (el) {
+                if (state.coins >= upg.cost) {
+                    el.classList.remove('disabled');
+                } else {
+                    el.classList.add('disabled');
+                }
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
