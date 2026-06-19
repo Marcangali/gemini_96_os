@@ -1,0 +1,2 @@
+[6/19/2026, 11:24:57 AM] v1:
+Patkány gyikkos szimulátor, ahol ki kell nyírni az utcán futó animált patkányokat, új eszközöket venni
