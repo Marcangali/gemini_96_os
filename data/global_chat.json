@@ -19,5 +19,12 @@
     "content": "close on pc mode+ and why system apps cant be moved to folders????, just my gemtop should have the rule+ when you dont click on test connection it shows settings_github_status_label, fix that.+ there is a new issue, on mobile the folder long hold is clipping trogh the folder and it shows open or properties. through folder.+ make",
     "timestamp": 1781988350075,
     "type": "text"
+  },
+  {
+    "id": "1781988358107",
+    "sender": "Guest_712",
+    "content": "sure if these happen, [plugin:vite:esbuild] Transform failed with 1 error: /app/applet/html/apps/paint.ts:121:2: ERROR: Unterminated string literal, open the system, just showw therse errors, when the app that you are trying to open fails, the system shouldnt be corrupted because of these.",
+    "timestamp": 1781988358107,
+    "type": "text"
   }
 ]
