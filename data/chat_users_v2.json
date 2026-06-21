@@ -1,1 +1,7 @@
-[]
+[
+  {
+    "username": "marcangali",
+    "salt": "0e338f6863127768198f0f317f0929df",
+    "hash": "3324a448ddf05bcd0b5d9802308b26ba55be580a8e5d1bc80053450dcad59ffc"
+  }
+]
