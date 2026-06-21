@@ -34,7 +34,7 @@
       "id": "1782044506858",
       "roomId": "gemini",
       "sender": "marcangali",
-      "content": "SEC_GCM:2817219013abd6e90815c980:77c3987abe45720efbf837c39e3b32897f25d9c7",
+      "content": "SEC_GCM:e5e898e743dfedb37695b8fb:6d39d27782c93f369e4e95d4e4e38d7f776c0a68",
       "timestamp": 1782044506858,
       "type": "text"
     },
@@ -50,8 +50,16 @@
       "id": "1782045089961",
       "roomId": "gemini",
       "sender": "marcangali2",
-      "content": "SEC_GCM:a34da8558c07cdb821132320:387c087995e538f3a73eaf0a17f229e693",
+      "content": "SEC_GCM:de3e951728080052864ad776:ac166fc069856dd22e4d8607b10a31abfe",
       "timestamp": 1782045089961,
+      "type": "text"
+    },
+    {
+      "id": "1782045123630",
+      "roomId": "gemini",
+      "sender": "marcangali2",
+      "content": "SEC_GCM:28b4b0729ef41d3904845c75:b47a48e59195f897f68fe05afd85aefcac30",
+      "timestamp": 1782045123630,
       "type": "text"
     }
   ]
