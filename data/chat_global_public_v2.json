@@ -1,3 +1,12 @@
 {
-  "messages": []
+  "messages": [
+    {
+      "id": "1782045702699",
+      "roomId": "global",
+      "sender": "marcangali2",
+      "content": "Hi",
+      "timestamp": 1782045702699,
+      "type": "text"
+    }
+  ]
 }
