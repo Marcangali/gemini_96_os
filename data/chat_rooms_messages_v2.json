@@ -21,6 +21,14 @@
       "content": "Hu",
       "timestamp": 1782044485361,
       "type": "text"
+    },
+    {
+      "id": "1782044490993",
+      "roomId": "global",
+      "sender": "marcangali",
+      "content": "Fasz",
+      "timestamp": 1782044490993,
+      "type": "text"
     }
   ]
 }
