@@ -34,8 +34,16 @@
       "id": "1782044506858",
       "roomId": "gemini",
       "sender": "marcangali",
-      "content": "Szua",
+      "content": "SEC_GCM:7d633a2aee940c135f6e7376:b6ad2dc4f084fe72ac0ece7ec9e84c162e0cddbc",
       "timestamp": 1782044506858,
+      "type": "text"
+    },
+    {
+      "id": "1782045059799",
+      "roomId": "global",
+      "sender": "marcangali2",
+      "content": "Ha",
+      "timestamp": 1782045059799,
       "type": "text"
     }
   ]
