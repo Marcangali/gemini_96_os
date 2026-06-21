@@ -29,6 +29,14 @@
       "content": "Fasz",
       "timestamp": 1782044497462,
       "type": "text"
+    },
+    {
+      "id": "1782044506858",
+      "roomId": "gemini",
+      "sender": "marcangali",
+      "content": "Szua",
+      "timestamp": 1782044506858,
+      "type": "text"
     }
   ]
 }
