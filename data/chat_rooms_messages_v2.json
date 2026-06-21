@@ -13,5 +13,14 @@
       "members": []
     }
   ],
-  "messages": []
+  "messages": [
+    {
+      "id": "1782044485361",
+      "roomId": "global",
+      "sender": "marcangali",
+      "content": "Hu",
+      "timestamp": 1782044485361,
+      "type": "text"
+    }
+  ]
 }
