@@ -1,0 +1,17 @@
+{
+  "rooms": [
+    {
+      "id": "global",
+      "name": "🌍 Global chat",
+      "type": "public",
+      "members": []
+    },
+    {
+      "id": "gemini",
+      "name": "🤖 Gemini Bot",
+      "type": "bot",
+      "members": []
+    }
+  ],
+  "messages": []
+}
