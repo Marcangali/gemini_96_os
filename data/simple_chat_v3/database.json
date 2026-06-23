@@ -1,0 +1,35 @@
+{
+  "rooms": [
+    {
+      "id": "global",
+      "name": "🌍 Global chat",
+      "type": "public",
+      "members": []
+    }
+  ],
+  "messages": [
+    {
+      "id": "1782217007041_99wwq",
+      "roomId": "global",
+      "sender": "marcangali2",
+      "content": "hi",
+      "timestamp": 1782217007041,
+      "type": "text",
+      "seenBy": [
+        "marcangali2"
+      ],
+      "reactions": []
+    },
+    {
+      "id": "1782217723691_4kabz",
+      "roomId": "global",
+      "sender": "marcangali2",
+      "content": "g",
+      "timestamp": 1782217723691,
+      "type": "text",
+      "seenBy": [
+        "marcangali2"
+      ]
+    }
+  ]
+}
