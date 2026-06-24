@@ -38,5 +38,13 @@
     "timestamp": 1782329839542,
     "avatarColor": "from-amber-500 to-orange-500",
     "role": "Registered"
+  },
+  {
+    "id": "msg_1782330101226_b30s",
+    "username": "admin",
+    "text": "@Gemini_AI Wait",
+    "timestamp": 1782330101226,
+    "avatarColor": "from-amber-500 to-orange-500",
+    "role": "Registered"
   }
 ]
