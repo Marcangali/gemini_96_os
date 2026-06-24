@@ -46,5 +46,13 @@
     "timestamp": 1782330101226,
     "avatarColor": "from-amber-500 to-orange-500",
     "role": "Registered"
+  },
+  {
+    "id": "msg_ai_1782330102413",
+    "username": "Gemini_AI",
+    "text": "Hello! I am Gemini. Connect your actual Google API key to toggle live AI chat model generation!",
+    "timestamp": 1782330102413,
+    "avatarColor": "from-indigo-600 to-purple-800",
+    "role": "Bot"
   }
 ]
