@@ -1,0 +1,10 @@
+[
+  {
+    "id": "msg_welcome_gemini",
+    "username": "Gemini_AI",
+    "text": "Hello! I am Gemini. This is our secure private conversation channel synchronized via GitHub. Ask me anything!",
+    "timestamp": 1782330522726,
+    "avatarColor": "from-violet-600 to-indigo-700",
+    "role": "Bot"
+  }
+]
