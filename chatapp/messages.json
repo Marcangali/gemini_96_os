@@ -22,5 +22,13 @@
     "timestamp": 1782329646875,
     "avatarColor": "from-slate-600 to-slate-800",
     "role": "Guest"
+  },
+  {
+    "id": "msg_1782329717014_7nqx",
+    "username": "admin",
+    "text": "what the heck",
+    "timestamp": 1782329717014,
+    "avatarColor": "from-amber-500 to-orange-500",
+    "role": "Registered"
   }
 ]
