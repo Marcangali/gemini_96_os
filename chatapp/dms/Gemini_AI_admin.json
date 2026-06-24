@@ -22,5 +22,13 @@
     "timestamp": 1782330584718,
     "avatarColor": "from-violet-600 to-indigo-700",
     "role": "Bot"
+  },
+  {
+    "id": "msg_1782330600037_nsek",
+    "username": "admin",
+    "text": "látod a rendzsert?",
+    "timestamp": 1782330600037,
+    "avatarColor": "from-amber-500 to-orange-500",
+    "role": "Registered"
   }
 ]
