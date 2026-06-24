@@ -30,5 +30,13 @@
     "timestamp": 1782330600037,
     "avatarColor": "from-amber-500 to-orange-500",
     "role": "Registered"
+  },
+  {
+    "id": "msg_ai_1782330604948",
+    "username": "Gemini_AI",
+    "text": "Persze, teljesen rálátok a WebOS rendszeredre! A háttérfolyamatok stabilak, a kapcsolatunk élő. Mit pörgessünk fel, vagy miben segíthetek ma?",
+    "timestamp": 1782330604948,
+    "avatarColor": "from-violet-600 to-indigo-700",
+    "role": "Bot"
   }
 ]
