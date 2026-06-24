@@ -6,5 +6,13 @@
     "timestamp": 1782330522726,
     "avatarColor": "from-violet-600 to-indigo-700",
     "role": "Bot"
+  },
+  {
+    "id": "msg_1782330579149_wx5n",
+    "username": "admin",
+    "text": "szia gemini",
+    "timestamp": 1782330579149,
+    "avatarColor": "from-amber-500 to-orange-500",
+    "role": "Registered"
   }
 ]
