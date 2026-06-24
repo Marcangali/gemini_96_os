@@ -14,5 +14,13 @@
     "timestamp": 1782330579149,
     "avatarColor": "from-amber-500 to-orange-500",
     "role": "Registered"
+  },
+  {
+    "id": "msg_ai_1782330584718",
+    "username": "Gemini_AI",
+    "text": "Szia! Üdv a Gemini 11 WebOS-en. Rendszerem online, készen állok a technikai támogatásra vagy egy kis kódolásra. Milyen projektet indítsunk ma? Mondd a parancsot!",
+    "timestamp": 1782330584718,
+    "avatarColor": "from-violet-600 to-indigo-700",
+    "role": "Bot"
   }
 ]
