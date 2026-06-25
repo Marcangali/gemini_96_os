@@ -4,3 +4,7 @@ Csinálj egy kártyajós alkalmazást ami az ujjlenyomatból olvassa ki a jövő
 ---
 [6/25/2026, 11:13:53 AM] v2:
 It is not working, nothing happens when you put your finger. And remove work themed things because it is for middle schoolers.
+
+---
+[6/25/2026, 11:16:30 AM] v3:
+It is not working make holding down 1 second and it ahows your fate., it is still not working
