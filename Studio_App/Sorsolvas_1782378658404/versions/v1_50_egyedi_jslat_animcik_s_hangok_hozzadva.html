@@ -1,0 +1,440 @@
+<!--
+APP_NAME: Sorsolvasó
+APP_DESCRIPTION: Ujjlenyomat-alapú kártyajós, ami felfedi a (néha kegyetlen) jövődet.
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 550
+VERSION_SUMMARY: 50 egyedi jóslat, animációk és hangok hozzáadva.
+STORE_ID: sorsolvaso-tarot
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorsolvasó</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        :root {
+            --bg-color: #f0f0f5;
+            --primary: #6366f1;
+            --danger: #ef4444;
+            --success: #10b981;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --card-gold: #fbbf24;
+            --card-dark: #0f172a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at top right, #e0e7ff, transparent),
+                              radial-gradient(circle at bottom left, #f3e8ff, transparent);
+            color: var(--text-dark);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .mobile-mode body {
+            background-size: cover;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* --- UI ELEMENTS --- */
+        .title {
+            position: absolute;
+            top: 30px;
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            color: var(--text-dark);
+            text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: opacity 0.5s ease;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            font-weight: 400;
+            margin-top: 4px;
+        }
+
+        /* --- SCANNER VIEW --- */
+        #scanner-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            width: 100%;
+        }
+
+        .scanner-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .scanner-container:active, .scanner-container.active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            background: conic-gradient(var(--primary) var(--progress, 0%), transparent 0);
+            mask-image: radial-gradient(transparent 65%, black 66%);
+            -webkit-mask-image: radial-gradient(transparent 65%, black 66%);
+            opacity: 0.8;
+        }
+
+        .fingerprint-icon {
+            width: 80px;
+            height: 80px;
+            fill: var(--primary);
+            opacity: 0.7;
+            transition: fill 0.3s ease, opacity 0.3s ease;
+        }
+
+        .scanner-container.active .fingerprint-icon {
+            opacity: 1;
+            fill: #4f46e5;
+            filter: drop-shadow(0 0 8px rgba(79, 70, 229, 0.6));
+        }
+
+        .instruction {
+            margin-top: 40px;
+            font-size: 0.95rem;
+            color: var(--text-light);
+            font-weight: 600;
+            text-align: center;
+            animation: pulseText 2s infinite;
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        /* --- CARD VIEW --- */
+        #card-view {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            perspective: 1000px;
+            width: 100%;
+        }
+
+        .card-container {
+            width: 260px;
+            height: 380px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-radius: 16px;
+        }
+
+        .card-container.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, var(--card-dark) 0%, #1e1b4b 100%);
+            border: 2px solid var(--card-gold);
+            color: var(--card-gold);
+        }
+
+        .card-back::after {
+            content: '';
+            position: absolute;
+            width: calc(100% - 20px);
+            height: calc(100% - 20px);
+            border: 1px dashed rgba(251, 191, 36, 0.5);
+            border-radius: 10px;
+        }
+
+        .mystic-eye {
+            width: 80px;
+            height: 80px;
+            fill: var(--card-gold);
+            margin-bottom: 20px;
+        }
+
+        .card-front {
+            background: #fff;
+            transform: rotateY(180deg);
+            border: 4px solid #fff;
+            box-shadow: inset 0 0 0 2px var(--card-gold);
+        }
+
+        .card-front.bad-fortune {
+            box-shadow: inset 0 0 0 2px var(--danger);
+        }
+
+        .card-front.good-fortune {
+            box-shadow: inset 0 0 0 2px var(--success);
+        }
+
+        .fortune-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .fortune-type {
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+        }
+
+        .bad-fortune .fortune-type { color: var(--danger); }
+        .good-fortune .fortune-type { color: var(--success); }
+
+        .fortune-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.5;
+            color: var(--text-dark);
+        }
+
+        .reset-btn {
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-weight: 600;
+            color: var(--text-dark);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .reset-btn.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reset-btn:hover {
+            background: #fff;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+
+        #god-mode-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(90deg, #ff007f, #7f00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="god-mode-indicator">GOD MODE ACTIVE</div>
+
+    <div id="app">
+        <div class="title" id="main-title">
+            Kártyajós
+            <div class="subtitle">Ujjlenyomat elemzés</div>
+        </div>
+
+        <div id="scanner-view">
+            <div class="scanner-container" id="scanner">
+                <div class="progress-ring" id="progress-ring"></div>
+                <svg class="fingerprint-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z" opacity="0"/>
+                    <path d="M17.54,5.3A9.94,9.94,0,0,0,12,3.5a9.9,9.9,0,0,0-5.54,1.8l1.09,1.64A7.94,7.94,0,0,1,12,5.5a7.94,7.94,0,0,1,4.45,1.44ZM12,7.5A4.5,4.5,0,0,0,7.5,12a4.43,4.43,0,0,0,.61,2.23l1.71-1A2.47,2.47,0,0,1,9.5,12a2.5,2.5,0,0,1,5,0,2.47,2.47,0,0,1-.32,1.2l1.71,1A4.43,4.43,0,0,0,16.5,12,4.5,4.5,0,0,0,12,7.5ZM4.33,8.68A9.9,9.9,0,0,0,2.5,12a9.9,9.9,0,0,0,1.83,5.82l1.64-1.09A7.9,7.9,0,0,1,4.5,12a7.9,7.9,0,0,1,1.47-4.68ZM19.67,8.68l-1.64,1.09A7.9,7.9,0,0,1,19.5,12a7.9,7.9,0,0,1-1.47,4.68l1.64,1.09A9.9,9.9,0,0,0,21.5,12,9.9,9.9,0,0,0,19.67,8.68ZM12,14.5a2.47,2.47,0,0,0-1.2.32l-1,1.71A4.43,4.43,0,0,1,12,16.5a4.43,4.43,0,0,1-2.23-.61l-1,1.71A7.94,7.94,0,0,0,12,18.5a7.94,7.94,0,0,0,4.45-1.44l-1.09-1.64A5.94,5.94,0,0,1,12,14.5Z" />
+                    <path d="M12,9.5A2.5,2.5,0,0,0,9.5,12a2.47,2.47,0,0,0,.32,1.2l1.71-1A.49.49,0,0,1,11.5,12a.5.5,0,0,1,1,0,.49.49,0,0,1-.05.21l1.71,1A2.47,2.47,0,0,0,14.5,12,2.5,2.5,0,0,0,12,9.5Z" />
+                </svg>
+            </div>
+            <div class="instruction" id="instruction-text">Tartsd lenyomva az elemzéshez</div>
+        </div>
+
+        <div id="card-view">
+            <div class="card-container" id="tarot-card">
+                <div class="card-face card-back">
+                    <svg class="mystic-eye" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                    </svg>
+                    <div style="font-weight: 800; letter-spacing: 2px;">SORSOLVASÓ</div>
+                </div>
+                <div class="card-face card-front" id="card-front">
+                    <div class="fortune-icon" id="fortune-icon">🔮</div>
+                    <div class="fortune-type" id="fortune-type">Jóslat</div>
+                    <div class="fortune-text" id="fortune-text">A jövőd itt jelenik meg.</div>
+                </div>
+            </div>
+            <button class="reset-btn" id="reset-btn">Új jóslat kérése</button>
+        </div>
+    </div>
+
+    <script>
+        // --- FORTUNES DATA (50 items: 25 Good, 25 Bad) ---
+        const goodFortunes = [
+            "Váratlan gazdagság köszönt rád.",
+            "Ma valaki titokban mosolyog miattad.",
+            "A héten megtalálod életed szerelmét (vagy egy jó pizzát).",
+            "A karma ma maximálisan a te oldaladon áll.",
+            "Egy régi vágyad hamarosan teljesül.",
+            "Zöld lámpák kísérik utad hazáig.",
+            "Hibátlanul fog lefordulni a kódod elsőre.",
+            "Egy zseniális ötlet fog eszedbe jutni ma este.",
+            "Ma szerencsés napod van, vegyél sorsjegyet!",
+            "A főnököd ma elfelejti kiosztani a feladatokat.",
+            "Megtalálod az elveszettnek hitt tárgyadat.",
+            "Ingyen kávét, vagy teát kapsz ma valahol.",
+            "A jövőd olyan fényes, hogy hunyorognod kell.",
+            "Valaki őszintén megdicséri a megjelenésedet.",
+            "Egy új, izgalmas lehetőség nyílik meg előtted.",
+            "Sikerrel veszel egy nagyon nehéz akadályt.",
+            "A mai nap a te napod! Élvezd ki!",
+            "Az univerzum egy apró ajándékkal kedveskedik ma.",
+            "Ráébredsz egy rejtett tehetségedre.",
+            "Békés, nyugodt és stresszmentes estéd lesz.",
+            "A hétvégéd felejthetetlenül csodás lesz.",
+            "Egy váratlan pozitív üzenet feldobja a napodat.",
+            "A szerencse tündére ma a válladon ül.",
+            "Bármibe kezdesz ma, az sikerre van ítélve.",
+            "Képes vagy bármit elérni, csak higgy magadban!"
+        ];
+
+        const badFortunes = [
+            "Holnap meghalsz... az unalomtól egy megbeszélésen.",
+            "Rálépsz egy legókockára. Mezítláb. Sötétben.",
+            "A kávéd ki fog borulni a hófehér ingedre.",
+            "Megtámad egy dühös, nindzsa kiképzést kapott mókus.",
+            "Elfelejted az összes fontos jelszavadat.",
+            "Véletlenül bezárod a böngészőt 100 megnyitott füllel.",
+            "A telefonod 1%-on lesz, amikor a legnagyobb szükséged lenne rá.",
+            "Valaki megeszi a hűtőből a gondosan elrakott ebédedet.",
+            "Egy galamb célba veszi a vadonatúj kabátodat.",
+            "Elmegy az internet, pont mielőtt elmentenéd a munkád.",
+            "A zoknid egész nap le fog csúszni a cipődben.",
+            "Rossz buszra szállsz, és egy másik városban kötsz ki.",
+            "Egy űrlény téged választ kísérleti alanynak.",
+            "Beütöd a kislábujjad az asztal sarkába. Nagyon erősen.",
+            "Olyan zenét fogsz dúdolni egész nap, amit szívből utálsz.",
+            "A nadrágod elszakad a lehető legrosszabb pillanatban.",
+            "Egy zombi apokalipszisben te lennél az első áldozat.",
+            "Ráírsz valakire, akire nagyon nem akartál, és elküldöd.",
+            "A pizzádról teljesen lefelejtik a feltétet.",
+            "Holnap kiderül, hogy allergiás vagy az oxigénre.",
+            "Az önbizalmad ma 404-es hibát dob.",
+            "A szomszédod ma este kezd el trombitálni tanulni.",
+            "Végzetes hibát követsz el... a kódod 42. sorában.",
+            "Egy zongora esik a fejedre a semmiből (mint a rajzfilmekben).",
+            "A sorsdöntő pillanatban hatalmasat kell tüsszentened."
+        ];
+
+        // --- GOD MODE CHECK ---
+        let isGodMode = false;
+        try {
+            const debugOptions = JSON.parse(localStorage.getItem('gemini96-debugOptions') || '{}');
+            isGodMode = debugOptions.godMode === true || debugOptions.flappyGodMode === true;
+        } catch (e) { console.error("Error reading god mode", e); }
+
+        if (isGodMode) {
+            document.getElementById('god-mode-indicator').style.display = 'block';
+        }
+
+        // --- AUDIO SYSTEM (Web Audio API) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let scanOscillator = null;
+        let scanGain = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
