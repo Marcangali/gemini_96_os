@@ -8,3 +8,7 @@ It is not working, nothing happens when you put your finger. And remove work the
 ---
 [6/25/2026, 11:16:30 AM] v3:
 It is not working make holding down 1 second and it ahows your fate., it is still not working
+
+---
+[6/25/2026, 11:20:20 AM] v4:
+Add unlucky and make it 50-50 for a bad
