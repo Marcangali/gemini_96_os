@@ -1,0 +1,2 @@
+[6/25/2026, 11:11:00 AM] v1:
+Csinálj egy kártyajós alkalmazást ami az ujjlenyomatból olvassa ki a jövődet, legyenek angyon random dolgok, pl meghalsz holnap, meg ilyesmi... Legyen 50 féle a fele legyen rossz
