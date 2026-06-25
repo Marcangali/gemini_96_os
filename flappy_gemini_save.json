@@ -1,11 +1,12 @@
 {
-  "highScore": 22,
-  "coins": 57,
+  "highScore": 68,
+  "coins": 186,
   "inventory": [
     "skin_default",
-    "map_default"
+    "map_default",
+    "skin_blue"
   ],
-  "equippedSkin": "skin_default",
+  "equippedSkin": "skin_blue",
   "equippedMap": "map_default",
   "activePowerups": [],
   "soundEnabled": true
