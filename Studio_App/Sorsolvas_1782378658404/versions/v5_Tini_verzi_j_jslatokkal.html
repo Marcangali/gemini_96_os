@@ -1,0 +1,728 @@
+<!--
+APP_NAME: Sorsolvasó
+APP_DESCRIPTION: Ujjlenyomat-alapú kártyajós, ami felfedi a jövődet.
+APP_ICON: 
+APP_CATEGORY: Entertainment
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 550
+VERSION_SUMMARY: Tini verzió új jóslatokkal
+STORE_ID: sorsolvaso-tarot
+-->
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorsolvasó</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        :root {
+            --bg-color: #f0f0f5;
+            --primary: #6366f1;
+            --danger: #ef4444;
+            --success: #10b981;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --card-gold: #fbbf24;
+            --card-dark: #0f172a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-color);
+            background-image: radial-gradient(circle at top right, #e0e7ff, transparent),
+                              radial-gradient(circle at bottom left, #f3e8ff, transparent);
+            color: var(--text-dark);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .mobile-mode body {
+            background-size: cover;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* --- UI ELEMENTS --- */
+        .title {
+            position: absolute;
+            top: 30px;
+            text-align: center;
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            color: var(--text-dark);
+            text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: opacity 0.5s ease;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            font-weight: 400;
+            margin-top: 4px;
+        }
+
+        /* --- SCANNER VIEW --- */
+        #scanner-view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            width: 100%;
+        }
+
+        .scanner-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+            background: var(--glass-bg);
+            border: 2px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .scanner-container:active, .scanner-container.active {
+            transform: scale(0.95);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            background: conic-gradient(var(--primary) var(--progress, 0%), transparent 0);
+            mask-image: radial-gradient(transparent 65%, black 66%);
+            -webkit-mask-image: radial-gradient(transparent 65%, black 66%);
+            opacity: 0.8;
+        }
+
+        .fingerprint-icon {
+            width: 80px;
+            height: 80px;
+            fill: var(--primary);
+            opacity: 0.7;
+            transition: fill 0.3s ease, opacity 0.3s ease;
+        }
+
+        .scanner-container.active .fingerprint-icon {
+            opacity: 1;
+            fill: #4f46e5;
+            filter: drop-shadow(0 0 8px rgba(79, 70, 229, 0.6));
+        }
+
+        .instruction {
+            margin-top: 40px;
+            font-size: 0.95rem;
+            color: var(--text-light);
+            font-weight: 600;
+            text-align: center;
+            animation: pulseText 2s infinite;
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        /* --- CARD VIEW --- */
+        #card-view {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            perspective: 1000px;
+            width: 100%;
+        }
+
+        .card-container {
+            width: 260px;
+            height: 380px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-radius: 16px;
+        }
+
+        .card-container.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, var(--card-dark) 0%, #1e1b4b 100%);
+            border: 2px solid var(--card-gold);
+            color: var(--card-gold);
+        }
+
+        .card-back::after {
+            content: '';
+            position: absolute;
+            width: calc(100% - 20px);
+            height: calc(100% - 20px);
+            border: 1px dashed rgba(251, 191, 36, 0.5);
+            border-radius: 10px;
+        }
+
+        .mystic-eye {
+            width: 80px;
+            height: 80px;
+            fill: var(--card-gold);
+            margin-bottom: 20px;
+        }
+
+        .card-front {
+            background: #fff;
+            transform: rotateY(180deg);
+            border: 4px solid #fff;
+            box-shadow: inset 0 0 0 2px var(--card-gold);
+        }
+
+        .card-front.bad-fortune {
+            box-shadow: inset 0 0 0 2px var(--danger);
+        }
+
+        .card-front.good-fortune {
+            box-shadow: inset 0 0 0 2px var(--success);
+        }
+
+        .card-front.unlucky-fortune {
+            box-shadow: inset 0 0 0 2px #f97316;
+        }
+
+        .card-front.mediocre-fortune {
+            box-shadow: inset 0 0 0 2px #94a3b8;
+        }
+
+        .fortune-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .fortune-type {
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+        }
+
+        .bad-fortune .fortune-type { color: var(--danger); }
+        .good-fortune .fortune-type { color: var(--success); }
+        .unlucky-fortune .fortune-type { color: #f97316; }
+        .mediocre-fortune .fortune-type { color: #64748b; }
+
+        .fortune-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.5;
+            color: var(--text-dark);
+        }
+
+        .reset-btn {
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-weight: 600;
+            color: var(--text-dark);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .reset-btn.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .reset-btn:hover {
+            background: #fff;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+
+        #god-mode-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: linear-gradient(90deg, #ff007f, #7f00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="god-mode-indicator">GOD MODE ACTIVE</div>
+
+    <div id="app">
+        <div class="title" id="main-title">
+            Kártyajós
+            <div class="subtitle">Ujjlenyomat elemzés</div>
+        </div>
+
+        <div id="scanner-view">
+            <div class="scanner-container" id="scanner">
+                <div class="progress-ring" id="progress-ring"></div>
+                <svg class="fingerprint-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4h-2zm0 6h2v2h-2z" opacity="0"/>
+                    <path d="M17.54,5.3A9.94,9.94,0,0,0,12,3.5a9.9,9.9,0,0,0-5.54,1.8l1.09,1.64A7.94,7.94,0,0,1,12,5.5a7.94,7.94,0,0,1,4.45,1.44ZM12,7.5A4.5,4.5,0,0,0,7.5,12a4.43,4.43,0,0,0,.61,2.23l1.71-1A2.47,2.47,0,0,1,9.5,12a2.5,2.5,0,0,1,5,0,2.47,2.47,0,0,1-.32,1.2l1.71,1A4.43,4.43,0,0,0,16.5,12,4.5,4.5,0,0,0,12,7.5ZM4.33,8.68A9.9,9.9,0,0,0,2.5,12a9.9,9.9,0,0,0,1.83,5.82l1.64-1.09A7.9,7.9,0,0,1,4.5,12a7.9,7.9,0,0,1,1.47-4.68ZM19.67,8.68l-1.64,1.09A7.9,7.9,0,0,1,19.5,12a7.9,7.9,0,0,1-1.47,4.68l1.64,1.09A9.9,9.9,0,0,0,21.5,12,9.9,9.9,0,0,0,19.67,8.68ZM12,14.5a2.47,2.47,0,0,0-1.2.32l-1,1.71A4.43,4.43,0,0,1,12,16.5a4.43,4.43,0,0,1-2.23-.61l-1,1.71A7.94,7.94,0,0,0,12,18.5a7.94,7.94,0,0,0,4.45-1.44l-1.09-1.64A5.94,5.94,0,0,1,12,14.5Z" />
+                    <path d="M12,9.5A2.5,2.5,0,0,0,9.5,12a2.47,2.47,0,0,0,.32,1.2l1.71-1A.49.49,0,0,1,11.5,12a.5.5,0,0,1,1,0,.49.49,0,0,1-.05.21l1.71,1A2.47,2.47,0,0,0,14.5,12,2.5,2.5,0,0,0,12,9.5Z" />
+                </svg>
+            </div>
+            <div class="instruction" id="instruction-text">Tartsd lenyomva az elemzéshez</div>
+        </div>
+
+        <div id="card-view">
+            <div class="card-container" id="tarot-card">
+                <div class="card-face card-back">
+                    <svg class="mystic-eye" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                    </svg>
+                    <div style="font-weight: 800; letter-spacing: 2px;">SORSOLVASÓ</div>
+                </div>
+                <div class="card-face card-front" id="card-front">
+                    <div class="fortune-icon" id="fortune-icon">🔮</div>
+                    <div class="fortune-type" id="fortune-type">Jóslat</div>
+                    <div class="fortune-text" id="fortune-text">A jövőd itt jelenik meg.</div>
+                </div>
+            </div>
+            <button class="reset-btn" id="reset-btn">Új jóslat kérése</button>
+        </div>
+    </div>
+
+    <script>
+        // --- FORTUNES DATA (Teen Edition) ---
+        const goodFortunes = [
+            "A crushod lájkolja a legutóbbi instaposztodat.",
+            "A tanár ma elfelejt feleltetni töriből.",
+            "Kapsz egy ötöst anélkül, hogy kinyitottad volna a könyvet.",
+            "Végre visszaír az, aki eddig ghostolt.",
+            "Találsz egy elfelejtett ezrest a téli kabátod zsebében.",
+            "A menzán ma olyan kaja lesz, amit tényleg meg is lehet enni.",
+            "Valaki megdicséri a fitjedet a folyosón.",
+            "Tökéletes lesz a hajad, pont aznap, amikor a crushoddal találkozol.",
+            "Meglesz a kettes matekból!",
+            "A szüleid adnak extra zsebpénzt a hétvégére.",
+            "Ma végre megérted a matek anyagot. Vagy legalábbis úgy tűnik.",
+            "Pont le tudod másolni a házit a szünetben.",
+            "Egy váratlan dicséretet kapsz a legszigorúbb tanártól.",
+            "A tesitanár ma csak focit vagy röpit enged.",
+            "Sikerül időben beérned, pedig az utolsó pillanatban indultál.",
+            "Valaki megkínál egy energiaitallal.",
+            "Ingyen wifi van ott, ahol a legnagyobb szükséged van rá.",
+            "A TikTok algoritmus ma pont a te vibe-odat hozza.",
+            "Nem fog fagyni a telód egész nap.",
+            "Hosszabb lesz a szünet egy elmaradt óra miatt.",
+            "Bejön egy olyan poénod, amin az egész osztály nevet.",
+            "Pont téged hívnak el egy spontán programra suli után.",
+            "Sikerül elkerülnöd a biosz dogát.",
+            "A boltban pont le van árazva a kedvenc nasid.",
+            "Senki nem veszi észre, hogy késel pár percet.",
+            "Egy olyan zenét fedezel fel, ami az új személyiséged lesz hetekig.",
+            "A Spotify nem dob be olyan reklámot, ami idegesítene.",
+            "Rájössz, hogy holnap nincs is első órád.",
+            "A buszsofőr pont megvár, amikor futsz a megállóba.",
+            "Sikerül egy tökéletes BeReal-t lőnöd.",
+            "Az a személy, akit rühellsz, ma nem jön suliba.",
+            "A tanár egy poénnal indítja az órát, és egész jó kedve van.",
+            "Kiderül, hogy a doga csak jövő héten lesz.",
+            "Valaki felajánlja a helyét a tömött buszon.",
+            "Megnyersz egy random sorsolást vagy giveawayt instán.",
+            "Tökéletes kifogást találsz, és mindenki elhiszi.",
+            "A kedvenc streamer-ed pont akkor megy live-ba, amikor unatkozol.",
+            "Megkapod azt a snapet, amire egész nap vártál.",
+            "Ma mindenki észreveszi, milyen jól nézel ki.",
+            "Végre megkapod a csomagot, amit hetek óta rendeltél.",
+            "Egy random kiskutya/kiscica odamegy hozzád az utcán.",
+            "Valaki elküldi neked a tökéletes meme-t, ami pont a helyzetedre illik.",
+            "A szüleid ma kifejezetten chill hangulatban vannak.",
+            "Nem kell elmosogatnod ma este.",
+            "Olyan ruhát veszel fel, amiben 10/10-nek érzed magad.",
+            "A haverok ma nem csinálnak drámát semmiből.",
+            "Végre sikerül továbblépned egy szinten a játékban.",
+            "Az osztályfőnök elfelejti ellenőrizni a hiányzásokat.",
+            "Egy random idegen rámosolyog az utcán.",
+            "Megtalálod a tökéletes profilképet magadnak."
+        ];
+
+        const badFortunes = [
+            "A crushod láttamoz, és soha nem ír vissza.",
+            "Pont téged hívnak ki a táblához matekból.",
+            "Elalszol, és pont azon a napon, amikor dogát írtok.",
+            "Rájössz, hogy a házidat otthon hagytad.",
+            "Véletlenül belájkolod a crushod 3 évvel ezelőtti képét instán.",
+            "A tanár azt mondja: 'Tedd el a telefont, vagy beírom.'",
+            "Lebuksz, miközben próbálsz puskázni.",
+            "Egész nap azon görcsölsz, hogy vajon mit jelentett az a 'majd beszélünk'.",
+            "Egy szál 1%-on van a telód, de nincs nálad töltő.",
+            "A kedvenc ruhádra öntöd a reggeli kávét vagy kakaót.",
+            "Olyan dogát kapsz vissza, amire azt hitted ötös lesz... kettes alá.",
+            "A szüleid bemennek a fogadóórára.",
+            "Csoportmunkában neked kell mindent megcsinálnod a többiek helyett.",
+            "A menzán ma megint 'az a' fura leves lesz.",
+            "Pont akkor kapcsol be a hang a telódon a suliban, amikor a legkínosabb videót nézed.",
+            "Rálépsz valakinek a cipőjére a folyosón, és nagyon csúnyán néz.",
+            "A tesitanár 2000 métert futtat le veletek bemelegítésnek.",
+            "Kifogy a neted a hónap közepe előtt.",
+            "A Spotify pont akkor dob be egy cringe dalt, amikor valaki hallgatja veled.",
+            "Az a barátod, akivel a legjobban hülyéskedsz, hiányzik ma.",
+            "Beütöd a könyököd, és a zsibbadás 5 percig tart.",
+            "Új pattanásod nő, pont az arcod közepén egy fontos nap előtt.",
+            "Véletlenül a családi csoportba küldöd be a legdarkosabb meme-t.",
+            "A busz elmegy az orrod előtt, miközben a sofőr a szemedbe néz.",
+            "Valaki lelövi a poént a sorozatodban, amit épp elkezdtél.",
+            "Rájössz, hogy rossz napra tanultad meg a tételt.",
+            "Meglátod magad egy váratlan szögből a haverod BeReal-jában.",
+            "Elszakad a táskád pántja a legnagyobb tömegben.",
+            "A szüleid elkezdenek faggatni a jövődről.",
+            "A haverjaid programot csinálnak, és 'elfelejtenek' szólni.",
+            "Kínos csend támad, pont miután bemondtál egy 'hatalmas' poént.",
+            "A wifi pont akkor szakad meg, amikor nyernél a meccsen.",
+            "Rájössz, hogy az a menő dolog, amit mondtál, valójában nagyon cringe volt.",
+            "A tanár megkérdezi tőled: 'Szerinted ez vicces?'",
+            "Lejár a diákod, és pont ma ellenőrzik a buszon.",
+            "Valaki megeszi a hűtőből azt, amit egész nap vártál.",
+            "A crushod egy másik sráccal/csajjal beszélget, és nagyon nevetnek.",
+            "Kapsz egy 'beszélnünk kell' üzenetet.",
+            "Megfájdul a fejed a hatodik óra közepén, és még van kettő.",
+            "A fodrász 'csak egy kicsit' vágott a hajadból... de borzalmas lett.",
+            "Éjjel 2-kor jut eszedbe egy nagyon ciki dolog, amit 4 éve csináltál.",
+            "A telefonod kijelzője pont akkor törik be, amikor kiveszed a zsebedből.",
+            "Valaki screenshottolja a snapedet, és nem tudod miért.",
+            "Rájössz, hogy egész nap fordítva volt rajtad a pulcsid.",
+            "A tanár azt mondja: 'Aki a leghangosabb, azt feleltetem', és te pont akkor köhögsz.",
+            "A kedvenc zenekarod feloszlik, vagy a kedvenc sorozatodat kaszálják.",
+            "Egész órán vissza kell tartanod a pisilést, mert 'szünetben kellett volna'.",
+            "Az automatából nem esik ki a csoki, amit kifizettél.",
+            "Valaki felveszi a legrosszabb szögből egy videóra, és felteszi TikTokra.",
+            "Megkérdezik: 'Ugye tanultál a dogára?' – de nem is tudtál róla."
+        ];
+
+        const unluckyFortunes = [
+            "Megbotlasz a folyosón, páran látják, de nem nevetnek ki hangosan.",
+            "Kicsúszik a kezedből a telefonod, de nem törik be, csak a tok karcolódik.",
+            "Megkajálod magad ketchup-pal, de szerencsére sötét pulcsi van rajtad.",
+            "Kétezer forinttal mész boltba, de az energiaital és a chips 2010 Ft.",
+            "Elfelejted bedugni a fülhallgatód, és egy pillanatra mindenki hallja a zenédet.",
+            "A tanár felszólít, mondasz valami hülyeséget, de hamar továbblép.",
+            "Rossz buszra szállsz, de két megálló után rájössz és átszállsz.",
+            "Épphogy csak eléred a buszt, de egész úton lihegsz.",
+            "Kihűl a teád, mire eszedbe jut meginni.",
+            "Rálépsz egy rágóra, de könnyen lejön a cipődről.",
+            "Rosszul írod be a jelszavad kétszer, de harmadjára sikerül.",
+            "Pont akkor jön rád a köhögőroham, amikor a teremben síri csend van.",
+            "Kicsit megázol esernyő nélkül, de hamar megszáradsz.",
+            "Elküldesz egy hangüzenetet, de utólag visszahallgatva nagyon furcsa a hangod.",
+            "Valaki elfelejti a neved, és csak annyit mond: 'Hé!'"
+        ];
+
+        const mediocreFortunes = [
+            "A mai nap pontosan ugyanolyan lesz, mint a tegnapi.",
+            "Kapsz egy hármast matekból. Nem jó, de legalább nem is buktál.",
+            "A buszon csak a legrosszabb helyen lesz szabad ülés.",
+            "Észreveszed, hogy a zoknid felemás, de senkit sem érdekel.",
+            "Ma nem történik semmi cringe, de semmi izgalmas sem.",
+            "Elfelejted mit akartál mondani, de amúgy sem volt fontos.",
+            "Megeszel egy szendvicset, aminek teljesen átlagos íze van.",
+            "Egy random ismerősöd megnézi a sztorid, és ennyi.",
+            "Rájössz, hogy csütörtök van, pedig pénteknek érezted.",
+            "A telefonod 50%-on marad egész nap, mert alig használod.",
+            "Kapsz egy üzenetet, de csak a szolgáltatódtól.",
+            "Valaki rád köszön, te visszaköszönsz, és mentek tovább.",
+            "Pont átérsz a zöldön, de a következőnél meg kell állnod.",
+            "A menzán ma olyan kaja van, amit megeszel, de nem élvezed.",
+            "Este rájössz, hogy semmit sem csináltál ma, de jólesett."
+        ];
+
+        // --- GOD MODE CHECK ---
+        let isGodMode = false;
+        try {
+            const debugOptions = JSON.parse(localStorage.getItem('gemini96-debugOptions') || '{}');
+            isGodMode = debugOptions.godMode === true || debugOptions.flappyGodMode === true;
+        } catch (e) { console.error("Error reading god mode", e); }
+
+        if (isGodMode) {
+            document.getElementById('god-mode-indicator').style.display = 'block';
+        }
+
+        // --- AUDIO SYSTEM (Web Audio API) ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+        let scanOscillator = null;
+        let scanGain = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function startScanSound() {
+            if (!audioCtx) return;
+            scanOscillator = audioCtx.createOscillator();
+            scanGain = audioCtx.createGain();
+            scanOscillator.type = 'sine';
+            scanOscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+            scanOscillator.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 1);
+            scanGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            scanGain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
+            scanOscillator.connect(scanGain);
+            scanGain.connect(audioCtx.destination);
+            scanOscillator.start();
+        }
+
+        function stopScanSound() {
+            if (scanGain && audioCtx) {
+                scanGain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                setTimeout(() => {
+                    if (scanOscillator) {
+                        try {
+                            scanOscillator.stop();
+                            scanOscillator.disconnect();
+                        } catch (e) {}
+                        scanOscillator = null;
+                    }
+                }, 100);
+            }
+        }
+        
+        function playSuccessSound() {
+            playTone(600, 'sine', 0.1, 0.2);
+            setTimeout(() => playTone(800, 'sine', 0.2, 0.2), 100);
+        }
+
+        // --- SCANNER & UI LOGIC ---
+        const scanner = document.getElementById('scanner');
+        const progressRing = document.getElementById('progress-ring');
+        const instructionText = document.getElementById('instruction-text');
+        const scannerView = document.getElementById('scanner-view');
+        const cardView = document.getElementById('card-view');
+        const tarotCard = document.getElementById('tarot-card');
+        const resetBtn = document.getElementById('reset-btn');
+        
+        let progressInterval;
+        let progress = 0;
+        const HOLD_DURATION = 1000; // 1 second
+        const PROGRESS_STEP = 100 / (HOLD_DURATION / 20);
+        let isScanning = false;
+
+        function startScan(e) {
+            if (e.type === 'touchstart' || e.type === 'pointerdown') {
+                if (e.cancelable) e.preventDefault();
+            }
+            initAudio();
+            if (isScanning) return;
+            isScanning = true;
+            progress = 0;
+            scanner.classList.add('active');
+            instructionText.textContent = "Elemzés folyamatban...";
+            startScanSound();
+
+            progressInterval = setInterval(() => {
+                progress += PROGRESS_STEP;
+                progressRing.style.setProperty('--progress', `${Math.min(progress, 100)}%`);
+                if (progress >= 100) {
+                    completeScan();
+                }
+            }, 20);
+        }
+
+        function cancelScan() {
+            if (!isScanning) return;
+            isScanning = false;
+            clearInterval(progressInterval);
+            scanner.classList.remove('active');
+            progressRing.style.setProperty('--progress', '0%');
+            instructionText.textContent = "Tartsd lenyomva az elemzéshez";
+            stopScanSound();
+        }
+
+        function completeScan() {
+            isScanning = false;
+            clearInterval(progressInterval);
+            stopScanSound();
+            playSuccessSound();
+            
+            scanner.classList.remove('active');
+            progressRing.style.setProperty('--progress', '0%');
+            
+            scannerView.style.opacity = '0';
+            scannerView.style.transform = 'scale(0.8)';
+            
+            setTimeout(() => {
+                scannerView.style.display = 'none';
+                showCard();
+            }, 500);
+        }
+
+        function showCard() {
+            cardView.style.display = 'flex';
+            void cardView.offsetWidth; // Force reflow
+            
+            cardView.style.opacity = '1';
+            cardView.style.transform = 'scale(1)';
+            
+            generateFortune();
+            
+            setTimeout(() => {
+                tarotCard.classList.add('flipped');
+                setTimeout(() => {
+                    resetBtn.classList.add('visible');
+                }, 800);
+            }, 600);
+        }
+        
+        function generateFortune() {
+            const cardFront = document.getElementById('card-front');
+            const fortuneIcon = document.getElementById('fortune-icon');
+            const fortuneType = document.getElementById('fortune-type');
+            const fortuneText = document.getElementById('fortune-text');
+            
+            let rand = Math.random();
+            if (isGodMode) rand = 0.1; // Force good
+            
+            cardFront.className = 'card-face card-front';
+            
+            if (rand < 0.35) {
+                cardFront.classList.add('good-fortune');
+                fortuneIcon.textContent = ['✨', '🍀', '🌟', '🎉', '🚀'][Math.floor(Math.random() * 5)];
+                fortuneType.textContent = "Szerencsés Jövő";
+                fortuneText.textContent = goodFortunes[Math.floor(Math.random() * goodFortunes.length)];
+            } else if (rand < 0.70) {
+                cardFront.classList.add('bad-fortune');
+                fortuneIcon.textContent = ['💀', '⛈️', '⚠️', '🤡', '🌪️'][Math.floor(Math.random() * 5)];
+                fortuneType.textContent = "Sötét Jövő";
+                fortuneText.textContent = badFortunes[Math.floor(Math.random() * badFortunes.length)];
+            } else if (rand < 0.85) {
+                cardFront.classList.add('unlucky-fortune');
+                fortuneIcon.textContent = ['🐈‍⬛', '🌧️', '📉', '🧂', '🪞'][Math.floor(Math.random() * 5)];
+                fortuneType.textContent = "Peches Jövő";
+                fortuneText.textContent = unluckyFortunes[Math.floor(Math.random() * unluckyFortunes.length)];
+            } else {
+                cardFront.classList.add('mediocre-fortune');
+                fortuneIcon.textContent = ['😐', '🤷', '☁️', '🐢', '💤'][Math.floor(Math.random() * 5)];
+                fortuneType.textContent = "Közepes Jövő";
+                fortuneText.textContent = mediocreFortunes[Math.floor(Math.random() * mediocreFortunes.length)];
+            }
+        }
+        
+        function resetApp() {
+            initAudio();
+            tarotCard.classList.remove('flipped');
+            resetBtn.classList.remove('visible');
+            
+            setTimeout(() => {
+                cardView.style.opacity = '0';
+                cardView.style.transform = 'scale(0.9)';
+                
+                setTimeout(() => {
+                    cardView.style.display = 'none';
+                    scannerView.style.display = 'flex';
+                    instructionText.textContent = "Tartsd lenyomva az elemzéshez";
+                    void scannerView.offsetWidth;
+                    scannerView.style.opacity = '1';
+                    scannerView.style.transform = 'scale(1)';
+                }, 600);
+            }, 400);
+        }
+
+        // --- EVENT LISTENERS ---
+        scanner.addEventListener('mousedown', startScan);
+        scanner.addEventListener('touchstart', startScan, { passive: false });
+        
+        window.addEventListener('mouseup', cancelScan);
+        window.addEventListener('touchend', cancelScan);
+        window.addEventListener('touchcancel', cancelScan);
+        
+        resetBtn.addEventListener('click', resetApp);
+    </script>
+</body>
+</html>
