@@ -1,0 +1,625 @@
+[7/14/2026, 7:06:26 PM] v1:
+ROLE
+
+You are an elite AAA Game Director, Senior Web Game Engineer, Three.js Graphics Programmer, Gameplay Programmer, AI Engineer, Mobile Optimization Specialist, UI/UX Designer, and Software Architect.
+
+Your task is to build the actual playable game, not a generator, not a game maker, not a tutorial.
+
+Create a complete 3D offline Battle Royale game for HTML5 browsers, inspired by modern Battle Royale gameplay, but using completely original assets, code, names, characters, sounds, and designs.
+
+DO NOT create:
+
+- a 2D game
+- a top-down game
+- an isometric game
+- a sprite-based game
+- a game engine
+- a game generator
+- a prototype
+
+The final result must be a real playable 3D third-person game.
+
+---
+
+PLATFORM
+
+Target:
+
+- Desktop browsers
+- Android browsers
+- iOS Safari
+
+Technology:
+
+- HTML5
+- CSS3
+- JavaScript ES2023 or TypeScript
+- Three.js
+- WebGL2
+- WebGPU support with fallback
+- Web Audio API
+- IndexedDB
+- Service Worker
+- PWA support
+
+No:
+
+- servers
+- backend
+- cloud
+- multiplayer
+- accounts
+- Firebase
+- external APIs
+
+The game must work offline after installation.
+
+---
+
+3D REQUIREMENT (MANDATORY)
+
+The game MUST be true 3D.
+
+Use:
+
+- perspective camera
+- 3D meshes
+- GLTF/GLB models
+- skeletal animations
+- physically based materials
+- lighting
+- shadows
+- physics
+
+Forbidden:
+
+- Canvas 2D
+- HTML-only graphics
+- CSS games
+- top-down camera
+- fake 3D
+- raycasting
+
+The player must see a fully 3D world from a third-person camera.
+
+---
+
+CAMERA SYSTEM
+
+Create a modern third-person camera:
+
+Features:
+
+- camera behind player
+- orbit camera
+- aim camera
+- ADS zoom
+- smooth interpolation
+- camera collision
+- FOV control
+- recoil shake
+- sprint camera effects
+- mobile touch camera control
+
+Never use a fixed camera.
+
+---
+
+GAME WORLD
+
+Create a large optimized Battle Royale island.
+
+Include:
+
+Terrain
+
+- mountains
+- valleys
+- forests
+- rivers
+- lakes
+- beaches
+- cliffs
+- caves
+
+Locations
+
+Create 20–40 unique POIs:
+
+Examples:
+
+- cities
+- villages
+- factories
+- military bases
+- farms
+- warehouses
+- gas stations
+- towers
+- bunkers
+- underground areas
+
+Buildings must contain:
+
+- interiors
+- rooms
+- loot locations
+- destructible objects
+
+---
+
+PLAYER SYSTEM
+
+Create a fully animated 3D player.
+
+Implement:
+
+Movement:
+
+- walking
+- running
+- sprinting
+- jumping
+- crouching
+- sliding
+- swimming
+- falling
+- mantling
+
+Combat:
+
+- aiming
+- ADS
+- shooting
+- reloading
+- weapon switching
+- healing
+- inventory
+- interaction
+
+Animation:
+
+- idle
+- walk
+- run
+- sprint
+- jump
+- reload
+- crouch
+- death
+
+---
+
+BUILDING SYSTEM
+
+Create a Fortnite-style 3D building system.
+
+Structures:
+
+- walls
+- floors
+- ramps
+- roofs
+- stairs
+
+Features:
+
+- 3D grid snapping
+- building preview
+- rotation
+- placement validation
+- material types
+- health system
+- destruction
+- damage
+- repair
+- physics debris
+
+Optimize with:
+
+- object pooling
+- instanced meshes
+- efficient collisions
+
+---
+
+WEAPON SYSTEM
+
+Create a modular weapon framework.
+
+Weapons:
+
+- Assault Rifle
+- Shotgun
+- SMG
+- Pistol
+- Sniper
+- DMR
+- Rocket Launcher
+- Grenades
+- Pickaxe
+
+Each weapon needs:
+
+- 3D model
+- animations
+- sound
+- particles
+- muzzle flash
+- bullet effects
+- recoil
+- camera shake
+
+Stats:
+
+- damage
+- fire rate
+- magazine size
+- reload speed
+- accuracy
+- bloom
+- recoil
+- ADS accuracy
+- range
+
+---
+
+WEAPON RARITY
+
+Implement:
+
+- Common
+- Uncommon
+- Rare
+- Epic
+- Legendary
+- Mythic
+
+Rarity changes:
+
+- damage
+- reload speed
+- accuracy
+- recoil
+- fire rate
+- magazine size
+- visual appearance
+- drop probability
+
+---
+
+LOOT SYSTEM
+
+Create:
+
+- loot chests
+- ground loot
+- ammo boxes
+- supply drops
+
+Generate:
+
+- weapons
+- ammo
+- healing items
+- materials
+
+Use:
+
+- weighted loot tables
+- rarity chances
+- random generation
+
+---
+
+BOT AI
+
+Create offline Battle Royale AI.
+
+Support up to 99 bots with automatic scaling depending on device performance.
+
+Bots must:
+
+- spawn
+- land
+- explore
+- loot
+- open containers
+- collect weapons
+- collect materials
+- build
+- fight
+- heal
+- retreat
+- rotate with storm
+- use cover
+- flank
+- change weapons
+- reload
+- react to sounds
+
+Each bot has:
+
+- skill level
+- accuracy
+- reaction speed
+- aggression
+- strategy
+- personality
+
+Use:
+
+- finite state machines
+- behavior trees
+- navigation
+- AI LOD
+- distance simulation
+- optimized update frequency
+- Web Workers where useful
+
+---
+
+STORM SYSTEM
+
+Implement:
+
+- shrinking circle
+- multiple phases
+- random zones
+- storm damage
+- warnings
+- minimap display
+- AI storm awareness
+
+---
+
+MOBILE CONTROLS
+
+Create professional touch controls.
+
+Controls:
+
+Left joystick:
+
+- movement
+
+Right joystick:
+
+- camera aiming
+
+Buttons:
+
+- shoot
+- ADS
+- jump
+- sprint
+- crouch
+- reload
+- interact
+- inventory
+- map
+- pickaxe
+- healing
+
+Build buttons:
+
+- wall
+- floor
+- ramp
+- roof
+- rotate
+- edit
+
+Support:
+
+- multitouch
+- landscape mode
+- tablets
+- phones
+- adjustable HUD
+- left-handed mode
+
+---
+
+DESKTOP CONTROLS
+
+Support:
+
+Keyboard:
+
+WASD movement
+
+Space jump
+
+Shift sprint
+
+Ctrl crouch
+
+E interact
+
+Number keys weapons
+
+Mouse:
+
+aim
+
+shoot
+
+ADS
+
+building
+
+---
+
+UI
+
+Create:
+
+- main menu
+- loading screen
+- settings
+- graphics settings
+- audio settings
+- HUD editor
+- inventory
+- map
+- minimap
+- health bar
+- shield bar
+- ammo display
+- material display
+- storm timer
+- kill counter
+- victory screen
+- death screen
+
+---
+
+AUDIO
+
+Implement:
+
+- weapons
+- footsteps
+- building sounds
+- destruction
+- explosions
+- environment
+- music
+- UI sounds
+- 3D positional audio
+
+---
+
+SAVE SYSTEM
+
+Use IndexedDB.
+
+Save:
+
+- settings
+- graphics
+- controls
+- statistics
+- wins
+- kills
+- unlocks
+- match history
+
+No cloud saving.
+
+---
+
+PERFORMANCE
+
+Optimize for mobile browsers.
+
+Implement:
+
+- LOD
+- frustum culling
+- occlusion culling
+- instancing
+- texture compression
+- lazy loading
+- object pooling
+- memory management
+- garbage collection reduction
+- async loading
+
+Target:
+
+60 FPS on modern phones.
+
+---
+
+PROJECT STRUCTURE
+
+Create:
+
+/game
+
+index.html
+manifest.json
+service-worker.js
+
+/src
+
+engine/
+renderer/
+camera/
+player/
+weapons/
+building/
+ai/
+world/
+loot/
+storm/
+physics/
+ui/
+audio/
+save/
+optimization/
+
+/assets
+
+models/
+textures/
+sounds/
+animations/
+maps/
+shaders/
+
+---
+
+CODE REQUIREMENTS
+
+Generate real working code.
+
+No:
+
+- placeholders
+- fake functions
+- "implement later"
+- incomplete systems
+
+Every module must connect.
+
+Use:
+
+- clean architecture
+- reusable components
+- optimized code
+- comments for complex logic
+
+---
+
+RESPONSE FORMAT
+
+Build the game module by module.
+
+For every module provide:
+
+1. Explanation
+
+2. Folder location
+
+3. Complete code
+
+4. Required assets
+
+5. Integration steps
+
+6. Optimization notes
+
+7. Testing instructions
+
+8. Debugging instructions
+
+Continue until the complete offline 3D HTML5 Battle Royale game is finished.
+
+If the response limit is reached, continue from exactly where you stopped.
+
+Never change the project into a generator.
+
+Always build the actual playable 3D Battle Royale game.
