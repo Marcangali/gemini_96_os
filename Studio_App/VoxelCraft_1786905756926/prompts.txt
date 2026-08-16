@@ -1,0 +1,1528 @@
+[8/16/2026, 8:42:40 PM] v1:
+# Build a Full Minecraft 1.13-Level Voxel Sandbox Game
+
+You are an expert game-development AI agent. Your task is to build a **fully playable Minecraft-inspired voxel survival game from scratch**.
+
+The goal is NOT to create a simple Minecraft-looking demo.
+
+The goal is to create a **deep, functional voxel sandbox game comparable in gameplay complexity to Minecraft Java Edition around version 1.13**, with working world generation, blocks, items, inventory management, crafting, tools, combat, entities, lighting, physics, saving/loading, and survival mechanics.
+
+Everything should be implemented as real functional systems rather than visual placeholders.
+
+---
+
+# 1. CORE GAME
+
+Create a first-person 3D voxel sandbox game with:
+
+* Procedurally generated infinite/semi-infinite terrain
+* First-person camera
+* WASD movement
+* Mouse look
+* Jumping
+* Sprinting
+* Sneaking/crouching
+* Gravity
+* Collision detection
+* Block interaction
+* Block breaking
+* Block placement
+* Item pickup
+* Inventory
+* Crafting
+* Tools
+* Weapons
+* Armor
+* Health
+* Hunger
+* Damage
+* Death
+* Respawning
+* Day/night cycle
+* Hostile mobs
+* Passive mobs
+* Water
+* Lava
+* Lighting
+* Chunk loading/unloading
+* World saving/loading
+
+The game should feel like an actual voxel survival game, not a tech demo.
+
+---
+
+# 2. FIRST-PERSON CONTROLS
+
+Implement:
+
+## Movement
+
+* W = forward
+* S = backward
+* A = left
+* D = right
+* Space = jump
+* Shift = sneak
+* Double-tap W or Ctrl = sprint
+* Mouse = camera rotation
+* Left click = break/attack
+* Right click = place/use
+* E = inventory
+* Q = drop selected item
+* Number keys 1-9 = hotbar selection
+* Esc = pause menu
+
+Movement must interact correctly with terrain.
+
+The player cannot walk through solid blocks.
+
+The player should be able to:
+
+* Walk up normal slopes
+* Jump over small obstacles
+* Swim
+* Fall
+* Take fall damage
+* Sneak near block edges
+* Sprint
+* Stop sprinting when appropriate
+
+---
+
+# 3. VOXEL WORLD
+
+The world must be made from cubic blocks.
+
+Each block should have properties such as:
+
+```text
+Block ID
+Name
+Texture
+Hardness
+Resistance
+Tool requirement
+Tool type
+Transparent/opaque
+Solid/non-solid
+Light emission
+Flammable
+Gravity affected
+Liquid
+Drops
+Stack size
+```
+
+Create a proper block registry instead of hardcoding individual blocks everywhere.
+
+---
+
+# 4. BLOCKS
+
+Implement a substantial Minecraft 1.13-era block set.
+
+At minimum include:
+
+## Natural blocks
+
+* Grass Block
+* Dirt
+* Coarse Dirt
+* Podzol
+* Stone
+* Granite
+* Diorite
+* Andesite
+* Sand
+* Red Sand
+* Gravel
+* Clay
+* Snow
+* Snow Block
+* Ice
+* Packed Ice
+* Bedrock
+
+## Ores
+
+* Coal Ore
+* Iron Ore
+* Gold Ore
+* Redstone Ore
+* Lapis Ore
+* Diamond Ore
+* Emerald Ore
+
+## Wood
+
+Implement multiple wood types:
+
+* Oak
+* Spruce
+* Birch
+* Jungle
+* Acacia
+* Dark Oak
+
+Each should have:
+
+* Log
+* Stripped/appropriate wood variants where applicable
+* Planks
+* Leaves
+* Sapling
+
+## Building blocks
+
+* Cobblestone
+* Mossy Cobblestone
+* Stone Bricks
+* Mossy Stone Bricks
+* Cracked Stone Bricks
+* Chiseled Stone Bricks
+* Bricks
+* Glass
+* Glass Panes
+* Terracotta
+* Wool
+* Concrete-style decorative blocks if supported
+
+## Functional blocks
+
+* Crafting Table
+* Furnace
+* Chest
+* Anvil
+* Enchanting Table
+* Bed
+* Torch
+* Ladder
+* Door
+* Trapdoor
+* Fence
+* Fence Gate
+* Pressure Plate
+* Button
+* Sign
+
+## Fluids
+
+* Water
+* Lava
+
+Fluids should have actual behavior rather than being decorative textures.
+
+---
+
+# 5. WORLD GENERATION
+
+Create procedural terrain generation.
+
+Generate:
+
+* Oceans
+* Beaches
+* Plains
+* Forests
+* Mountains
+* Hills
+* Deserts
+* Taiga
+* Swamps
+* Rivers
+* Caves
+
+Terrain should not look completely random.
+
+Use layered procedural noise to create:
+
+* Continental shape
+* Elevation
+* Temperature
+* Humidity
+* Biomes
+* Terrain variation
+
+Generate underground caves using 3D noise or another procedural cave algorithm.
+
+Generate ores according to depth/distribution rules.
+
+Generate trees according to biome.
+
+Generate structures where appropriate.
+
+---
+
+# 6. CHUNK SYSTEM
+
+Implement a proper chunk architecture.
+
+Example:
+
+```text
+World
+ └── Chunk Manager
+      ├── Loaded Chunks
+      ├── Generation Queue
+      ├── Meshing Queue
+      ├── Unloading Queue
+      └── Save Queue
+```
+
+Chunks should be loaded around the player.
+
+When the player moves:
+
+* Load nearby chunks
+* Generate missing chunks
+* Build meshes
+* Unload distant chunks
+* Save modified chunks
+
+Do NOT regenerate chunks every frame.
+
+Use asynchronous/background processing where possible.
+
+---
+
+# 7. RENDERING
+
+Use optimized voxel rendering.
+
+Do not create a separate heavy 3D object for every cube if the chosen engine/framework allows better approaches.
+
+Implement:
+
+* Chunk meshes
+* Face culling
+* Hidden-face removal
+* Texture atlas
+* Ambient occlusion
+* Basic shadows
+* Fog
+* Distance rendering
+* Transparent blocks
+* Water rendering
+* Lava rendering
+
+Only render visible faces.
+
+---
+
+# 8. TEXTURE SYSTEM
+
+Create a texture atlas system.
+
+Every block should reference a texture.
+
+Support:
+
+* Top texture
+* Bottom texture
+* Side texture
+* Transparent textures
+* Animated textures where appropriate
+
+The architecture must make it easy to add new blocks without rewriting rendering code.
+
+---
+
+# 9. HOTBAR
+
+Create a functional Minecraft-style hotbar.
+
+It contains 9 slots.
+
+Each slot displays:
+
+* Item icon
+* Quantity
+* Selection outline
+
+Number keys select slots.
+
+Mouse wheel also changes selected slot.
+
+The selected item should appear in the player's hand.
+
+---
+
+# 10. INVENTORY SYSTEM
+
+This is extremely important.
+
+Implement a complete inventory system.
+
+The player inventory should contain:
+
+* 9 hotbar slots
+* Main inventory slots
+* Armor slots
+* Off-hand slot if supported
+
+Every inventory slot needs:
+
+```text
+Item ID
+Quantity
+Metadata
+Durability
+```
+
+Implement:
+
+* Pick up
+* Place
+* Split stacks
+* Merge stacks
+* Shift-click
+* Drag items
+* Drop items
+* Swap items
+* Stack items
+* Auto-stack where appropriate
+
+Maximum stack sizes should be respected.
+
+For example:
+
+```text
+Stone = 64
+Dirt = 64
+Torches = 64
+Tools = 1
+Armor = 1
+```
+
+Do not allow invalid item quantities.
+
+---
+
+# 11. INVENTORY UI
+
+Create a polished inventory interface.
+
+The UI should contain:
+
+* Player character preview
+* Armor slots
+* Main inventory
+* Hotbar
+* Offhand
+* Item tooltip
+* Item count
+* Durability bar
+
+Hovering an item should show:
+
+```text
+Item Name
+Description
+Durability
+Properties
+```
+
+Dragging items must feel responsive.
+
+---
+
+# 12. ITEM SYSTEM
+
+Create a centralized item registry.
+
+Items should contain:
+
+```text
+ID
+Name
+Icon
+Stack size
+Max durability
+Tool type
+Mining speed
+Attack damage
+Food value
+Armor value
+Use action
+Placeable block
+```
+
+Separate blocks and items logically while allowing blocks to have corresponding inventory items.
+
+---
+
+# 13. TOOLS
+
+Implement:
+
+* Wooden Pickaxe
+* Stone Pickaxe
+* Iron Pickaxe
+* Golden Pickaxe
+* Diamond Pickaxe
+
+Also:
+
+* Axes
+* Shovels
+* Hoes
+
+Tools must have:
+
+* Durability
+* Mining speed
+* Tool tier
+* Appropriate block effectiveness
+
+Example:
+
+A diamond pickaxe should mine stone faster than a wooden pickaxe.
+
+A pickaxe should be required for certain ores.
+
+Incorrect tools should either:
+
+* Mine extremely slowly
+* Or fail to drop the block
+
+depending on the block.
+
+---
+
+# 14. WEAPONS
+
+Implement:
+
+* Wooden Sword
+* Stone Sword
+* Iron Sword
+* Golden Sword
+* Diamond Sword
+* Bow
+* Arrows
+
+Implement:
+
+* Attack cooldown
+* Attack damage
+* Knockback
+* Critical hits
+* Projectile physics
+
+---
+
+# 15. BLOCK BREAKING
+
+Breaking blocks should feel physical.
+
+When looking at a block:
+
+* Highlight the targeted block
+* Show a breaking animation/crack overlay
+* Breaking time depends on block hardness
+* Tool modifies breaking speed
+* Wrong tool can be slower
+* Block produces appropriate drops
+
+Example:
+
+```text
+Dirt → Dirt
+Stone → Cobblestone
+Coal Ore → Coal
+Diamond Ore → Diamond
+Iron Ore → Iron Ore
+```
+
+Breaking should NOT instantly destroy every block.
+
+---
+
+# 16. BLOCK PLACEMENT
+
+Right-click should place the selected block.
+
+The system must determine:
+
+* Which face is targeted
+* Where the new block can be placed
+* Whether the location is occupied
+* Whether the player is inside the block
+* Correct orientation
+
+Support directional blocks such as:
+
+* Doors
+* Stairs
+* Furnaces
+* Chests
+* Signs
+* Beds
+
+---
+
+# 17. CRAFTING
+
+Implement a complete crafting system.
+
+Player crafting:
+
+```text
+2x2 crafting grid
+```
+
+Crafting table:
+
+```text
+3x3 crafting grid
+```
+
+Implement a recipe registry.
+
+Example recipe:
+
+```text
+Planks + Planks
+→ Sticks
+```
+
+Pickaxe recipe:
+
+```text
+XXX
+ S
+ S
+```
+
+where:
+
+```text
+X = material
+S = stick
+```
+
+Recipes should be data-driven.
+
+Do NOT hardcode every recipe into UI logic.
+
+---
+
+# 18. CRAFTING UI
+
+When the player opens crafting:
+
+Display:
+
+* Crafting grid
+* Output slot
+* Inventory
+* Recipe result
+* Required ingredients
+
+If the ingredients are missing, the output should be disabled.
+
+When the player crafts an item:
+
+* Consume ingredients
+* Produce output
+* Respect stack limits
+* Play crafting feedback
+
+---
+
+# 19. FURNACE
+
+Implement a functional furnace.
+
+UI:
+
+```text
+Input
+Fuel
+Output
+Progress
+Fuel progress
+```
+
+Examples:
+
+```text
+Iron Ore + Coal → Iron Ingot
+Gold Ore + Coal → Gold Ingot
+Sand → Glass
+Raw food → Cooked food
+```
+
+Fuel should actually be consumed.
+
+Smelting should take time.
+
+---
+
+# 20. CHESTS
+
+Implement storage containers.
+
+A chest should have its own inventory.
+
+Opening a chest displays:
+
+```text
+Chest Inventory
++
+Player Inventory
+```
+
+Items can be moved between them.
+
+Chest contents must persist when the world is saved.
+
+---
+
+# 21. FOOD AND HUNGER
+
+Implement hunger.
+
+Player has:
+
+* Health
+* Hunger
+* Saturation if practical
+
+Food items should restore hunger.
+
+Examples:
+
+* Apple
+* Bread
+* Cooked Porkchop
+* Cooked Beef
+* Cooked Chicken
+* Carrot
+* Potato
+* Baked Potato
+
+Hunger should affect survival.
+
+---
+
+# 22. HEALTH AND DAMAGE
+
+Implement health.
+
+Damage sources:
+
+* Mobs
+* Falling
+* Lava
+* Fire
+* Drowning
+* Hostile environment
+
+Display hearts in the HUD.
+
+When health reaches zero:
+
+* Player dies
+* Death screen appears
+* Player can respawn
+* Dropped items remain in the world if enabled
+
+---
+
+# 23. MOBS
+
+Implement basic AI.
+
+## Passive mobs
+
+At minimum:
+
+* Cow
+* Pig
+* Sheep
+* Chicken
+
+They should:
+
+* Wander
+* Avoid certain dangers
+* Have health
+* Take damage
+* Drop items
+* Have simple sounds if audio exists
+
+## Hostile mobs
+
+At minimum:
+
+* Zombie
+* Skeleton
+* Spider
+* Creeper
+
+Hostile mobs should:
+
+* Detect player
+* Navigate toward player
+* Attack
+* Take damage
+* Die
+* Drop loot
+
+---
+
+# 24. MOB AI
+
+Implement a basic behavior system.
+
+Example:
+
+```text
+Idle
+ ↓
+Wander
+ ↓
+Detect Player
+ ↓
+Chase
+ ↓
+Attack
+ ↓
+Lose Target
+ ↓
+Wander
+```
+
+Use pathfinding or practical voxel navigation.
+
+Mobs should understand:
+
+* Solid blocks
+* Heights
+* Obstacles
+* Water
+* Lava
+* Player position
+
+---
+
+# 25. COMBAT
+
+Combat must have actual gameplay mechanics.
+
+Implement:
+
+* Attack range
+* Attack cooldown
+* Damage
+* Knockback
+* Critical hits
+* Enemy invulnerability frames
+* Projectile attacks
+* Enemy death
+* Loot drops
+
+---
+
+# 26. ARMOR
+
+Implement:
+
+* Leather armor
+* Iron armor
+* Golden armor
+* Diamond armor
+
+Armor slots:
+
+```text
+Helmet
+Chestplate
+Leggings
+Boots
+```
+
+Armor should reduce incoming damage.
+
+Display armor icons on the HUD.
+
+---
+
+# 27. DAY/NIGHT CYCLE
+
+Implement a continuous day/night cycle.
+
+The environment should gradually transition:
+
+```text
+Morning
+Day
+Sunset
+Night
+Sunrise
+```
+
+Change:
+
+* Sky color
+* Sun position
+* Moon position
+* Ambient light
+* Fog
+* Mob spawning
+
+Hostile mobs should primarily spawn during darkness.
+
+---
+
+# 28. LIGHTING
+
+Implement block lighting.
+
+Support:
+
+* Sunlight
+* Torch light
+* Lava light
+* Other emissive blocks
+
+Light should propagate through the world.
+
+Torches should illuminate nearby blocks.
+
+---
+
+# 29. WATER AND LAVA
+
+Implement actual fluids.
+
+Water:
+
+* Flows
+* Spreads
+* Fills spaces
+* Can be swum through
+
+Lava:
+
+* Flows slower
+* Damages player
+* Ignites surroundings where appropriate
+* Emits light
+
+Implement a practical simulation rather than a fully physically accurate fluid simulation.
+
+---
+
+# 30. PLAYER PHYSICS
+
+Implement:
+
+* Gravity
+* Collision
+* Jumping
+* Falling
+* Fall damage
+* Swimming
+* Water movement
+* Lava movement
+* Sneaking
+* Sprinting
+
+The player must never clip through normal terrain.
+
+---
+
+# 31. INTERACTION RAYCAST
+
+Create a robust block-selection raycast.
+
+The system must detect:
+
+```text
+Target block
+Target face
+Distance
+Hit position
+```
+
+Use this system for:
+
+* Breaking
+* Placing
+* Opening chests
+* Opening furnaces
+* Opening crafting tables
+* Attacking mobs
+
+---
+
+# 32. UI / HUD
+
+Create a polished Minecraft-inspired HUD.
+
+Display:
+
+* Crosshair
+* Hotbar
+* Selected item
+* Health
+* Hunger
+* Armor
+* XP if implemented
+* Debug information optionally
+
+Do NOT clutter the screen.
+
+---
+
+# 33. PAUSE MENU
+
+Press ESC to open:
+
+```text
+Game Menu
+
+Resume
+Settings
+Save & Quit
+```
+
+Settings should include:
+
+* Mouse sensitivity
+* Render distance
+* FOV
+* Graphics quality
+* Sound volume
+* Music volume
+* Fullscreen
+* View bobbing
+* Chunk distance
+
+---
+
+# 34. WORLD MENU
+
+Create:
+
+```text
+Singleplayer
+
+Create New World
+Load World
+Delete World
+```
+
+World creation should allow:
+
+* World name
+* Seed
+* Difficulty
+* Game mode
+
+At minimum:
+
+```text
+Survival
+Creative
+```
+
+---
+
+# 35. CREATIVE MODE
+
+Creative mode should include:
+
+* Infinite blocks
+* No hunger
+* No normal damage
+* Flying
+* Creative inventory
+* Instant block breaking
+* Unlimited item placement
+
+Creative inventory should contain all available blocks/items.
+
+---
+
+# 36. SAVE SYSTEM
+
+The world must persist.
+
+Save:
+
+* Player position
+* Player rotation
+* Inventory
+* Health
+* Hunger
+* Selected hotbar slot
+* World seed
+* Time
+* Chunks
+* Block modifications
+* Containers
+* Mobs where appropriate
+
+Do NOT save the entire world into one massive file if a chunk-based architecture is more appropriate.
+
+Use:
+
+```text
+World/
+ ├── world metadata
+ ├── player data
+ └── chunks/
+      ├── chunk files
+      ├── ...
+```
+
+---
+
+# 37. PERFORMANCE
+
+Performance is a major requirement.
+
+Avoid:
+
+* One object per block
+* Rebuilding every chunk every frame
+* Recalculating world generation unnecessarily
+* Rendering invisible faces
+* Excessive garbage creation
+
+Implement:
+
+* Chunk meshing
+* Frustum culling
+* Face culling
+* Chunk streaming
+* Object reuse where appropriate
+* Background generation
+* Efficient collision detection
+
+Target:
+
+**60 FPS on reasonable desktop hardware.**
+
+---
+
+# 38. AUDIO
+
+If the engine supports audio, implement:
+
+* Block breaking sounds
+* Block placement sounds
+* Footsteps
+* Item pickup
+* Damage sounds
+* Mob sounds
+* Ambient environment
+* UI clicks
+* Music
+
+Audio should change depending on environment where practical.
+
+---
+
+# 39. PARTICLES
+
+Implement particles for:
+
+* Block breaking
+* Block placement
+* Damage
+* Critical hits
+* Smoke
+* Fire
+* Water
+* Lava
+* Falling blocks where applicable
+
+---
+
+# 40. GAME ARCHITECTURE
+
+Use clean modular architecture.
+
+Recommended systems:
+
+```text
+Game
+ ├── Renderer
+ ├── World
+ │    ├── ChunkManager
+ │    ├── WorldGenerator
+ │    ├── BlockRegistry
+ │    └── Lighting
+ │
+ ├── Player
+ │    ├── Controller
+ │    ├── Inventory
+ │    ├── Equipment
+ │    └── Physics
+ │
+ ├── Items
+ │    ├── ItemRegistry
+ │    └── ItemStack
+ │
+ ├── Crafting
+ │    ├── RecipeRegistry
+ │    └── CraftingManager
+ │
+ ├── Entities
+ │    ├── Mob
+ │    ├── PassiveMob
+ │    └── HostileMob
+ │
+ ├── Combat
+ ├── Physics
+ ├── Audio
+ ├── UI
+ ├── SaveSystem
+ └── Settings
+```
+
+Keep systems separated.
+
+Do not create one enormous source file.
+
+---
+
+# 41. DATA-DRIVEN DESIGN
+
+Whenever possible, make content data-driven.
+
+Blocks, items, recipes, mobs and loot tables should be defined through data structures/files rather than requiring changes throughout the engine.
+
+For example:
+
+```json
+{
+  "id": "diamond_pickaxe",
+  "type": "tool",
+  "tier": "diamond",
+  "durability": 1561,
+  "damage": 5
+}
+```
+
+Recipes should similarly be data-driven.
+
+This makes future expansion easy.
+
+---
+
+# 42. MINECRAFT 1.13-ERA TARGET
+
+The game should aim for the overall gameplay depth and feature set of approximately **Minecraft Java Edition 1.13**, not modern Minecraft.
+
+Do NOT spend development time implementing modern Minecraft systems that are irrelevant to this target.
+
+Prioritize:
+
+1. Core voxel world
+2. World generation
+3. Blocks
+4. Inventory
+5. Item stacks
+6. Crafting
+7. Tools
+8. Combat
+9. Mobs
+10. Survival
+11. Lighting
+12. Fluids
+13. Saving/loading
+14. Performance
+15. UI polish
+
+---
+
+# 43. IMPORTANT: NO FAKE FEATURES
+
+Do not create buttons that pretend to work.
+
+Do not implement:
+
+```text
+"Coming soon"
+"TODO"
+"Placeholder"
+```
+
+for core systems.
+
+If a feature is shown in the UI, it should actually function.
+
+For example:
+
+If there is an inventory:
+
+→ items must actually move.
+
+If there is crafting:
+
+→ recipes must actually craft.
+
+If there is a furnace:
+
+→ items must actually smelt.
+
+If there is a chest:
+
+→ contents must actually save.
+
+If there are mobs:
+
+→ mobs must actually move and attack.
+
+If there is world saving:
+
+→ quitting and reopening must restore the world.
+
+---
+
+# 44. DEVELOPMENT STRATEGY
+
+Build the game incrementally.
+
+Do NOT attempt to generate thousands of lines of disconnected code at once.
+
+Implement in stages:
+
+### Stage 1 — Engine Foundation
+
+* Window
+* Renderer
+* Camera
+* Input
+* Game loop
+
+### Stage 2 — Voxel World
+
+* Blocks
+* Chunk system
+* Mesh generation
+* Terrain
+* Collision
+* Block breaking/placing
+
+### Stage 3 — Player
+
+* Movement
+* Physics
+* Health
+* Hunger
+* Hotbar
+
+### Stage 4 — Items
+
+* Item registry
+* Item stacks
+* Inventory
+* Dropped items
+* Pickup
+
+### Stage 5 — Crafting
+
+* Recipes
+* 2x2 crafting
+* Crafting table
+* Crafting UI
+
+### Stage 6 — Survival
+
+* Tools
+* Weapons
+* Armor
+* Food
+* Damage
+* Death
+
+### Stage 7 — World Systems
+
+* Biomes
+* Caves
+* Ores
+* Trees
+* Water
+* Lava
+* Lighting
+* Day/night
+
+### Stage 8 — Entities
+
+* Mob system
+* Passive mobs
+* Hostile mobs
+* AI
+* Combat
+* Loot
+
+### Stage 9 — Containers
+
+* Chests
+* Furnace
+* Other functional blocks
+
+### Stage 10 — Persistence
+
+* World save
+* Chunk save
+* Player save
+* Container save
+
+### Stage 11 — Polish
+
+* Particles
+* Audio
+* Animations
+* UI
+* Performance
+* Bug fixing
+
+---
+
+# 45. TESTING REQUIREMENTS
+
+After implementing each major system, test it before moving forward.
+
+Create tests/checks for:
+
+### Inventory
+
+* Add item
+* Remove item
+* Stack items
+* Split stack
+* Move items
+* Drop items
+* Save/load inventory
+
+### Crafting
+
+* Valid recipe
+* Invalid recipe
+* Ingredient consumption
+* Output creation
+* Stack limits
+
+### World
+
+* Generate chunk
+* Save chunk
+* Load chunk
+* Modify block
+* Reload modified block
+
+### Physics
+
+* Walk
+* Jump
+* Collision
+* Fall
+* Fall damage
+* Water
+* Lava
+
+### Mobs
+
+* Spawn
+* Move
+* Detect player
+* Attack
+* Take damage
+* Die
+* Drop loot
+
+---
+
+# 46. VISUAL QUALITY
+
+The final game should look cohesive and polished.
+
+Use a consistent pixel-art voxel aesthetic.
+
+The visual language should communicate:
+
+* Block type
+* Item type
+* Tool durability
+* UI state
+* Selected inventory slot
+* Damage
+* Interactions
+
+Animations should be smooth.
+
+Avoid prototype-quality UI.
+
+---
+
+# 47. FINAL ACCEPTANCE TEST
+
+Before considering the project complete, I should be able to:
+
+1. Start the game.
+2. Create a world.
+3. Spawn into a procedurally generated world.
+4. Walk around.
+5. Break trees.
+6. Collect wood.
+7. Open inventory.
+8. Move items between slots.
+9. Craft planks.
+10. Craft sticks.
+11. Craft a crafting table.
+12. Place the crafting table.
+13. Open it.
+14. Craft a pickaxe.
+15. Mine stone.
+16. Craft stone tools.
+17. Explore caves.
+18. Find ores.
+19. Mine ores.
+20. Smelt ores in a furnace.
+21. Store items in a chest.
+22. Fight mobs.
+23. Eat food.
+24. Take damage.
+25. Survive nighttime.
+26. Explore different biomes.
+27. Save the game.
+28. Quit.
+29. Reopen the game.
+30. Load the same world.
+31. Verify that inventory, terrain modifications, containers and player state persist.
+
+If any of these fundamental interactions are fake or broken, the project is not finished.
+
+---
+
+# 48. MOST IMPORTANT DEVELOPMENT RULE
+
+Prioritize **functionality over quantity**.
+
+It is better to have:
+
+* 30 fully functional blocks
+* 10 functional mobs/items
+* complete inventory
+* complete crafting
+* complete survival
+* working world saving
+
+than:
+
+* 500 decorative blocks
+* fake menus
+* incomplete inventory
+* broken crafting
+* no persistence.
+
+Build a solid playable game first, then expand the content.
+
+The final result should feel like a **real playable voxel survival game inspired by Minecraft 1.13**, with interconnected systems rather than a collection of isolated demonstrations.
