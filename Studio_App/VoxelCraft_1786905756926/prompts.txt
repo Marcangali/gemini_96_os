@@ -1526,3 +1526,7 @@ than:
 Build a solid playable game first, then expand the content.
 
 The final result should feel like a **real playable voxel survival game inspired by Minecraft 1.13**, with interconnected systems rather than a collection of isolated demonstrations.
+
+---
+[8/16/2026, 8:45:37 PM] v2:
+it is not working
