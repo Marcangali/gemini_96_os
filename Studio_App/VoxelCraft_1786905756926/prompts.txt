@@ -1530,3 +1530,7 @@ The final result should feel like a **real playable voxel survival game inspired
 ---
 [8/16/2026, 8:45:37 PM] v2:
 it is not working
+
+---
+[8/16/2026, 8:52:11 PM] v5:
+it is not playable because if you click on play ,the menu is still remains here
