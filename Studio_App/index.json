@@ -5,5 +5,13 @@
     "folderPath": "Studio_App/VoxelCraft_1786905756926",
     "lastModified": 1786906333906,
     "icon": "https://raw.githubusercontent.com/Marcangali/gemini_96_os/main/Studio_App/VoxelCraft_1786905756926/icon.png?s=48cc7c8dca7900e003a15ff4b5a0545d9537e512"
+  },
+  {
+    "id": "MiniOS_1787036989897",
+    "name": "MiniOS",
+    "folderPath": "Studio_App/MiniOS_1787036989897",
+    "lastModified": 1787036994011,
+    "icon": "",
+    "initialPrompt": "generate a multi file project of a simple webos"
   }
 ]
