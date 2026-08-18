@@ -12,3 +12,7 @@ runtime error error resolving module ./app
 ---
 [8/18/2026, 9:23:16 AM] v4:
 make windows that they can be smallerable and movable
+
+---
+[8/18/2026, 9:36:16 AM] v5:
+make the root terminal more useful and working
