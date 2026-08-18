@@ -1,0 +1,579 @@
+<!--
+APP_NAME: MiniOS
+APP_DESCRIPTION: A compact, modern web-based operating system simulation.
+APP_CATEGORY: Utilities
+WINDOW_WIDTH: 380
+WINDOW_HEIGHT: 600
+VERSION_SUMMARY: Initial release with modular apps.
+PROJECT_MODE: multi
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script id="__studio_vfs_shim__">
+(function() {
+    var vfs = {"package.json":"{\n  \"name\": \"minios\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Compact WebOS simulation\",\n  \"main\": \"index.tsx\",\n  \"dependencies\": {\n    \"react\": \"^18.2.0\",\n    \"react-dom\": \"^18.2.0\",\n    \"lucide-react\": \"^0.263.1\"\n  },\n  \"devDependencies\": {\n    \"@types/react\": \"^18.2.0\",\n    \"@types/react-dom\": \"^18.2.0\",\n    \"typescript\": \"^5.0.2\"\n  }\n}"};
+    var origFetch = window.fetch;
+    if (origFetch) {
+        window.fetch = function(input, init) {
+            var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+            var clean = url.replace(/^[./]+/, '').split('?')[0].split('#')[0];
+            if (vfs.hasOwnProperty(clean) || vfs.hasOwnProperty(url)) {
+                var content = vfs[clean] !== undefined ? vfs[clean] : vfs[url];
+                return Promise.resolve(new Response(content, {
+                    status: 200,
+                    statusText: 'OK',
+                    headers: { 'Content-Type': clean.endsWith('.json') ? 'application/json' : 'text/plain' }
+                }));
+            }
+            return origFetch.apply(this, arguments);
+        };
+    }
+})();
+</script>
+
+<script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+    "lucide-react": "https://esm.sh/lucide-react@0.263.1",
+    "canvas-confetti": "https://esm.sh/canvas-confetti",
+    "framer-motion": "https://esm.sh/framer-motion?external=react,react-dom",
+    "recharts": "https://esm.sh/recharts?external=react,react-dom",
+    "three": "https://esm.sh/three",
+    "chart.js": "https://esm.sh/chart.js/auto",
+    "chart.js/auto": "https://esm.sh/chart.js/auto",
+    "lodash": "https://esm.sh/lodash-es",
+    "lodash-es": "https://esm.sh/lodash-es",
+    "howler": "https://esm.sh/howler",
+    "tone": "https://esm.sh/tone",
+    "axios": "https://esm.sh/axios",
+    "clsx": "https://esm.sh/clsx",
+    "tailwind-merge": "https://esm.sh/tailwind-merge",
+    "@types/react": "https://esm.sh/@types/react@18.2.0",
+    "@types/react-dom": "https://esm.sh/@types/react-dom@18.2.0",
+    "typescript": "https://esm.sh/typescript@5.0.2"
+  }
+}
+</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MiniOS</title>
+    <style data-filename="style.css">
+/* style.css */
+:root {
+    --os-bg: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop'); /* Abstract pleasant background */
+    --sys-bg-blur: rgba(255, 255, 255, 0.7);
+    --sys-bg-solid: #ffffff;
+    --sys-text: #1a1a1a;
+    --sys-text-muted: #666666;
+    --sys-accent: #0067c0;
+    --sys-accent-hover: #005a9e;
+    --sys-border: rgba(0, 0, 0, 0.1);
+    --sys-shadow: 0 4px 24px rgba(0,0,0,0.1);
+    --sys-radius: 12px;
+    --taskbar-height: 48px;
+    
+    --app-bg: #f9f9f9;
+}
+
+/* Dark mode pseudo-support (can be toggled via class later) */
+.dark-theme {
+    --sys-bg-blur: rgba(30, 30, 30, 0.75);
+    --sys-bg-solid: #202020;
+    --sys-text: #ffffff;
+    --sys-text-muted: #aaaaaa;
+    --sys-border: rgba(255, 255, 255, 0.1);
+    --sys-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --app-bg: #2d2d2d;
+    --sys-accent: #4cc2ff;
+    --sys-accent-hover: #38a4d9;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    user-select: none; /* Prevent text selection mostly */
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* OS Container */
+.os-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background-image: var(--os-bg);
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Desktop */
+.desktop {
+    flex: 1;
+    position: relative;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    grid-auto-rows: 90px;
+    gap: 8px;
+    align-content: start;
+    z-index: 10;
+}
+
+.desktop-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+.desktop-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.desktop-icon:active {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.icon-wrapper {
+    width: 48px;
+    height: 48px;
+    background: var(--sys-bg-solid);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sys-text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.desktop-icon span {
+    font-size: 12px;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Taskbar */
+.taskbar {
+    height: var(--taskbar-height);
+    background: var(--sys-bg-blur);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--sys-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    z-index: 100;
+}
+
+.taskbar-center {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    justify-content: center;
+}
+
+.taskbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--sys-text);
+    font-size: 12px;
+}
+
+.start-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--sys-accent);
+}
+
+.start-button:hover, .taskbar-icon:hover {
+    background: rgba(128, 128, 128, 0.15);
+}
+
+.taskbar-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--sys-text);
+    position: relative;
+}
+
+.taskbar-icon.active::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 3px;
+    background: var(--sys-accent);
+    border-radius: 2px;
+}
+
+.sys-tray {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.sys-tray:hover {
+    background: rgba(128, 128, 128, 0.15);
+}
+
+/* Start Menu */
+.start-menu {
+    position: absolute;
+    bottom: calc(var(--taskbar-height) + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 340px;
+    height: 400px;
+    background: var(--sys-bg-blur);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid var(--sys-border);
+    border-radius: var(--sys-radius);
+    box-shadow: var(--sys-shadow);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    transform: translate(-50%, 10px);
+}
+
+.start-menu.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+}
+
+.start-search {
+    width: 100%;
+    padding: 10px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--sys-border);
+    background: rgba(255, 255, 255, 0.5);
+    color: var(--sys-text);
+    outline: none;
+    margin-bottom: 16px;
+}
+.dark-theme .start-search { background: rgba(0,0,0,0.2); }
+
+.start-apps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    overflow-y: auto;
+}
+
+.start-app-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--sys-text);
+}
+.start-app-item:hover { background: rgba(128, 128, 128, 0.1); }
+.start-app-item .icon { font-size: 24px; margin-bottom: 4px; }
+.start-app-item span { font-size: 11px; text-align: center; }
+
+/* Window Manager */
+.window-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: var(--taskbar-height);
+    background: var(--app-bg);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    animation: windowOpen 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes windowOpen {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.window-header {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    background: var(--sys-bg-solid);
+    border-bottom: 1px solid var(--sys-border);
+    color: var(--sys-text);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.window-title { display: flex; align-items: center; gap: 8px; }
+
+.window-controls { display: flex; gap: 4px; }
+.window-btn {
+    width: 32px; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--sys-text);
+}
+.window-btn:hover { background: rgba(128,128,128,0.2); }
+.window-btn.close:hover { background: #e81123; color: white; }
+
+.window-content {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* App: Calculator */
+.calc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    height: 100%;
+    padding: 2px;
+    background: var(--sys-border);
+}
+.calc-display {
+    grid-column: 1 / -1;
+    background: var(--app-bg);
+    color: var(--sys-text);
+    font-size: 32px;
+    text-align: right;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    word-break: break-all;
+}
+.calc-btn {
+    background: var(--sys-bg-solid);
+    border: none;
+    color: var(--sys-text);
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.calc-btn:active { background: var(--sys-border); }
+.calc-btn.accent { background: var(--sys-accent); color: white; }
+.calc-btn.accent:active { background: var(--sys-accent-hover); }
+
+/* App: Notes */
+.notes-textarea {
+    width: 100%;
+    height: 100%;
+    border: none;
+    resize: none;
+    padding: 16px;
+    font-size: 16px;
+    background: var(--app-bg);
+    color: var(--sys-text);
+    outline: none;
+}
+
+/* App: Settings */
+.settings-container { padding: 20px; color: var(--sys-text); }
+.settings-section { margin-bottom: 24px; }
+.settings-section h3 { margin-bottom: 12px; font-size: 14px; color: var(--sys-text-muted); text-transform: uppercase; }
+.setting-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--sys-bg-solid); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--sys-border); }
+
+/* App: Terminal (God Mode) */
+.terminal-container { background: #0c0c0c; color: #00ff00; font-family: monospace; padding: 10px; height: 100%; overflow-y: auto; }
+.terminal-line { margin-bottom: 4px; font-size: 13px;}
+.terminal-cursor { display: inline-block; width: 8px; height: 14px; background: #00ff00; animation: blink 1s step-end infinite; vertical-align: middle;}
+@keyframes blink { 50% { opacity: 0; } }
+
+.god-mode-indicator { color: #ff3333; font-weight: bold; font-size: 10px; border: 1px solid #ff3333; padding: 2px 4px; border-radius: 4px; margin-right: 8px; }
+
+/* Utilities */
+.text-xs { font-size: 10px; }
+.font-bold { font-weight: bold; }
+</style>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+<!-- Google AI Studio runtime transpiler & module loader -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
+<script type="module">
+(async function() {
+    const files = {"package.json":"{\n  \"name\": \"minios\",\n  \"version\": \"1.0.0\",\n  \"description\": \"Compact WebOS simulation\",\n  \"main\": \"index.tsx\",\n  \"dependencies\": {\n    \"react\": \"^18.2.0\",\n    \"react-dom\": \"^18.2.0\",\n    \"lucide-react\": \"^0.263.1\"\n  },\n  \"devDependencies\": {\n    \"@types/react\": \"^18.2.0\",\n    \"@types/react-dom\": \"^18.2.0\",\n    \"typescript\": \"^5.0.2\"\n  }\n}","style.css":":root {\n    --os-bg: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop'); /* Abstract pleasant background */\n    --sys-bg-blur: rgba(255, 255, 255, 0.7);\n    --sys-bg-solid: #ffffff;\n    --sys-text: #1a1a1a;\n    --sys-text-muted: #666666;\n    --sys-accent: #0067c0;\n    --sys-accent-hover: #005a9e;\n    --sys-border: rgba(0, 0, 0, 0.1);\n    --sys-shadow: 0 4px 24px rgba(0,0,0,0.1);\n    --sys-radius: 12px;\n    --taskbar-height: 48px;\n    \n    --app-bg: #f9f9f9;\n}\n\n/* Dark mode pseudo-support (can be toggled via class later) */\n.dark-theme {\n    --sys-bg-blur: rgba(30, 30, 30, 0.75);\n    --sys-bg-solid: #202020;\n    --sys-text: #ffffff;\n    --sys-text-muted: #aaaaaa;\n    --sys-border: rgba(255, 255, 255, 0.1);\n    --sys-shadow: 0 8px 32px rgba(0,0,0,0.4);\n    --app-bg: #2d2d2d;\n    --sys-accent: #4cc2ff;\n    --sys-accent-hover: #38a4d9;\n}\n\n* {\n    box-sizing: border-box;\n    margin: 0;\n    padding: 0;\n    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;\n    user-select: none; /* Prevent text selection mostly */\n}\n\nbody, html {\n    width: 100%;\n    height: 100%;\n    overflow: hidden;\n    background-color: #000;\n}\n\n#root {\n    width: 100%;\n    height: 100%;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n}\n\n/* OS Container */\n.os-container {\n    position: relative;\n    width: 100%;\n    height: 100%;\n    background-image: var(--os-bg);\n    background-size: cover;\n    background-position: center;\n    overflow: hidden;\n    display: flex;\n    flex-direction: column;\n}\n\n/* Desktop */\n.desktop {\n    flex: 1;\n    position: relative;\n    padding: 16px;\n    display: grid;\n    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));\n    grid-auto-rows: 90px;\n    gap: 8px;\n    align-content: start;\n    z-index: 10;\n}\n\n.desktop-icon {\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    gap: 6px;\n    padding: 8px;\n    border-radius: 8px;\n    cursor: pointer;\n    transition: background 0.2s;\n    color: white;\n    text-shadow: 0 1px 3px rgba(0,0,0,0.8);\n}\n\n.desktop-icon:hover {\n    background: rgba(255, 255, 255, 0.2);\n}\n\n.desktop-icon:active {\n    background: rgba(255, 255, 255, 0.3);\n}\n\n.icon-wrapper {\n    width: 48px;\n    height: 48px;\n    background: var(--sys-bg-solid);\n    border-radius: 12px;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    color: var(--sys-text);\n    box-shadow: 0 2px 8px rgba(0,0,0,0.2);\n}\n\n.desktop-icon span {\n    font-size: 12px;\n    text-align: center;\n    font-weight: 500;\n}\n\n/* Taskbar */\n.taskbar {\n    height: var(--taskbar-height);\n    background: var(--sys-bg-blur);\n    backdrop-filter: blur(20px);\n    -webkit-backdrop-filter: blur(20px);\n    border-top: 1px solid var(--sys-border);\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    padding: 0 12px;\n    z-index: 100;\n}\n\n.taskbar-center {\n    display: flex;\n    gap: 8px;\n    flex: 1;\n    justify-content: center;\n}\n\n.taskbar-right {\n    display: flex;\n    align-items: center;\n    gap: 12px;\n    color: var(--sys-text);\n    font-size: 12px;\n}\n\n.start-button {\n    width: 36px;\n    height: 36px;\n    border-radius: 6px;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    cursor: pointer;\n    transition: background 0.2s;\n    color: var(--sys-accent);\n}\n\n.start-button:hover, .taskbar-icon:hover {\n    background: rgba(128, 128, 128, 0.15);\n}\n\n.taskbar-icon {\n    width: 36px;\n    height: 36px;\n    border-radius: 6px;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    cursor: pointer;\n    color: var(--sys-text);\n    position: relative;\n}\n\n.taskbar-icon.active::after {\n    content: '';\n    position: absolute;\n    bottom: 2px;\n    left: 50%;\n    transform: translateX(-50%);\n    width: 12px;\n    height: 3px;\n    background: var(--sys-accent);\n    border-radius: 2px;\n}\n\n.sys-tray {\n    display: flex;\n    align-items: center;\n    gap: 8px;\n    padding: 4px 8px;\n    border-radius: 6px;\n    cursor: pointer;\n}\n\n.sys-tray:hover {\n    background: rgba(128, 128, 128, 0.15);\n}\n\n/* Start Menu */\n.start-menu {\n    position: absolute;\n    bottom: calc(var(--taskbar-height) + 12px);\n    left: 50%;\n    transform: translateX(-50%);\n    width: 90%;\n    max-width: 340px;\n    height: 400px;\n    background: var(--sys-bg-blur);\n    backdrop-filter: blur(25px);\n    -webkit-backdrop-filter: blur(25px);\n    border: 1px solid var(--sys-border);\n    border-radius: var(--sys-radius);\n    box-shadow: var(--sys-shadow);\n    z-index: 90;\n    display: flex;\n    flex-direction: column;\n    padding: 16px;\n    opacity: 0;\n    pointer-events: none;\n    transition: opacity 0.2s, transform 0.2s;\n    transform: translate(-50%, 10px);\n}\n\n.start-menu.open {\n    opacity: 1;\n    pointer-events: auto;\n    transform: translate(-50%, 0);\n}\n\n.start-search {\n    width: 100%;\n    padding: 10px 16px;\n    border-radius: 20px;\n    border: 1px solid var(--sys-border);\n    background: rgba(255, 255, 255, 0.5);\n    color: var(--sys-text);\n    outline: none;\n    margin-bottom: 16px;\n}\n.dark-theme .start-search { background: rgba(0,0,0,0.2); }\n\n.start-apps-grid {\n    display: grid;\n    grid-template-columns: repeat(4, 1fr);\n    gap: 12px;\n    overflow-y: auto;\n}\n\n.start-app-item {\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 4px;\n    padding: 8px;\n    border-radius: 8px;\n    cursor: pointer;\n    color: var(--sys-text);\n}\n.start-app-item:hover { background: rgba(128, 128, 128, 0.1); }\n.start-app-item .icon { font-size: 24px; margin-bottom: 4px; }\n.start-app-item span { font-size: 11px; text-align: center; }\n\n/* Window Manager */\n.window-container {\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    bottom: var(--taskbar-height);\n    background: var(--app-bg);\n    z-index: 50;\n    display: flex;\n    flex-direction: column;\n    animation: windowOpen 0.2s cubic-bezier(0.16, 1, 0.3, 1);\n}\n\n@keyframes windowOpen {\n    from { opacity: 0; transform: scale(0.95) translateY(10px); }\n    to { opacity: 1; transform: scale(1) translateY(0); }\n}\n\n.window-header {\n    height: 40px;\n    display: flex;\n    align-items: center;\n    justify-content: space-between;\n    padding: 0 12px;\n    background: var(--sys-bg-solid);\n    border-bottom: 1px solid var(--sys-border);\n    color: var(--sys-text);\n    font-weight: 600;\n    font-size: 14px;\n}\n\n.window-title { display: flex; align-items: center; gap: 8px; }\n\n.window-controls { display: flex; gap: 4px; }\n.window-btn {\n    width: 32px; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--sys-text);\n}\n.window-btn:hover { background: rgba(128,128,128,0.2); }\n.window-btn.close:hover { background: #e81123; color: white; }\n\n.window-content {\n    flex: 1;\n    overflow-y: auto;\n    position: relative;\n}\n\n/* App: Calculator */\n.calc-grid {\n    display: grid;\n    grid-template-columns: repeat(4, 1fr);\n    gap: 2px;\n    height: 100%;\n    padding: 2px;\n    background: var(--sys-border);\n}\n.calc-display {\n    grid-column: 1 / -1;\n    background: var(--app-bg);\n    color: var(--sys-text);\n    font-size: 32px;\n    text-align: right;\n    padding: 20px 16px;\n    display: flex;\n    flex-direction: column;\n    justify-content: flex-end;\n    word-break: break-all;\n}\n.calc-btn {\n    background: var(--sys-bg-solid);\n    border: none;\n    color: var(--sys-text);\n    font-size: 18px;\n    cursor: pointer;\n    transition: background 0.1s;\n}\n.calc-btn:active { background: var(--sys-border); }\n.calc-btn.accent { background: var(--sys-accent); color: white; }\n.calc-btn.accent:active { background: var(--sys-accent-hover); }\n\n/* App: Notes */\n.notes-textarea {\n    width: 100%;\n    height: 100%;\n    border: none;\n    resize: none;\n    padding: 16px;\n    font-size: 16px;\n    background: var(--app-bg);\n    color: var(--sys-text);\n    outline: none;\n}\n\n/* App: Settings */\n.settings-container { padding: 20px; color: var(--sys-text); }\n.settings-section { margin-bottom: 24px; }\n.settings-section h3 { margin-bottom: 12px; font-size: 14px; color: var(--sys-text-muted); text-transform: uppercase; }\n.setting-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--sys-bg-solid); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--sys-border); }\n\n/* App: Terminal (God Mode) */\n.terminal-container { background: #0c0c0c; color: #00ff00; font-family: monospace; padding: 10px; height: 100%; overflow-y: auto; }\n.terminal-line { margin-bottom: 4px; font-size: 13px;}\n.terminal-cursor { display: inline-block; width: 8px; height: 14px; background: #00ff00; animation: blink 1s step-end infinite; vertical-align: middle;}\n@keyframes blink { 50% { opacity: 0; } }\n\n.god-mode-indicator { color: #ff3333; font-weight: bold; font-size: 10px; border: 1px solid #ff3333; padding: 2px 4px; border-radius: 4px; margin-right: 8px; }\n\n/* Utilities */\n.text-xs { font-size: 10px; }\n.font-bold { font-weight: bold; }","types.ts":"export interface AppDefinition {\n    id: string;\n    name: string;\n    icon: any; // Lucide icon component\n    component: React.FC<{ onClose: () => void }>;\n    isGodModeOnly?: boolean;\n}\n\nexport interface OsState {\n    activeAppId: string | null;\n    openAppIds: string[];\n    isStartMenuOpen: boolean;\n}","utils/audio.ts":"// Simple web audio synthesizer for system sounds\n\nlet audioCtx: AudioContext | null = null;\n\nconst getAudioContext = () => {\n    if (!audioCtx) {\n        audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();\n    }\n    if (audioCtx.state === 'suspended') {\n        audioCtx.resume();\n    }\n    return audioCtx;\n};\n\nexport const playClickSound = () => {\n    try {\n        const ctx = getAudioContext();\n        const osc = ctx.createOscillator();\n        const gainNode = ctx.createGain();\n\n        osc.type = 'sine';\n        osc.frequency.setValueAtTime(800, ctx.currentTime);\n        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.05);\n\n        gainNode.gain.setValueAtTime(0.1, ctx.currentTime);\n        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);\n\n        osc.connect(gainNode);\n        gainNode.connect(ctx.destination);\n\n        osc.start();\n        osc.stop(ctx.currentTime + 0.05);\n    } catch (e) {\n        console.error(\"Audio error\", e);\n    }\n};\n\nexport const playStartupSound = () => {\n    try {\n        const ctx = getAudioContext();\n        const osc1 = ctx.createOscillator();\n        const osc2 = ctx.createOscillator();\n        const gainNode = ctx.createGain();\n\n        osc1.type = 'sine';\n        osc2.type = 'triangle';\n        \n        // C Major Chord ish\n        osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5\n        osc2.frequency.setValueAtTime(659.25, ctx.currentTime); // E5\n\n        gainNode.gain.setValueAtTime(0, ctx.currentTime);\n        gainNode.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.1);\n        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);\n\n        osc1.connect(gainNode);\n        osc2.connect(gainNode);\n        gainNode.connect(ctx.destination);\n\n        osc1.start();\n        osc2.start();\n        osc1.stop(ctx.currentTime + 1.5);\n        osc2.stop(ctx.currentTime + 1.5);\n    } catch (e) {\n        console.error(\"Audio error\", e);\n    }\n};\n\nexport const playErrorSound = () => {\n    try {\n        const ctx = getAudioContext();\n        const osc = ctx.createOscillator();\n        const gainNode = ctx.createGain();\n\n        osc.type = 'sawtooth';\n        osc.frequency.setValueAtTime(150, ctx.currentTime);\n        osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2);\n\n        gainNode.gain.setValueAtTime(0.2, ctx.currentTime);\n        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);\n\n        osc.connect(gainNode);\n        gainNode.connect(ctx.destination);\n\n        osc.start();\n        osc.stop(ctx.currentTime + 0.2);\n    } catch (e) {\n        console.error(\"Audio error\", e);\n    }\n}","utils/godMode.ts":"export const checkGodMode = (): boolean => {\n    try {\n        const debugOptions = JSON.parse(localStorage.getItem('gemini96-debugOptions') || '{}');\n        // Check standard flappyGodMode as per instructions, or a generic godMode\n        return debugOptions.flappyGodMode === true || debugOptions.godMode === true;\n    } catch (e) {\n        return false;\n    }\n};","components/apps/Calculator.tsx":"import React, { useState } from 'react';\nimport { playClickSound, playErrorSound } from '../../utils/audio';\n\nexport const Calculator: React.FC<{ onClose: () => void }> = () => {\n    const [display, setDisplay] = useState('0');\n    const [equation, setEquation] = useState('');\n\n    const handlePress = (val: string) => {\n        playClickSound();\n        if (val === 'C') {\n            setDisplay('0');\n            setEquation('');\n        } else if (val === '=') {\n            try {\n                // Safe eval replacement for simple calc\n                const sanitized = equation + display;\n                if(/^[0-9+\\-*/. ]+$/.test(sanitized)) {\n                    // eslint-disable-next-line no-new-func\n                    const result = new Function('return ' + sanitized)();\n                    setDisplay(String(result));\n                    setEquation('');\n                } else {\n                    throw new Error(\"Invalid\");\n                }\n            } catch (e) {\n                setDisplay('Error');\n                setEquation('');\n                playErrorSound();\n            }\n        } else if (['+', '-', '*', '/'].includes(val)) {\n            setEquation(display + val);\n            setDisplay('0');\n        } else {\n            setDisplay(display === '0' ? val : display + val);\n        }\n    };\n\n    const buttons = [\n        'C', '(', ')', '/',\n        '7', '8', '9', '*',\n        '4', '5', '6', '-',\n        '1', '2', '3', '+',\n        '0', '.', '=', ''\n    ];\n\n    return (\n        <div className=\"calc-grid\">\n            <div className=\"calc-display\">\n                <div style={{fontSize: '14px', color: 'var(--sys-text-muted)', minHeight: '20px'}}>{equation}</div>\n                <div>{display}</div>\n            </div>\n            {buttons.map((btn, i) => (\n                btn ? (\n                    <button \n                        key={i} \n                        className={`calc-btn ${btn === '=' ? 'accent' : ''}`}\n                        onClick={() => handlePress(btn)}\n                    >\n                        {btn}\n                    </button>\n                ) : <div key={i} />\n            ))}\n        </div>\n    );\n};","components/apps/Notes.tsx":"import React, { useState, useEffect } from 'react';\n\nexport const Notes: React.FC<{ onClose: () => void }> = () => {\n    const [text, setText] = useState('');\n\n    useEffect(() => {\n        const saved = localStorage.getItem('minios-notes');\n        if (saved) setText(saved);\n    }, []);\n\n    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {\n        setText(e.target.value);\n        localStorage.setItem('minios-notes', e.target.value);\n    };\n\n    return (\n        <textarea \n            className=\"notes-textarea\" \n            value={text}\n            onChange={handleChange}\n            placeholder=\"Type your notes here... (Auto-saved)\"\n            autoFocus\n        />\n    );\n};","components/apps/Settings.tsx":"import React, { useState, useEffect } from 'react';\nimport { playClickSound } from '../../utils/audio';\n\nexport const Settings: React.FC<{ onClose: () => void }> = () => {\n    const [isDark, setIsDark] = useState(false);\n\n    useEffect(() => {\n        setIsDark(document.documentElement.classList.contains('dark-theme'));\n    }, []);\n\n    const toggleTheme = () => {\n        playClickSound();\n        const root = document.documentElement;\n        if (isDark) {\n            root.classList.remove('dark-theme');\n        } else {\n            root.classList.add('dark-theme');\n        }\n        setIsDark(!isDark);\n    };\n\n    return (\n        <div className=\"settings-container\">\n            <div className=\"settings-section\">\n                <h3>Personalization</h3>\n                <div className=\"setting-item\">\n                    <span>Dark Mode</span>\n                    <button onClick={toggleTheme} style={{\n                        padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--sys-border)', background: 'var(--sys-bg-blur)', color: 'var(--sys-text)', cursor: 'pointer'\n                    }}>\n                        {isDark ? 'Turn Off' : 'Turn On'}\n                    </button>\n                </div>\n            </div>\n            \n            <div className=\"settings-section\">\n                <h3>System</h3>\n                <div className=\"setting-item\" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '8px'}}>\n                    <div style={{fontWeight: 'bold'}}>MiniOS v1.0</div>\n                    <div style={{fontSize: '12px', color: 'var(--sys-text-muted)'}}>Compact Web OS Environment</div>\n                    <div style={{fontSize: '12px', color: 'var(--sys-text-muted)'}}>Memory: 4.00 GB (Emulated)</div>\n                </div>\n            </div>\n        </div>\n    );\n};","components/apps/Terminal.tsx":"import React, { useState, useEffect } from 'react';\n\nexport const Terminal: React.FC<{ onClose: () => void }> = () => {\n    const [lines, setLines] = useState<string[]>([]);\n    \n    useEffect(() => {\n        const bootSequence = [\n            \"Initializing kernel... OK\",\n            \"Mounting virtual file systems... OK\",\n            \"Loading God Mode modules... OVERRIDE GRANTED\",\n            \"Bypassing security protocols... DONE\",\n            \" \",\n            \"ROOT ACCESS GRANTED.\",\n            \"Welcome to the mainframe.\",\n            \"root@minios:~#\"\n        ];\n\n        let i = 0;\n        const interval = setInterval(() => {\n            if (i < bootSequence.length) {\n                setLines(prev => [...prev, bootSequence[i]]);\n                i++;\n            } else {\n                clearInterval(interval);\n            }\n        }, 300);\n\n        return () => clearInterval(interval);\n    }, []);\n\n    return (\n        <div className=\"terminal-container\">\n            {lines.map((line, idx) => (\n                <div key={idx} className=\"terminal-line\">{line}</div>\n            ))}\n            {lines.length === 8 && <span className=\"terminal-cursor\" />}\n        </div>\n    );\n};","components/Window.tsx":"import React from 'react';\nimport { X, Minus, Square } from 'lucide-react';\nimport { AppDefinition } from '../types';\n\ninterface WindowProps {\n    app: AppDefinition;\n    onClose: () => void;\n}\n\nexport const Window: React.FC<WindowProps> = ({ app, onClose }) => {\n    const Icon = app.icon;\n    \n    return (\n        <div className=\"window-container\">\n            <div className=\"window-header\">\n                <div className=\"window-title\">\n                    <Icon size={16} />\n                    <span>{app.name}</span>\n                </div>\n                <div className=\"window-controls\">\n                    <div className=\"window-btn\"><Minus size={16} /></div>\n                    <div className=\"window-btn\"><Square size={14} /></div>\n                    <div className=\"window-btn close\" onClick={onClose}><X size={16} /></div>\n                </div>\n            </div>\n            <div className=\"window-content\">\n                <app.component onClose={onClose} />\n            </div>\n        </div>\n    );\n};","App.tsx":"import React, { useState, useEffect } from 'react';\nimport { Calculator } from './components/apps/Calculator';\nimport { Notes } from './components/apps/Notes';\nimport { Settings } from './components/apps/Settings';\nimport { Terminal } from './components/apps/Terminal';\nimport { Window } from './components/Window';\nimport { checkGodMode } from './utils/godMode';\nimport { playClickSound, playStartupSound } from './utils/audio';\nimport { AppDefinition, OsState } from './types';\nimport { LayoutGrid, Calculator as CalcIcon, StickyNote, Settings as SettingsIcon, TerminalSquare, Wifi, BatteryMedium, Volume2 } from 'lucide-react';\n\nconst APPS: AppDefinition[] = [\n    { id: 'calc', name: 'Calculator', icon: CalcIcon, component: Calculator },\n    { id: 'notes', name: 'Notes', icon: StickyNote, component: Notes },\n    { id: 'settings', name: 'Settings', icon: SettingsIcon, component: Settings },\n    { id: 'terminal', name: 'Root Terminal', icon: TerminalSquare, component: Terminal, isGodModeOnly: true }\n];\n\nexport const App: React.FC = () => {\n    const [state, setState] = useState<OsState>({\n        activeAppId: null,\n        openAppIds: [],\n        isStartMenuOpen: false\n    });\n    const [time, setTime] = useState(new Date());\n    const [isGodMode, setIsGodMode] = useState(false);\n    const [hasStarted, setHasStarted] = useState(false);\n\n    useEffect(() => {\n        setIsGodMode(checkGodMode());\n        const timer = setInterval(() => setTime(new Date()), 1000);\n        return () => clearInterval(timer);\n    }, []);\n\n    // Play startup sound once on first interaction to respect browser autoplay policies\n    useEffect(() => {\n        const handleFirstInteraction = () => {\n            if (!hasStarted) {\n                playStartupSound();\n                setHasStarted(true);\n            }\n            window.removeEventListener('click', handleFirstInteraction);\n        };\n        window.addEventListener('click', handleFirstInteraction);\n        return () => window.removeEventListener('click', handleFirstInteraction);\n    }, [hasStarted]);\n\n    const toggleStartMenu = () => {\n        playClickSound();\n        setState(s => ({ ...s, isStartMenuOpen: !s.isStartMenuOpen }));\n    };\n\n    const closeStartMenu = () => {\n        if (state.isStartMenuOpen) {\n            setState(s => ({ ...s, isStartMenuOpen: false }));\n        }\n    };\n\n    const openApp = (appId: string) => {\n        playClickSound();\n        setState(s => ({\n            ...s,\n            isStartMenuOpen: false,\n            activeAppId: appId,\n            openAppIds: s.openAppIds.includes(appId) ? s.openAppIds : [...s.openAppIds, appId]\n        }));\n    };\n\n    const closeApp = (appId: string) => {\n        playClickSound();\n        setState(s => ({\n            ...s,\n            activeAppId: s.activeAppId === appId ? null : s.activeAppId,\n            openAppIds: s.openAppIds.filter(id => id !== appId)\n        }));\n    };\n\n    const activeAppDef = APPS.find(a => a.id === state.activeAppId);\n    const visibleApps = APPS.filter(a => !a.isGodModeOnly || isGodMode);\n\n    return (\n        <div className=\"os-container\" onClick={closeStartMenu}>\n            {/* Desktop Area */}\n            <div className=\"desktop\">\n                {visibleApps.map(app => {\n                    const Icon = app.icon;\n                    return (\n                        <div key={`desktop-${app.id}`} className=\"desktop-icon\" onDoubleClick={() => openApp(app.id)} onClick={(e) => { e.stopPropagation(); openApp(app.id); }}>\n                            <div className=\"icon-wrapper\">\n                                <Icon size={24} />\n                            </div>\n                            <span>{app.name}</span>\n                        </div>\n                    );\n                })}\n            </div>\n\n            {/* Window Manager (Only showing topmost active app for compact view) */}\n            {activeAppDef && (\n                <Window \n                    app={activeAppDef} \n                    onClose={() => closeApp(activeAppDef.id)} \n                />\n            )}\n\n            {/* Start Menu */}\n            <div className={`start-menu ${state.isStartMenuOpen ? 'open' : ''}`} onClick={e => e.stopPropagation()}>\n                <input type=\"text\" className=\"start-search\" placeholder=\"Type here to search\" />\n                <div style={{marginBottom: '16px', fontWeight: 600, fontSize: '14px', color: 'var(--sys-text)'}}>Pinned</div>\n                <div className=\"start-apps-grid\">\n                    {visibleApps.map(app => {\n                        const Icon = app.icon;\n                        return (\n                            <div key={`start-${app.id}`} className=\"start-app-item\" onClick={() => openApp(app.id)}>\n                                <Icon className=\"icon\" color={app.isGodModeOnly ? '#00ff00' : 'currentColor'} />\n                                <span>{app.name}</span>\n                            </div>\n                        );\n                    })}\n                </div>\n            </div>\n\n            {/* Taskbar */}\n            <div className=\"taskbar\" onClick={e => e.stopPropagation()}>\n                <div className=\"taskbar-center\">\n                    <div className=\"start-button\" onClick={toggleStartMenu}>\n                        <LayoutGrid size={20} />\n                    </div>\n                    {/* Open App Icons in Taskbar */}\n                    {state.openAppIds.map(appId => {\n                        const app = APPS.find(a => a.id === appId);\n                        if (!app) return null;\n                        const Icon = app.icon;\n                        const isActive = state.activeAppId === appId;\n                        return (\n                            <div \n                                key={`tb-${appId}`} \n                                className={`taskbar-icon ${isActive ? 'active' : ''}`}\n                                onClick={() => openApp(appId)}\n                            >\n                                <Icon size={18} color={app.isGodModeOnly ? '#00ff00' : 'currentColor'} />\n                            </div>\n                        );\n                    })}\n                </div>\n                <div className=\"taskbar-right\">\n                    {isGodMode && <span className=\"god-mode-indicator\">ROOTED</span>}\n                    <div className=\"sys-tray\">\n                        <Wifi size={14} />\n                        <Volume2 size={14} />\n                        <BatteryMedium size={14} />\n                    </div>\n                    <div className=\"sys-tray\" style={{flexDirection: 'column', gap: '2px', alignItems: 'flex-end'}}>\n                        <span className=\"text-xs font-bold\">{time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>\n                        <span className=\"text-xs\">{time.toLocaleDateString()}</span>\n                    </div>\n                </div>\n            </div>\n        </div>\n    );\n};","index.tsx":"import React from 'react';\nimport { createRoot } from 'react-dom/client';\nimport { App } from './App';\n\nconst container = document.getElementById('root');\nif (container) {\n    const root = createRoot(container);\n    root.render(<App />);\n}"};
+
+    // Helper: Normalize path
+    function normalizePath(path) {
+        let clean = path.replace(/^\.\//, '');
+        if (!clean.match(/\.[a-zA-Z0-9]+$/)) {
+            // Check extensions
+            for (const ext of ['.tsx', '.ts', '.jsx', '.js', '.json']) {
+                if (files[clean + ext]) return clean + ext;
+            }
+        }
+        return clean;
+    }
+
+    // Babel transpile map
+    const moduleBlobUrls = {};
+
+    // 1. Convert JSON files to ES Modules
+    for (const [filename, content] of Object.entries(files)) {
+        if (filename.endsWith('.json')) {
+            const esmCode = 'export default ' + content + ';';
+            const blob = new Blob([esmCode], { type: 'application/javascript' });
+            const blobUrl = URL.createObjectURL(blob);
+            moduleBlobUrls[filename] = blobUrl;
+            moduleBlobUrls['./' + filename] = blobUrl;
+        }
+    }
+
+    // 2. Transpile all JS/TS/TSX/JSX files with Babel
+    for (const [filename, content] of Object.entries(files)) {
+        if (!filename.match(/\.(tsx?|jsx?|js)$/i)) continue;
+
+        try {
+            // Rewrite local relative imports in the code to point to our blob URLs
+            let transformed = content;
+
+            // Transform with Babel Standalone
+            const result = Babel.transform(transformed, {
+                filename: filename,
+                presets: [
+                    ['react', { runtime: 'automatic' }],
+                    'typescript'
+                ],
+                sourceType: 'module'
+            });
+
+            let jsCode = result.code;
+
+            // Rewrite relative imports inside jsCode: e.g. import ... from "./App"
+            jsCode = jsCode.replace(/(import|export)\s+([\w*\s{},]*\s+from\s+)?['"](\.[^'"]+)['"]/g, (match, type, clause, importPath) => {
+                const norm = normalizePath(importPath);
+                return `${type} ${clause || ''} '${importPath}'`;
+            });
+
+            const blob = new Blob([jsCode], { type: 'application/javascript' });
+            const blobUrl = URL.createObjectURL(blob);
+            moduleBlobUrls[filename] = blobUrl;
+            moduleBlobUrls['./' + filename] = blobUrl;
+            // Also without extension
+            const noExt = filename.replace(/\.[a-zA-Z0-9]+$/, '');
+            moduleBlobUrls[noExt] = blobUrl;
+            moduleBlobUrls['./' + noExt] = blobUrl;
+        } catch (err) {
+            console.error("Babel transpile error in " + filename + ":", err);
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = 'color: #ef4444; background: #fee2e2; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; margin: 16px; white-space: pre-wrap;';
+            errDiv.textContent = 'Compilation Error in ' + filename + ':\n' + err.message;
+            document.body.prepend(errDiv);
+        }
+    }
+
+    // Dynamic Import Resolver for relative modules
+    const originalImport = window.__import__ || ((url) => import(url));
+
+    // 3. Find and execute Entry Point
+    const candidates = [
+        'index.tsx', 'src/index.tsx', 'main.tsx', 'src/main.tsx',
+        'App.tsx', 'src/App.tsx', 'index.jsx', 'main.jsx', 'App.jsx',
+        'main.js', 'index.js'
+    ];
+
+    let entryFile = null;
+    for (const c of candidates) {
+        if (files[c]) {
+            entryFile = c;
+            break;
+        }
+    }
+
+    if (!entryFile) {
+        const anyTsx = Object.keys(files).find(k => k.match(/\.(tsx|jsx)$/i));
+        if (anyTsx) entryFile = anyTsx;
+    }
+
+    if (entryFile && moduleBlobUrls[entryFile]) {
+        try {
+            const entryMod = await import(moduleBlobUrls[entryFile]);
+
+            // If entry module default exports a React Component, auto-mount it if not already mounted
+            if (entryMod.default && typeof entryMod.default === 'function') {
+                const rootContainer = document.getElementById('root') || document.getElementById('app') || document.body;
+                if (rootContainer && !rootContainer.children.length) {
+                    try {
+                        const React = await import('react');
+                        const ReactDOM = await import('react-dom/client');
+                        const root = ReactDOM.createRoot(rootContainer);
+                        root.render(React.createElement(entryMod.default));
+                    } catch (mountErr) {
+                        console.warn("Auto-mount fallback triggered:", mountErr);
+                    }
+                }
+            }
+        } catch (execErr) {
+            console.error("Execution error:", execErr);
+            const errDiv = document.createElement('div');
+            errDiv.style.cssText = 'color: #ef4444; background: #fee2e2; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 13px; margin: 16px; white-space: pre-wrap;';
+            errDiv.textContent = 'Runtime Error:\n' + execErr.message + '\n' + (execErr.stack || '');
+            document.body.prepend(errDiv);
+        }
+    }
+})();
+</script>
+
+</body>
+</html>
+<!-- STUDIO_VFS_DATA: eyJmaWxlcyI6eyJwYWNrYWdlLmpzb24iOiJ7XG4gIFwibmFtZVwiOiBcIm1pbmlvc1wiLFxuICBcInZlcnNpb25cIjogXCIxLjAuMFwiLFxuICBcImRlc2NyaXB0aW9uXCI6IFwiQ29tcGFjdCBXZWJPUyBzaW11bGF0aW9uXCIsXG4gIFwibWFpblwiOiBcImluZGV4LnRzeFwiLFxuICBcImRlcGVuZGVuY2llc1wiOiB7XG4gICAgXCJyZWFjdFwiOiBcIl4xOC4yLjBcIixcbiAgICBcInJlYWN0LWRvbVwiOiBcIl4xOC4yLjBcIixcbiAgICBcImx1Y2lkZS1yZWFjdFwiOiBcIl4wLjI2My4xXCJcbiAgfSxcbiAgXCJkZXZEZXBlbmRlbmNpZXNcIjoge1xuICAgIFwiQHR5cGVzL3JlYWN0XCI6IFwiXjE4LjIuMFwiLFxuICAgIFwiQHR5cGVzL3JlYWN0LWRvbVwiOiBcIl4xOC4yLjBcIixcbiAgICBcInR5cGVzY3JpcHRcIjogXCJeNS4wLjJcIlxuICB9XG59IiwiaW5kZXguaHRtbCI6IjwhRE9DVFlQRSBodG1sPlxuPGh0bWwgbGFuZz1cImVuXCI+XG48aGVhZD5cbiAgICA8bWV0YSBjaGFyc2V0PVwiVVRGLThcIj5cbiAgICA8bWV0YSBuYW1lPVwidmlld3BvcnRcIiBjb250ZW50PVwid2lkdGg9ZGV2aWNlLXdpZHRoLCBpbml0aWFsLXNjYWxlPTEuMCwgbWF4aW11bS1zY2FsZT0xLjAsIHVzZXItc2NhbGFibGU9bm9cIj5cbiAgICA8dGl0bGU+TWluaU9TPC90aXRsZT5cbiAgICA8bGluayByZWw9XCJzdHlsZXNoZWV0XCIgaHJlZj1cInN0eWxlLmNzc1wiPlxuPC9oZWFkPlxuPGJvZHk+XG4gICAgPGRpdiBpZD1cInJvb3RcIj48L2Rpdj5cbjwvYm9keT5cbjwvaHRtbD4iLCJzdHlsZS5jc3MiOiI6cm9vdCB7XG4gICAgLS1vcy1iZzogdXJsKCdodHRwczovL2ltYWdlcy51bnNwbGFzaC5jb20vcGhvdG8tMTYxODAwNTE4MjM4NC1hODNhOGJkNTdmYmU/cT04MCZ3PTI1NjQmYXV0bz1mb3JtYXQmZml0PWNyb3AnKTsgLyogQWJzdHJhY3QgcGxlYXNhbnQgYmFja2dyb3VuZCAqL1xuICAgIC0tc3lzLWJnLWJsdXI6IHJnYmEoMjU1LCAyNTUsIDI1NSwgMC43KTtcbiAgICAtLXN5cy1iZy1zb2xpZDogI2ZmZmZmZjtcbiAgICAtLXN5cy10ZXh0OiAjMWExYTFhO1xuICAgIC0tc3lzLXRleHQtbXV0ZWQ6ICM2NjY2NjY7XG4gICAgLS1zeXMtYWNjZW50OiAjMDA2N2MwO1xuICAgIC0tc3lzLWFjY2VudC1ob3ZlcjogIzAwNWE5ZTtcbiAgICAtLXN5cy1ib3JkZXI6IHJnYmEoMCwgMCwgMCwgMC4xKTtcbiAgICAtLXN5cy1zaGFkb3c6IDAgNHB4IDI0cHggcmdiYSgwLDAsMCwwLjEpO1xuICAgIC0tc3lzLXJhZGl1czogMTJweDtcbiAgICAtLXRhc2tiYXItaGVpZ2h0OiA0OHB4O1xuICAgIFxuICAgIC0tYXBwLWJnOiAjZjlmOWY5O1xufVxuXG4vKiBEYXJrIG1vZGUgcHNldWRvLXN1cHBvcnQgKGNhbiBiZSB0b2dnbGVkIHZpYSBjbGFzcyBsYXRlcikgKi9cbi5kYXJrLXRoZW1lIHtcbiAgICAtLXN5cy1iZy1ibHVyOiByZ2JhKDMwLCAzMCwgMzAsIDAuNzUpO1xuICAgIC0tc3lzLWJnLXNvbGlkOiAjMjAyMDIwO1xuICAgIC0tc3lzLXRleHQ6ICNmZmZmZmY7XG4gICAgLS1zeXMtdGV4dC1tdXRlZDogI2FhYWFhYTtcbiAgICAtLXN5cy1ib3JkZXI6IHJnYmEoMjU1LCAyNTUsIDI1NSwgMC4xKTtcbiAgICAtLXN5cy1zaGFkb3c6IDAgOHB4IDMycHggcmdiYSgwLDAsMCwwLjQpO1xuICAgIC0tYXBwLWJnOiAjMmQyZDJkO1xuICAgIC0tc3lzLWFjY2VudDogIzRjYzJmZjtcbiAgICAtLXN5cy1hY2NlbnQtaG92ZXI6ICMzOGE0ZDk7XG59XG5cbioge1xuICAgIGJveC1zaXppbmc6IGJvcmRlci1ib3g7XG4gICAgbWFyZ2luOiAwO1xuICAgIHBhZGRpbmc6IDA7XG4gICAgZm9udC1mYW1pbHk6ICdTZWdvZSBVSScsIHN5c3RlbS11aSwgLWFwcGxlLXN5c3RlbSwgc2Fucy1zZXJpZjtcbiAgICB1c2VyLXNlbGVjdDogbm9uZTsgLyogUHJldmVudCB0ZXh0IHNlbGVjdGlvbiBtb3N0bHkgKi9cbn1cblxuYm9keSwgaHRtbCB7XG4gICAgd2lkdGg6IDEwMCU7XG4gICAgaGVpZ2h0OiAxMDAlO1xuICAgIG92ZXJmbG93OiBoaWRkZW47XG4gICAgYmFja2dyb3VuZC1jb2xvcjogIzAwMDtcbn1cblxuI3Jvb3Qge1xuICAgIHdpZHRoOiAxMDAlO1xuICAgIGhlaWdodDogMTAwJTtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGp1c3RpZnktY29udGVudDogY2VudGVyO1xuICAgIGFsaWduLWl0ZW1zOiBjZW50ZXI7XG59XG5cbi8qIE9TIENvbnRhaW5lciAqL1xuLm9zLWNvbnRhaW5lciB7XG4gICAgcG9zaXRpb246IHJlbGF0aXZlO1xuICAgIHdpZHRoOiAxMDAlO1xuICAgIGhlaWdodDogMTAwJTtcbiAgICBiYWNrZ3JvdW5kLWltYWdlOiB2YXIoLS1vcy1iZyk7XG4gICAgYmFja2dyb3VuZC1zaXplOiBjb3ZlcjtcbiAgICBiYWNrZ3JvdW5kLXBvc2l0aW9uOiBjZW50ZXI7XG4gICAgb3ZlcmZsb3c6IGhpZGRlbjtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGZsZXgtZGlyZWN0aW9uOiBjb2x1bW47XG59XG5cbi8qIERlc2t0b3AgKi9cbi5kZXNrdG9wIHtcbiAgICBmbGV4OiAxO1xuICAgIHBvc2l0aW9uOiByZWxhdGl2ZTtcbiAgICBwYWRkaW5nOiAxNnB4O1xuICAgIGRpc3BsYXk6IGdyaWQ7XG4gICAgZ3JpZC10ZW1wbGF0ZS1jb2x1bW5zOiByZXBlYXQoYXV0by1maWxsLCBtaW5tYXgoNzJweCwgMWZyKSk7XG4gICAgZ3JpZC1hdXRvLXJvd3M6IDkwcHg7XG4gICAgZ2FwOiA4cHg7XG4gICAgYWxpZ24tY29udGVudDogc3RhcnQ7XG4gICAgei1pbmRleDogMTA7XG59XG5cbi5kZXNrdG9wLWljb24ge1xuICAgIGRpc3BsYXk6IGZsZXg7XG4gICAgZmxleC1kaXJlY3Rpb246IGNvbHVtbjtcbiAgICBhbGlnbi1pdGVtczogY2VudGVyO1xuICAgIGp1c3RpZnktY29udGVudDogY2VudGVyO1xuICAgIGdhcDogNnB4O1xuICAgIHBhZGRpbmc6IDhweDtcbiAgICBib3JkZXItcmFkaXVzOiA4cHg7XG4gICAgY3Vyc29yOiBwb2ludGVyO1xuICAgIHRyYW5zaXRpb246IGJhY2tncm91bmQgMC4ycztcbiAgICBjb2xvcjogd2hpdGU7XG4gICAgdGV4dC1zaGFkb3c6IDAgMXB4IDNweCByZ2JhKDAsMCwwLDAuOCk7XG59XG5cbi5kZXNrdG9wLWljb246aG92ZXIge1xuICAgIGJhY2tncm91bmQ6IHJnYmEoMjU1LCAyNTUsIDI1NSwgMC4yKTtcbn1cblxuLmRlc2t0b3AtaWNvbjphY3RpdmUge1xuICAgIGJhY2tncm91bmQ6IHJnYmEoMjU1LCAyNTUsIDI1NSwgMC4zKTtcbn1cblxuLmljb24td3JhcHBlciB7XG4gICAgd2lkdGg6IDQ4cHg7XG4gICAgaGVpZ2h0OiA0OHB4O1xuICAgIGJhY2tncm91bmQ6IHZhcigtLXN5cy1iZy1zb2xpZCk7XG4gICAgYm9yZGVyLXJhZGl1czogMTJweDtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGFsaWduLWl0ZW1zOiBjZW50ZXI7XG4gICAganVzdGlmeS1jb250ZW50OiBjZW50ZXI7XG4gICAgY29sb3I6IHZhcigtLXN5cy10ZXh0KTtcbiAgICBib3gtc2hhZG93OiAwIDJweCA4cHggcmdiYSgwLDAsMCwwLjIpO1xufVxuXG4uZGVza3RvcC1pY29uIHNwYW4ge1xuICAgIGZvbnQtc2l6ZTogMTJweDtcbiAgICB0ZXh0LWFsaWduOiBjZW50ZXI7XG4gICAgZm9udC13ZWlnaHQ6IDUwMDtcbn1cblxuLyogVGFza2JhciAqL1xuLnRhc2tiYXIge1xuICAgIGhlaWdodDogdmFyKC0tdGFza2Jhci1oZWlnaHQpO1xuICAgIGJhY2tncm91bmQ6IHZhcigtLXN5cy1iZy1ibHVyKTtcbiAgICBiYWNrZHJvcC1maWx0ZXI6IGJsdXIoMjBweCk7XG4gICAgLXdlYmtpdC1iYWNrZHJvcC1maWx0ZXI6IGJsdXIoMjBweCk7XG4gICAgYm9yZGVyLXRvcDogMXB4IHNvbGlkIHZhcigtLXN5cy1ib3JkZXIpO1xuICAgIGRpc3BsYXk6IGZsZXg7XG4gICAgYWxpZ24taXRlbXM6IGNlbnRlcjtcbiAgICBqdXN0aWZ5LWNvbnRlbnQ6IHNwYWNlLWJldHdlZW47XG4gICAgcGFkZGluZzogMCAxMnB4O1xuICAgIHotaW5kZXg6IDEwMDtcbn1cblxuLnRhc2tiYXItY2VudGVyIHtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGdhcDogOHB4O1xuICAgIGZsZXg6IDE7XG4gICAganVzdGlmeS1jb250ZW50OiBjZW50ZXI7XG59XG5cbi50YXNrYmFyLXJpZ2h0IHtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGFsaWduLWl0ZW1zOiBjZW50ZXI7XG4gICAgZ2FwOiAxMnB4O1xuICAgIGNvbG9yOiB2YXIoLS1zeXMtdGV4dCk7XG4gICAgZm9udC1zaXplOiAxMnB4O1xufVxuXG4uc3RhcnQtYnV0dG9uIHtcbiAgICB3aWR0aDogMzZweDtcbiAgICBoZWlnaHQ6IDM2cHg7XG4gICAgYm9yZGVyLXJhZGl1czogNnB4O1xuICAgIGRpc3BsYXk6IGZsZXg7XG4gICAgYWxpZ24taXRlbXM6IGNlbnRlcjtcbiAgICBqdXN0aWZ5LWNvbnRlbnQ6IGNlbnRlcjtcbiAgICBjdXJzb3I6IHBvaW50ZXI7XG4gICAgdHJhbnNpdGlvbjogYmFja2dyb3VuZCAwLjJzO1xuICAgIGNvbG9yOiB2YXIoLS1zeXMtYWNjZW50KTtcbn1cblxuLnN0YXJ0LWJ1dHRvbjpob3ZlciwgLnRhc2tiYXItaWNvbjpob3ZlciB7XG4gICAgYmFja2dyb3VuZDogcmdiYSgxMjgsIDEyOCwgMTI4LCAwLjE1KTtcbn1cblxuLnRhc2tiYXItaWNvbiB7XG4gICAgd2lkdGg6IDM2cHg7XG4gICAgaGVpZ2h0OiAzNnB4O1xuICAgIGJvcmRlci1yYWRpdXM6IDZweDtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGFsaWduLWl0ZW1zOiBjZW50ZXI7XG4gICAganVzdGlmeS1jb250ZW50OiBjZW50ZXI7XG4gICAgY3Vyc29yOiBwb2ludGVyO1xuICAgIGNvbG9yOiB2YXIoLS1zeXMtdGV4dCk7XG4gICAgcG9zaXRpb246IHJlbGF0aXZlO1xufVxuXG4udGFza2Jhci1pY29uLmFjdGl2ZTo6YWZ0ZXIge1xuICAgIGNvbnRlbnQ6ICcnO1xuICAgIHBvc2l0aW9uOiBhYnNvbHV0ZTtcbiAgICBib3R0b206IDJweDtcbiAgICBsZWZ0OiA1MCU7XG4gICAgdHJhbnNmb3JtOiB0cmFuc2xhdGVYKC01MCUpO1xuICAgIHdpZHRoOiAxMnB4O1xuICAgIGhlaWdodDogM3B4O1xuICAgIGJhY2tncm91bmQ6IHZhcigtLXN5cy1hY2NlbnQpO1xuICAgIGJvcmRlci1yYWRpdXM6IDJweDtcbn1cblxuLnN5cy10cmF5IHtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGFsaWduLWl0ZW1zOiBjZW50ZXI7XG4gICAgZ2FwOiA4cHg7XG4gICAgcGFkZGluZzogNHB4IDhweDtcbiAgICBib3JkZXItcmFkaXVzOiA2cHg7XG4gICAgY3Vyc29yOiBwb2ludGVyO1xufVxuXG4uc3lzLXRyYXk6aG92ZXIge1xuICAgIGJhY2tncm91bmQ6IHJnYmEoMTI4LCAxMjgsIDEyOCwgMC4xNSk7XG59XG5cbi8qIFN0YXJ0IE1lbnUgKi9cbi5zdGFydC1tZW51IHtcbiAgICBwb3NpdGlvbjogYWJzb2x1dGU7XG4gICAgYm90dG9tOiBjYWxjKHZhcigtLXRhc2tiYXItaGVpZ2h0KSArIDEycHgpO1xuICAgIGxlZnQ6IDUwJTtcbiAgICB0cmFuc2Zvcm06IHRyYW5zbGF0ZVgoLTUwJSk7XG4gICAgd2lkdGg6IDkwJTtcbiAgICBtYXgtd2lkdGg6IDM0MHB4O1xuICAgIGhlaWdodDogNDAwcHg7XG4gICAgYmFja2dyb3VuZDogdmFyKC0tc3lzLWJnLWJsdXIpO1xuICAgIGJhY2tkcm9wLWZpbHRlcjogYmx1cigyNXB4KTtcbiAgICAtd2Via2l0LWJhY2tkcm9wLWZpbHRlcjogYmx1cigyNXB4KTtcbiAgICBib3JkZXI6IDFweCBzb2xpZCB2YXIoLS1zeXMtYm9yZGVyKTtcbiAgICBib3JkZXItcmFkaXVzOiB2YXIoLS1zeXMtcmFkaXVzKTtcbiAgICBib3gtc2hhZG93OiB2YXIoLS1zeXMtc2hhZG93KTtcbiAgICB6LWluZGV4OiA5MDtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGZsZXgtZGlyZWN0aW9uOiBjb2x1bW47XG4gICAgcGFkZGluZzogMTZweDtcbiAgICBvcGFjaXR5OiAwO1xuICAgIHBvaW50ZXItZXZlbnRzOiBub25lO1xuICAgIHRyYW5zaXRpb246IG9wYWNpdHkgMC4ycywgdHJhbnNmb3JtIDAuMnM7XG4gICAgdHJhbnNmb3JtOiB0cmFuc2xhdGUoLTUwJSwgMTBweCk7XG59XG5cbi5zdGFydC1tZW51Lm9wZW4ge1xuICAgIG9wYWNpdHk6IDE7XG4gICAgcG9pbnRlci1ldmVudHM6IGF1dG87XG4gICAgdHJhbnNmb3JtOiB0cmFuc2xhdGUoLTUwJSwgMCk7XG59XG5cbi5zdGFydC1zZWFyY2gge1xuICAgIHdpZHRoOiAxMDAlO1xuICAgIHBhZGRpbmc6IDEwcHggMTZweDtcbiAgICBib3JkZXItcmFkaXVzOiAyMHB4O1xuICAgIGJvcmRlcjogMXB4IHNvbGlkIHZhcigtLXN5cy1ib3JkZXIpO1xuICAgIGJhY2tncm91bmQ6IHJnYmEoMjU1LCAyNTUsIDI1NSwgMC41KTtcbiAgICBjb2xvcjogdmFyKC0tc3lzLXRleHQpO1xuICAgIG91dGxpbmU6IG5vbmU7XG4gICAgbWFyZ2luLWJvdHRvbTogMTZweDtcbn1cbi5kYXJrLXRoZW1lIC5zdGFydC1zZWFyY2ggeyBiYWNrZ3JvdW5kOiByZ2JhKDAsMCwwLDAuMik7IH1cblxuLnN0YXJ0LWFwcHMtZ3JpZCB7XG4gICAgZGlzcGxheTogZ3JpZDtcbiAgICBncmlkLXRlbXBsYXRlLWNvbHVtbnM6IHJlcGVhdCg0LCAxZnIpO1xuICAgIGdhcDogMTJweDtcbiAgICBvdmVyZmxvdy15OiBhdXRvO1xufVxuXG4uc3RhcnQtYXBwLWl0ZW0ge1xuICAgIGRpc3BsYXk6IGZsZXg7XG4gICAgZmxleC1kaXJlY3Rpb246IGNvbHVtbjtcbiAgICBhbGlnbi1pdGVtczogY2VudGVyO1xuICAgIGdhcDogNHB4O1xuICAgIHBhZGRpbmc6IDhweDtcbiAgICBib3JkZXItcmFkaXVzOiA4cHg7XG4gICAgY3Vyc29yOiBwb2ludGVyO1xuICAgIGNvbG9yOiB2YXIoLS1zeXMtdGV4dCk7XG59XG4uc3RhcnQtYXBwLWl0ZW06aG92ZXIgeyBiYWNrZ3JvdW5kOiByZ2JhKDEyOCwgMTI4LCAxMjgsIDAuMSk7IH1cbi5zdGFydC1hcHAtaXRlbSAuaWNvbiB7IGZvbnQtc2l6ZTogMjRweDsgbWFyZ2luLWJvdHRvbTogNHB4OyB9XG4uc3RhcnQtYXBwLWl0ZW0gc3BhbiB7IGZvbnQtc2l6ZTogMTFweDsgdGV4dC1hbGlnbjogY2VudGVyOyB9XG5cbi8qIFdpbmRvdyBNYW5hZ2VyICovXG4ud2luZG93LWNvbnRhaW5lciB7XG4gICAgcG9zaXRpb246IGFic29sdXRlO1xuICAgIHRvcDogMDtcbiAgICBsZWZ0OiAwO1xuICAgIHJpZ2h0OiAwO1xuICAgIGJvdHRvbTogdmFyKC0tdGFza2Jhci1oZWlnaHQpO1xuICAgIGJhY2tncm91bmQ6IHZhcigtLWFwcC1iZyk7XG4gICAgei1pbmRleDogNTA7XG4gICAgZGlzcGxheTogZmxleDtcbiAgICBmbGV4LWRpcmVjdGlvbjogY29sdW1uO1xuICAgIGFuaW1hdGlvbjogd2luZG93T3BlbiAwLjJzIGN1YmljLWJlemllcigwLjE2LCAxLCAwLjMsIDEpO1xufVxuXG5Aa2V5ZnJhbWVzIHdpbmRvd09wZW4ge1xuICAgIGZyb20geyBvcGFjaXR5OiAwOyB0cmFuc2Zvcm06IHNjYWxlKDAuOTUpIHRyYW5zbGF0ZVkoMTBweCk7IH1cbiAgICB0byB7IG9wYWNpdHk6IDE7IHRyYW5zZm9ybTogc2NhbGUoMSkgdHJhbnNsYXRlWSgwKTsgfVxufVxuXG4ud2luZG93LWhlYWRlciB7XG4gICAgaGVpZ2h0OiA0MHB4O1xuICAgIGRpc3BsYXk6IGZsZXg7XG4gICAgYWxpZ24taXRlbXM6IGNlbnRlcjtcbiAgICBqdXN0aWZ5LWNvbnRlbnQ6IHNwYWNlLWJldHdlZW47XG4gICAgcGFkZGluZzogMCAxMnB4O1xuICAgIGJhY2tncm91bmQ6IHZhcigtLXN5cy1iZy1zb2xpZCk7XG4gICAgYm9yZGVyLWJvdHRvbTogMXB4IHNvbGlkIHZhcigtLXN5cy1ib3JkZXIpO1xuICAgIGNvbG9yOiB2YXIoLS1zeXMtdGV4dCk7XG4gICAgZm9udC13ZWlnaHQ6IDYwMDtcbiAgICBmb250LXNpemU6IDE0cHg7XG59XG5cbi53aW5kb3ctdGl0bGUgeyBkaXNwbGF5OiBmbGV4OyBhbGlnbi1pdGVtczogY2VudGVyOyBnYXA6IDhweDsgfVxuXG4ud2luZG93LWNvbnRyb2xzIHsgZGlzcGxheTogZmxleDsgZ2FwOiA0cHg7IH1cbi53aW5kb3ctYnRuIHtcbiAgICB3aWR0aDogMzJweDsgaGVpZ2h0OiAzMnB4OyBib3JkZXItcmFkaXVzOiA0cHg7IGRpc3BsYXk6IGZsZXg7IGFsaWduLWl0ZW1zOiBjZW50ZXI7IGp1c3RpZnktY29udGVudDogY2VudGVyOyBjdXJzb3I6IHBvaW50ZXI7IGNvbG9yOiB2YXIoLS1zeXMtdGV4dCk7XG59XG4ud2luZG93LWJ0bjpob3ZlciB7IGJhY2tncm91bmQ6IHJnYmEoMTI4LDEyOCwxMjgsMC4yKTsgfVxuLndpbmRvdy1idG4uY2xvc2U6aG92ZXIgeyBiYWNrZ3JvdW5kOiAjZTgxMTIzOyBjb2xvcjogd2hpdGU7IH1cblxuLndpbmRvdy1jb250ZW50IHtcbiAgICBmbGV4OiAxO1xuICAgIG92ZXJmbG93LXk6IGF1dG87XG4gICAgcG9zaXRpb246IHJlbGF0aXZlO1xufVxuXG4vKiBBcHA6IENhbGN1bGF0b3IgKi9cbi5jYWxjLWdyaWQge1xuICAgIGRpc3BsYXk6IGdyaWQ7XG4gICAgZ3JpZC10ZW1wbGF0ZS1jb2x1bW5zOiByZXBlYXQoNCwgMWZyKTtcbiAgICBnYXA6IDJweDtcbiAgICBoZWlnaHQ6IDEwMCU7XG4gICAgcGFkZGluZzogMnB4O1xuICAgIGJhY2tncm91bmQ6IHZhcigtLXN5cy1ib3JkZXIpO1xufVxuLmNhbGMtZGlzcGxheSB7XG4gICAgZ3JpZC1jb2x1bW46IDEgLyAtMTtcbiAgICBiYWNrZ3JvdW5kOiB2YXIoLS1hcHAtYmcpO1xuICAgIGNvbG9yOiB2YXIoLS1zeXMtdGV4dCk7XG4gICAgZm9udC1zaXplOiAzMnB4O1xuICAgIHRleHQtYWxpZ246IHJpZ2h0O1xuICAgIHBhZGRpbmc6IDIwcHggMTZweDtcbiAgICBkaXNwbGF5OiBmbGV4O1xuICAgIGZsZXgtZGlyZWN0aW9uOiBjb2x1bW47XG4gICAganVzdGlmeS1jb250ZW50OiBmbGV4LWVuZDtcbiAgICB3b3JkLWJyZWFrOiBicmVhay1hbGw7XG59XG4uY2FsYy1idG4ge1xuICAgIGJhY2tncm91bmQ6IHZhcigtLXN5cy1iZy1zb2xpZCk7XG4gICAgYm9yZGVyOiBub25lO1xuICAgIGNvbG9yOiB2YXIoLS1zeXMtdGV4dCk7XG4gICAgZm9udC1zaXplOiAxOHB4O1xuICAgIGN1cnNvcjogcG9pbnRlcjtcbiAgICB0cmFuc2l0aW9uOiBiYWNrZ3JvdW5kIDAuMXM7XG59XG4uY2FsYy1idG46YWN0aXZlIHsgYmFja2dyb3VuZDogdmFyKC0tc3lzLWJvcmRlcik7IH1cbi5jYWxjLWJ0bi5hY2NlbnQgeyBiYWNrZ3JvdW5kOiB2YXIoLS1zeXMtYWNjZW50KTsgY29sb3I6IHdoaXRlOyB9XG4uY2FsYy1idG4uYWNjZW50OmFjdGl2ZSB7IGJhY2tncm91bmQ6IHZhcigtLXN5cy1hY2NlbnQtaG92ZXIpOyB9XG5cbi8qIEFwcDogTm90ZXMgKi9cbi5ub3Rlcy10ZXh0YXJlYSB7XG4gICAgd2lkdGg6IDEwMCU7XG4gICAgaGVpZ2h0OiAxMDAlO1xuICAgIGJvcmRlcjogbm9uZTtcbiAgICByZXNpemU6IG5vbmU7XG4gICAgcGFkZGluZzogMTZweDtcbiAgICBmb250LXNpemU6IDE2cHg7XG4gICAgYmFja2dyb3VuZDogdmFyKC0tYXBwLWJnKTtcbiAgICBjb2xvcjogdmFyKC0tc3lzLXRleHQpO1xuICAgIG91dGxpbmU6IG5vbmU7XG59XG5cbi8qIEFwcDogU2V0dGluZ3MgKi9cbi5zZXR0aW5ncy1jb250YWluZXIgeyBwYWRkaW5nOiAyMHB4OyBjb2xvcjogdmFyKC0tc3lzLXRleHQpOyB9XG4uc2V0dGluZ3Mtc2VjdGlvbiB7IG1hcmdpbi1ib3R0b206IDI0cHg7IH1cbi5zZXR0aW5ncy1zZWN0aW9uIGgzIHsgbWFyZ2luLWJvdHRvbTogMTJweDsgZm9udC1zaXplOiAxNHB4OyBjb2xvcjogdmFyKC0tc3lzLXRleHQtbXV0ZWQpOyB0ZXh0LXRyYW5zZm9ybTogdXBwZXJjYXNlOyB9XG4uc2V0dGluZy1pdGVtIHsgZGlzcGxheTogZmxleDsganVzdGlmeS1jb250ZW50OiBzcGFjZS1iZXR3ZWVuOyBhbGlnbi1pdGVtczogY2VudGVyOyBwYWRkaW5nOiAxMnB4OyBiYWNrZ3JvdW5kOiB2YXIoLS1zeXMtYmctc29saWQpOyBib3JkZXItcmFkaXVzOiA4cHg7IG1hcmdpbi1ib3R0b206IDhweDsgYm9yZGVyOiAxcHggc29saWQgdmFyKC0tc3lzLWJvcmRlcik7IH1cblxuLyogQXBwOiBUZXJtaW5hbCAoR29kIE1vZGUpICovXG4udGVybWluYWwtY29udGFpbmVyIHsgYmFja2dyb3VuZDogIzBjMGMwYzsgY29sb3I6ICMwMGZmMDA7IGZvbnQtZmFtaWx5OiBtb25vc3BhY2U7IHBhZGRpbmc6IDEwcHg7IGhlaWdodDogMTAwJTsgb3ZlcmZsb3cteTogYXV0bzsgfVxuLnRlcm1pbmFsLWxpbmUgeyBtYXJnaW4tYm90dG9tOiA0cHg7IGZvbnQtc2l6ZTogMTNweDt9XG4udGVybWluYWwtY3Vyc29yIHsgZGlzcGxheTogaW5saW5lLWJsb2NrOyB3aWR0aDogOHB4OyBoZWlnaHQ6IDE0cHg7IGJhY2tncm91bmQ6ICMwMGZmMDA7IGFuaW1hdGlvbjogYmxpbmsgMXMgc3RlcC1lbmQgaW5maW5pdGU7IHZlcnRpY2FsLWFsaWduOiBtaWRkbGU7fVxuQGtleWZyYW1lcyBibGluayB7IDUwJSB7IG9wYWNpdHk6IDA7IH0gfVxuXG4uZ29kLW1vZGUtaW5kaWNhdG9yIHsgY29sb3I6ICNmZjMzMzM7IGZvbnQtd2VpZ2h0OiBib2xkOyBmb250LXNpemU6IDEwcHg7IGJvcmRlcjogMXB4IHNvbGlkICNmZjMzMzM7IHBhZGRpbmc6IDJweCA0cHg7IGJvcmRlci1yYWRpdXM6IDRweDsgbWFyZ2luLXJpZ2h0OiA4cHg7IH1cblxuLyogVXRpbGl0aWVzICovXG4udGV4dC14cyB7IGZvbnQtc2l6ZTogMTBweDsgfVxuLmZvbnQtYm9sZCB7IGZvbnQtd2VpZ2h0OiBib2xkOyB9IiwidHlwZXMudHMiOiJleHBvcnQgaW50ZXJmYWNlIEFwcERlZmluaXRpb24ge1xuICAgIGlkOiBzdHJpbmc7XG4gICAgbmFtZTogc3RyaW5nO1xuICAgIGljb246IGFueTsgLy8gTHVjaWRlIGljb24gY29tcG9uZW50XG4gICAgY29tcG9uZW50OiBSZWFjdC5GQzx7IG9uQ2xvc2U6ICgpID0+IHZvaWQgfT47XG4gICAgaXNHb2RNb2RlT25seT86IGJvb2xlYW47XG59XG5cbmV4cG9ydCBpbnRlcmZhY2UgT3NTdGF0ZSB7XG4gICAgYWN0aXZlQXBwSWQ6IHN0cmluZyB8IG51bGw7XG4gICAgb3BlbkFwcElkczogc3RyaW5nW107XG4gICAgaXNTdGFydE1lbnVPcGVuOiBib29sZWFuO1xufSIsInV0aWxzL2F1ZGlvLnRzIjoiLy8gU2ltcGxlIHdlYiBhdWRpbyBzeW50aGVzaXplciBmb3Igc3lzdGVtIHNvdW5kc1xuXG5sZXQgYXVkaW9DdHg6IEF1ZGlvQ29udGV4dCB8IG51bGwgPSBudWxsO1xuXG5jb25zdCBnZXRBdWRpb0NvbnRleHQgPSAoKSA9PiB7XG4gICAgaWYgKCFhdWRpb0N0eCkge1xuICAgICAgICBhdWRpb0N0eCA9IG5ldyAod2luZG93LkF1ZGlvQ29udGV4dCB8fCAod2luZG93IGFzIGFueSkud2Via2l0QXVkaW9Db250ZXh0KSgpO1xuICAgIH1cbiAgICBpZiAoYXVkaW9DdHguc3RhdGUgPT09ICdzdXNwZW5kZWQnKSB7XG4gICAgICAgIGF1ZGlvQ3R4LnJlc3VtZSgpO1xuICAgIH1cbiAgICByZXR1cm4gYXVkaW9DdHg7XG59O1xuXG5leHBvcnQgY29uc3QgcGxheUNsaWNrU291bmQgPSAoKSA9PiB7XG4gICAgdHJ5IHtcbiAgICAgICAgY29uc3QgY3R4ID0gZ2V0QXVkaW9Db250ZXh0KCk7XG4gICAgICAgIGNvbnN0IG9zYyA9IGN0eC5jcmVhdGVPc2NpbGxhdG9yKCk7XG4gICAgICAgIGNvbnN0IGdhaW5Ob2RlID0gY3R4LmNyZWF0ZUdhaW4oKTtcblxuICAgICAgICBvc2MudHlwZSA9ICdzaW5lJztcbiAgICAgICAgb3NjLmZyZXF1ZW5jeS5zZXRWYWx1ZUF0VGltZSg4MDAsIGN0eC5jdXJyZW50VGltZSk7XG4gICAgICAgIG9zYy5mcmVxdWVuY3kuZXhwb25lbnRpYWxSYW1wVG9WYWx1ZUF0VGltZSgzMDAsIGN0eC5jdXJyZW50VGltZSArIDAuMDUpO1xuXG4gICAgICAgIGdhaW5Ob2RlLmdhaW4uc2V0VmFsdWVBdFRpbWUoMC4xLCBjdHguY3VycmVudFRpbWUpO1xuICAgICAgICBnYWluTm9kZS5nYWluLmV4cG9uZW50aWFsUmFtcFRvVmFsdWVBdFRpbWUoMC4wMDEsIGN0eC5jdXJyZW50VGltZSArIDAuMDUpO1xuXG4gICAgICAgIG9zYy5jb25uZWN0KGdhaW5Ob2RlKTtcbiAgICAgICAgZ2Fpbk5vZGUuY29ubmVjdChjdHguZGVzdGluYXRpb24pO1xuXG4gICAgICAgIG9zYy5zdGFydCgpO1xuICAgICAgICBvc2Muc3RvcChjdHguY3VycmVudFRpbWUgKyAwLjA1KTtcbiAgICB9IGNhdGNoIChlKSB7XG4gICAgICAgIGNvbnNvbGUuZXJyb3IoXCJBdWRpbyBlcnJvclwiLCBlKTtcbiAgICB9XG59O1xuXG5leHBvcnQgY29uc3QgcGxheVN0YXJ0dXBTb3VuZCA9ICgpID0+IHtcbiAgICB0cnkge1xuICAgICAgICBjb25zdCBjdHggPSBnZXRBdWRpb0NvbnRleHQoKTtcbiAgICAgICAgY29uc3Qgb3NjMSA9IGN0eC5jcmVhdGVPc2NpbGxhdG9yKCk7XG4gICAgICAgIGNvbnN0IG9zYzIgPSBjdHguY3JlYXRlT3NjaWxsYXRvcigpO1xuICAgICAgICBjb25zdCBnYWluTm9kZSA9IGN0eC5jcmVhdGVHYWluKCk7XG5cbiAgICAgICAgb3NjMS50eXBlID0gJ3NpbmUnO1xuICAgICAgICBvc2MyLnR5cGUgPSAndHJpYW5nbGUnO1xuICAgICAgICBcbiAgICAgICAgLy8gQyBNYWpvciBDaG9yZCBpc2hcbiAgICAgICAgb3NjMS5mcmVxdWVuY3kuc2V0VmFsdWVBdFRpbWUoNTIzLjI1LCBjdHguY3VycmVudFRpbWUpOyAvLyBDNVxuICAgICAgICBvc2MyLmZyZXF1ZW5jeS5zZXRWYWx1ZUF0VGltZSg2NTkuMjUsIGN0eC5jdXJyZW50VGltZSk7IC8vIEU1XG5cbiAgICAgICAgZ2Fpbk5vZGUuZ2Fpbi5zZXRWYWx1ZUF0VGltZSgwLCBjdHguY3VycmVudFRpbWUpO1xuICAgICAgICBnYWluTm9kZS5nYWluLmxpbmVhclJhbXBUb1ZhbHVlQXRUaW1lKDAuMTUsIGN0eC5jdXJyZW50VGltZSArIDAuMSk7XG4gICAgICAgIGdhaW5Ob2RlLmdhaW4uZXhwb25lbnRpYWxSYW1wVG9WYWx1ZUF0VGltZSgwLjAwMSwgY3R4LmN1cnJlbnRUaW1lICsgMS41KTtcblxuICAgICAgICBvc2MxLmNvbm5lY3QoZ2Fpbk5vZGUpO1xuICAgICAgICBvc2MyLmNvbm5lY3QoZ2Fpbk5vZGUpO1xuICAgICAgICBnYWluTm9kZS5jb25uZWN0KGN0eC5kZXN0aW5hdGlvbik7XG5cbiAgICAgICAgb3NjMS5zdGFydCgpO1xuICAgICAgICBvc2MyLnN0YXJ0KCk7XG4gICAgICAgIG9zYzEuc3RvcChjdHguY3VycmVudFRpbWUgKyAxLjUpO1xuICAgICAgICBvc2MyLnN0b3AoY3R4LmN1cnJlbnRUaW1lICsgMS41KTtcbiAgICB9IGNhdGNoIChlKSB7XG4gICAgICAgIGNvbnNvbGUuZXJyb3IoXCJBdWRpbyBlcnJvclwiLCBlKTtcbiAgICB9XG59O1xuXG5leHBvcnQgY29uc3QgcGxheUVycm9yU291bmQgPSAoKSA9PiB7XG4gICAgdHJ5IHtcbiAgICAgICAgY29uc3QgY3R4ID0gZ2V0QXVkaW9Db250ZXh0KCk7XG4gICAgICAgIGNvbnN0IG9zYyA9IGN0eC5jcmVhdGVPc2NpbGxhdG9yKCk7XG4gICAgICAgIGNvbnN0IGdhaW5Ob2RlID0gY3R4LmNyZWF0ZUdhaW4oKTtcblxuICAgICAgICBvc2MudHlwZSA9ICdzYXd0b290aCc7XG4gICAgICAgIG9zYy5mcmVxdWVuY3kuc2V0VmFsdWVBdFRpbWUoMTUwLCBjdHguY3VycmVudFRpbWUpO1xuICAgICAgICBvc2MuZnJlcXVlbmN5LmV4cG9uZW50aWFsUmFtcFRvVmFsdWVBdFRpbWUoMTAwLCBjdHguY3VycmVudFRpbWUgKyAwLjIpO1xuXG4gICAgICAgIGdhaW5Ob2RlLmdhaW4uc2V0VmFsdWVBdFRpbWUoMC4yLCBjdHguY3VycmVudFRpbWUpO1xuICAgICAgICBnYWluTm9kZS5nYWluLmV4cG9uZW50aWFsUmFtcFRvVmFsdWVBdFRpbWUoMC4wMDEsIGN0eC5jdXJyZW50VGltZSArIDAuMik7XG5cbiAgICAgICAgb3NjLmNvbm5lY3QoZ2Fpbk5vZGUpO1xuICAgICAgICBnYWluTm9kZS5jb25uZWN0KGN0eC5kZXN0aW5hdGlvbik7XG5cbiAgICAgICAgb3NjLnN0YXJ0KCk7XG4gICAgICAgIG9zYy5zdG9wKGN0eC5jdXJyZW50VGltZSArIDAuMik7XG4gICAgfSBjYXRjaCAoZSkge1xuICAgICAgICBjb25zb2xlLmVycm9yKFwiQXVkaW8gZXJyb3JcIiwgZSk7XG4gICAgfVxufSIsInV0aWxzL2dvZE1vZGUudHMiOiJleHBvcnQgY29uc3QgY2hlY2tHb2RNb2RlID0gKCk6IGJvb2xlYW4gPT4ge1xuICAgIHRyeSB7XG4gICAgICAgIGNvbnN0IGRlYnVnT3B0aW9ucyA9IEpTT04ucGFyc2UobG9jYWxTdG9yYWdlLmdldEl0ZW0oJ2dlbWluaTk2LWRlYnVnT3B0aW9ucycpIHx8ICd7fScpO1xuICAgICAgICAvLyBDaGVjayBzdGFuZGFyZCBmbGFwcHlHb2RNb2RlIGFzIHBlciBpbnN0cnVjdGlvbnMsIG9yIGEgZ2VuZXJpYyBnb2RNb2RlXG4gICAgICAgIHJldHVybiBkZWJ1Z09wdGlvbnMuZmxhcHB5R29kTW9kZSA9PT0gdHJ1ZSB8fCBkZWJ1Z09wdGlvbnMuZ29kTW9kZSA9PT0gdHJ1ZTtcbiAgICB9IGNhdGNoIChlKSB7XG4gICAgICAgIHJldHVybiBmYWxzZTtcbiAgICB9XG59OyIsImNvbXBvbmVudHMvYXBwcy9DYWxjdWxhdG9yLnRzeCI6ImltcG9ydCBSZWFjdCwgeyB1c2VTdGF0ZSB9IGZyb20gJ3JlYWN0JztcbmltcG9ydCB7IHBsYXlDbGlja1NvdW5kLCBwbGF5RXJyb3JTb3VuZCB9IGZyb20gJy4uLy4uL3V0aWxzL2F1ZGlvJztcblxuZXhwb3J0IGNvbnN0IENhbGN1bGF0b3I6IFJlYWN0LkZDPHsgb25DbG9zZTogKCkgPT4gdm9pZCB9PiA9ICgpID0+IHtcbiAgICBjb25zdCBbZGlzcGxheSwgc2V0RGlzcGxheV0gPSB1c2VTdGF0ZSgnMCcpO1xuICAgIGNvbnN0IFtlcXVhdGlvbiwgc2V0RXF1YXRpb25dID0gdXNlU3RhdGUoJycpO1xuXG4gICAgY29uc3QgaGFuZGxlUHJlc3MgPSAodmFsOiBzdHJpbmcpID0+IHtcbiAgICAgICAgcGxheUNsaWNrU291bmQoKTtcbiAgICAgICAgaWYgKHZhbCA9PT0gJ0MnKSB7XG4gICAgICAgICAgICBzZXREaXNwbGF5KCcwJyk7XG4gICAgICAgICAgICBzZXRFcXVhdGlvbignJyk7XG4gICAgICAgIH0gZWxzZSBpZiAodmFsID09PSAnPScpIHtcbiAgICAgICAgICAgIHRyeSB7XG4gICAgICAgICAgICAgICAgLy8gU2FmZSBldmFsIHJlcGxhY2VtZW50IGZvciBzaW1wbGUgY2FsY1xuICAgICAgICAgICAgICAgIGNvbnN0IHNhbml0aXplZCA9IGVxdWF0aW9uICsgZGlzcGxheTtcbiAgICAgICAgICAgICAgICBpZigvXlswLTkrXFwtKi8uIF0rJC8udGVzdChzYW5pdGl6ZWQpKSB7XG4gICAgICAgICAgICAgICAgICAgIC8vIGVzbGludC1kaXNhYmxlLW5leHQtbGluZSBuby1uZXctZnVuY1xuICAgICAgICAgICAgICAgICAgICBjb25zdCByZXN1bHQgPSBuZXcgRnVuY3Rpb24oJ3JldHVybiAnICsgc2FuaXRpemVkKSgpO1xuICAgICAgICAgICAgICAgICAgICBzZXREaXNwbGF5KFN0cmluZyhyZXN1bHQpKTtcbiAgICAgICAgICAgICAgICAgICAgc2V0RXF1YXRpb24oJycpO1xuICAgICAgICAgICAgICAgIH0gZWxzZSB7XG4gICAgICAgICAgICAgICAgICAgIHRocm93IG5ldyBFcnJvcihcIkludmFsaWRcIik7XG4gICAgICAgICAgICAgICAgfVxuICAgICAgICAgICAgfSBjYXRjaCAoZSkge1xuICAgICAgICAgICAgICAgIHNldERpc3BsYXkoJ0Vycm9yJyk7XG4gICAgICAgICAgICAgICAgc2V0RXF1YXRpb24oJycpO1xuICAgICAgICAgICAgICAgIHBsYXlFcnJvclNvdW5kKCk7XG4gICAgICAgICAgICB9XG4gICAgICAgIH0gZWxzZSBpZiAoWycrJywgJy0nLCAnKicsICcvJ10uaW5jbHVkZXModmFsKSkge1xuICAgICAgICAgICAgc2V0RXF1YXRpb24oZGlzcGxheSArIHZhbCk7XG4gICAgICAgICAgICBzZXREaXNwbGF5KCcwJyk7XG4gICAgICAgIH0gZWxzZSB7XG4gICAgICAgICAgICBzZXREaXNwbGF5KGRpc3BsYXkgPT09ICcwJyA/IHZhbCA6IGRpc3BsYXkgKyB2YWwpO1xuICAgICAgICB9XG4gICAgfTtcblxuICAgIGNvbnN0IGJ1dHRvbnMgPSBbXG4gICAgICAgICdDJywgJygnLCAnKScsICcvJyxcbiAgICAgICAgJzcnLCAnOCcsICc5JywgJyonLFxuICAgICAgICAnNCcsICc1JywgJzYnLCAnLScsXG4gICAgICAgICcxJywgJzInLCAnMycsICcrJyxcbiAgICAgICAgJzAnLCAnLicsICc9JywgJydcbiAgICBdO1xuXG4gICAgcmV0dXJuIChcbiAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJjYWxjLWdyaWRcIj5cbiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiY2FsYy1kaXNwbGF5XCI+XG4gICAgICAgICAgICAgICAgPGRpdiBzdHlsZT17e2ZvbnRTaXplOiAnMTRweCcsIGNvbG9yOiAndmFyKC0tc3lzLXRleHQtbXV0ZWQpJywgbWluSGVpZ2h0OiAnMjBweCd9fT57ZXF1YXRpb259PC9kaXY+XG4gICAgICAgICAgICAgICAgPGRpdj57ZGlzcGxheX08L2Rpdj5cbiAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAge2J1dHRvbnMubWFwKChidG4sIGkpID0+IChcbiAgICAgICAgICAgICAgICBidG4gPyAoXG4gICAgICAgICAgICAgICAgICAgIDxidXR0b24gXG4gICAgICAgICAgICAgICAgICAgICAgICBrZXk9e2l9IFxuICAgICAgICAgICAgICAgICAgICAgICAgY2xhc3NOYW1lPXtgY2FsYy1idG4gJHtidG4gPT09ICc9JyA/ICdhY2NlbnQnIDogJyd9YH1cbiAgICAgICAgICAgICAgICAgICAgICAgIG9uQ2xpY2s9eygpID0+IGhhbmRsZVByZXNzKGJ0bil9XG4gICAgICAgICAgICAgICAgICAgID5cbiAgICAgICAgICAgICAgICAgICAgICAgIHtidG59XG4gICAgICAgICAgICAgICAgICAgIDwvYnV0dG9uPlxuICAgICAgICAgICAgICAgICkgOiA8ZGl2IGtleT17aX0gLz5cbiAgICAgICAgICAgICkpfVxuICAgICAgICA8L2Rpdj5cbiAgICApO1xufTsiLCJjb21wb25lbnRzL2FwcHMvTm90ZXMudHN4IjoiaW1wb3J0IFJlYWN0LCB7IHVzZVN0YXRlLCB1c2VFZmZlY3QgfSBmcm9tICdyZWFjdCc7XG5cbmV4cG9ydCBjb25zdCBOb3RlczogUmVhY3QuRkM8eyBvbkNsb3NlOiAoKSA9PiB2b2lkIH0+ID0gKCkgPT4ge1xuICAgIGNvbnN0IFt0ZXh0LCBzZXRUZXh0XSA9IHVzZVN0YXRlKCcnKTtcblxuICAgIHVzZUVmZmVjdCgoKSA9PiB7XG4gICAgICAgIGNvbnN0IHNhdmVkID0gbG9jYWxTdG9yYWdlLmdldEl0ZW0oJ21pbmlvcy1ub3RlcycpO1xuICAgICAgICBpZiAoc2F2ZWQpIHNldFRleHQoc2F2ZWQpO1xuICAgIH0sIFtdKTtcblxuICAgIGNvbnN0IGhhbmRsZUNoYW5nZSA9IChlOiBSZWFjdC5DaGFuZ2VFdmVudDxIVE1MVGV4dEFyZWFFbGVtZW50PikgPT4ge1xuICAgICAgICBzZXRUZXh0KGUudGFyZ2V0LnZhbHVlKTtcbiAgICAgICAgbG9jYWxTdG9yYWdlLnNldEl0ZW0oJ21pbmlvcy1ub3RlcycsIGUudGFyZ2V0LnZhbHVlKTtcbiAgICB9O1xuXG4gICAgcmV0dXJuIChcbiAgICAgICAgPHRleHRhcmVhIFxuICAgICAgICAgICAgY2xhc3NOYW1lPVwibm90ZXMtdGV4dGFyZWFcIiBcbiAgICAgICAgICAgIHZhbHVlPXt0ZXh0fVxuICAgICAgICAgICAgb25DaGFuZ2U9e2hhbmRsZUNoYW5nZX1cbiAgICAgICAgICAgIHBsYWNlaG9sZGVyPVwiVHlwZSB5b3VyIG5vdGVzIGhlcmUuLi4gKEF1dG8tc2F2ZWQpXCJcbiAgICAgICAgICAgIGF1dG9Gb2N1c1xuICAgICAgICAvPlxuICAgICk7XG59OyIsImNvbXBvbmVudHMvYXBwcy9TZXR0aW5ncy50c3giOiJpbXBvcnQgUmVhY3QsIHsgdXNlU3RhdGUsIHVzZUVmZmVjdCB9IGZyb20gJ3JlYWN0JztcbmltcG9ydCB7IHBsYXlDbGlja1NvdW5kIH0gZnJvbSAnLi4vLi4vdXRpbHMvYXVkaW8nO1xuXG5leHBvcnQgY29uc3QgU2V0dGluZ3M6IFJlYWN0LkZDPHsgb25DbG9zZTogKCkgPT4gdm9pZCB9PiA9ICgpID0+IHtcbiAgICBjb25zdCBbaXNEYXJrLCBzZXRJc0RhcmtdID0gdXNlU3RhdGUoZmFsc2UpO1xuXG4gICAgdXNlRWZmZWN0KCgpID0+IHtcbiAgICAgICAgc2V0SXNEYXJrKGRvY3VtZW50LmRvY3VtZW50RWxlbWVudC5jbGFzc0xpc3QuY29udGFpbnMoJ2RhcmstdGhlbWUnKSk7XG4gICAgfSwgW10pO1xuXG4gICAgY29uc3QgdG9nZ2xlVGhlbWUgPSAoKSA9PiB7XG4gICAgICAgIHBsYXlDbGlja1NvdW5kKCk7XG4gICAgICAgIGNvbnN0IHJvb3QgPSBkb2N1bWVudC5kb2N1bWVudEVsZW1lbnQ7XG4gICAgICAgIGlmIChpc0RhcmspIHtcbiAgICAgICAgICAgIHJvb3QuY2xhc3NMaXN0LnJlbW92ZSgnZGFyay10aGVtZScpO1xuICAgICAgICB9IGVsc2Uge1xuICAgICAgICAgICAgcm9vdC5jbGFzc0xpc3QuYWRkKCdkYXJrLXRoZW1lJyk7XG4gICAgICAgIH1cbiAgICAgICAgc2V0SXNEYXJrKCFpc0RhcmspO1xuICAgIH07XG5cbiAgICByZXR1cm4gKFxuICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInNldHRpbmdzLWNvbnRhaW5lclwiPlxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzZXR0aW5ncy1zZWN0aW9uXCI+XG4gICAgICAgICAgICAgICAgPGgzPlBlcnNvbmFsaXphdGlvbjwvaDM+XG4gICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzZXR0aW5nLWl0ZW1cIj5cbiAgICAgICAgICAgICAgICAgICAgPHNwYW4+RGFyayBNb2RlPC9zcGFuPlxuICAgICAgICAgICAgICAgICAgICA8YnV0dG9uIG9uQ2xpY2s9e3RvZ2dsZVRoZW1lfSBzdHlsZT17e1xuICAgICAgICAgICAgICAgICAgICAgICAgcGFkZGluZzogJzZweCAxMnB4JywgYm9yZGVyUmFkaXVzOiAnNHB4JywgYm9yZGVyOiAnMXB4IHNvbGlkIHZhcigtLXN5cy1ib3JkZXIpJywgYmFja2dyb3VuZDogJ3ZhcigtLXN5cy1iZy1ibHVyKScsIGNvbG9yOiAndmFyKC0tc3lzLXRleHQpJywgY3Vyc29yOiAncG9pbnRlcidcbiAgICAgICAgICAgICAgICAgICAgfX0+XG4gICAgICAgICAgICAgICAgICAgICAgICB7aXNEYXJrID8gJ1R1cm4gT2ZmJyA6ICdUdXJuIE9uJ31cbiAgICAgICAgICAgICAgICAgICAgPC9idXR0b24+XG4gICAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgIFxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzZXR0aW5ncy1zZWN0aW9uXCI+XG4gICAgICAgICAgICAgICAgPGgzPlN5c3RlbTwvaDM+XG4gICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzZXR0aW5nLWl0ZW1cIiBzdHlsZT17e2ZsZXhEaXJlY3Rpb246ICdjb2x1bW4nLCBhbGlnbkl0ZW1zOiAnZmxleC1zdGFydCcsIGdhcDogJzhweCd9fT5cbiAgICAgICAgICAgICAgICAgICAgPGRpdiBzdHlsZT17e2ZvbnRXZWlnaHQ6ICdib2xkJ319Pk1pbmlPUyB2MS4wPC9kaXY+XG4gICAgICAgICAgICAgICAgICAgIDxkaXYgc3R5bGU9e3tmb250U2l6ZTogJzEycHgnLCBjb2xvcjogJ3ZhcigtLXN5cy10ZXh0LW11dGVkKSd9fT5Db21wYWN0IFdlYiBPUyBFbnZpcm9ubWVudDwvZGl2PlxuICAgICAgICAgICAgICAgICAgICA8ZGl2IHN0eWxlPXt7Zm9udFNpemU6ICcxMnB4JywgY29sb3I6ICd2YXIoLS1zeXMtdGV4dC1tdXRlZCknfX0+TWVtb3J5OiA0LjAwIEdCIChFbXVsYXRlZCk8L2Rpdj5cbiAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICA8L2Rpdj5cbiAgICApO1xufTsiLCJjb21wb25lbnRzL2FwcHMvVGVybWluYWwudHN4IjoiaW1wb3J0IFJlYWN0LCB7IHVzZVN0YXRlLCB1c2VFZmZlY3QgfSBmcm9tICdyZWFjdCc7XG5cbmV4cG9ydCBjb25zdCBUZXJtaW5hbDogUmVhY3QuRkM8eyBvbkNsb3NlOiAoKSA9PiB2b2lkIH0+ID0gKCkgPT4ge1xuICAgIGNvbnN0IFtsaW5lcywgc2V0TGluZXNdID0gdXNlU3RhdGU8c3RyaW5nW10+KFtdKTtcbiAgICBcbiAgICB1c2VFZmZlY3QoKCkgPT4ge1xuICAgICAgICBjb25zdCBib290U2VxdWVuY2UgPSBbXG4gICAgICAgICAgICBcIkluaXRpYWxpemluZyBrZXJuZWwuLi4gT0tcIixcbiAgICAgICAgICAgIFwiTW91bnRpbmcgdmlydHVhbCBmaWxlIHN5c3RlbXMuLi4gT0tcIixcbiAgICAgICAgICAgIFwiTG9hZGluZyBHb2QgTW9kZSBtb2R1bGVzLi4uIE9WRVJSSURFIEdSQU5URURcIixcbiAgICAgICAgICAgIFwiQnlwYXNzaW5nIHNlY3VyaXR5IHByb3RvY29scy4uLiBET05FXCIsXG4gICAgICAgICAgICBcIiBcIixcbiAgICAgICAgICAgIFwiUk9PVCBBQ0NFU1MgR1JBTlRFRC5cIixcbiAgICAgICAgICAgIFwiV2VsY29tZSB0byB0aGUgbWFpbmZyYW1lLlwiLFxuICAgICAgICAgICAgXCJyb290QG1pbmlvczp+I1wiXG4gICAgICAgIF07XG5cbiAgICAgICAgbGV0IGkgPSAwO1xuICAgICAgICBjb25zdCBpbnRlcnZhbCA9IHNldEludGVydmFsKCgpID0+IHtcbiAgICAgICAgICAgIGlmIChpIDwgYm9vdFNlcXVlbmNlLmxlbmd0aCkge1xuICAgICAgICAgICAgICAgIHNldExpbmVzKHByZXYgPT4gWy4uLnByZXYsIGJvb3RTZXF1ZW5jZVtpXV0pO1xuICAgICAgICAgICAgICAgIGkrKztcbiAgICAgICAgICAgIH0gZWxzZSB7XG4gICAgICAgICAgICAgICAgY2xlYXJJbnRlcnZhbChpbnRlcnZhbCk7XG4gICAgICAgICAgICB9XG4gICAgICAgIH0sIDMwMCk7XG5cbiAgICAgICAgcmV0dXJuICgpID0+IGNsZWFySW50ZXJ2YWwoaW50ZXJ2YWwpO1xuICAgIH0sIFtdKTtcblxuICAgIHJldHVybiAoXG4gICAgICAgIDxkaXYgY2xhc3NOYW1lPVwidGVybWluYWwtY29udGFpbmVyXCI+XG4gICAgICAgICAgICB7bGluZXMubWFwKChsaW5lLCBpZHgpID0+IChcbiAgICAgICAgICAgICAgICA8ZGl2IGtleT17aWR4fSBjbGFzc05hbWU9XCJ0ZXJtaW5hbC1saW5lXCI+e2xpbmV9PC9kaXY+XG4gICAgICAgICAgICApKX1cbiAgICAgICAgICAgIHtsaW5lcy5sZW5ndGggPT09IDggJiYgPHNwYW4gY2xhc3NOYW1lPVwidGVybWluYWwtY3Vyc29yXCIgLz59XG4gICAgICAgIDwvZGl2PlxuICAgICk7XG59OyIsImNvbXBvbmVudHMvV2luZG93LnRzeCI6ImltcG9ydCBSZWFjdCBmcm9tICdyZWFjdCc7XG5pbXBvcnQgeyBYLCBNaW51cywgU3F1YXJlIH0gZnJvbSAnbHVjaWRlLXJlYWN0JztcbmltcG9ydCB7IEFwcERlZmluaXRpb24gfSBmcm9tICcuLi90eXBlcyc7XG5cbmludGVyZmFjZSBXaW5kb3dQcm9wcyB7XG4gICAgYXBwOiBBcHBEZWZpbml0aW9uO1xuICAgIG9uQ2xvc2U6ICgpID0+IHZvaWQ7XG59XG5cbmV4cG9ydCBjb25zdCBXaW5kb3c6IFJlYWN0LkZDPFdpbmRvd1Byb3BzPiA9ICh7IGFwcCwgb25DbG9zZSB9KSA9PiB7XG4gICAgY29uc3QgSWNvbiA9IGFwcC5pY29uO1xuICAgIFxuICAgIHJldHVybiAoXG4gICAgICAgIDxkaXYgY2xhc3NOYW1lPVwid2luZG93LWNvbnRhaW5lclwiPlxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJ3aW5kb3ctaGVhZGVyXCI+XG4gICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJ3aW5kb3ctdGl0bGVcIj5cbiAgICAgICAgICAgICAgICAgICAgPEljb24gc2l6ZT17MTZ9IC8+XG4gICAgICAgICAgICAgICAgICAgIDxzcGFuPnthcHAubmFtZX08L3NwYW4+XG4gICAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJ3aW5kb3ctY29udHJvbHNcIj5cbiAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJ3aW5kb3ctYnRuXCI+PE1pbnVzIHNpemU9ezE2fSAvPjwvZGl2PlxuICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cIndpbmRvdy1idG5cIj48U3F1YXJlIHNpemU9ezE0fSAvPjwvZGl2PlxuICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cIndpbmRvdy1idG4gY2xvc2VcIiBvbkNsaWNrPXtvbkNsb3NlfT48WCBzaXplPXsxNn0gLz48L2Rpdj5cbiAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJ3aW5kb3ctY29udGVudFwiPlxuICAgICAgICAgICAgICAgIDxhcHAuY29tcG9uZW50IG9uQ2xvc2U9e29uQ2xvc2V9IC8+XG4gICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgPC9kaXY+XG4gICAgKTtcbn07IiwiQXBwLnRzeCI6ImltcG9ydCBSZWFjdCwgeyB1c2VTdGF0ZSwgdXNlRWZmZWN0IH0gZnJvbSAncmVhY3QnO1xuaW1wb3J0IHsgQ2FsY3VsYXRvciB9IGZyb20gJy4vY29tcG9uZW50cy9hcHBzL0NhbGN1bGF0b3InO1xuaW1wb3J0IHsgTm90ZXMgfSBmcm9tICcuL2NvbXBvbmVudHMvYXBwcy9Ob3Rlcyc7XG5pbXBvcnQgeyBTZXR0aW5ncyB9IGZyb20gJy4vY29tcG9uZW50cy9hcHBzL1NldHRpbmdzJztcbmltcG9ydCB7IFRlcm1pbmFsIH0gZnJvbSAnLi9jb21wb25lbnRzL2FwcHMvVGVybWluYWwnO1xuaW1wb3J0IHsgV2luZG93IH0gZnJvbSAnLi9jb21wb25lbnRzL1dpbmRvdyc7XG5pbXBvcnQgeyBjaGVja0dvZE1vZGUgfSBmcm9tICcuL3V0aWxzL2dvZE1vZGUnO1xuaW1wb3J0IHsgcGxheUNsaWNrU291bmQsIHBsYXlTdGFydHVwU291bmQgfSBmcm9tICcuL3V0aWxzL2F1ZGlvJztcbmltcG9ydCB7IEFwcERlZmluaXRpb24sIE9zU3RhdGUgfSBmcm9tICcuL3R5cGVzJztcbmltcG9ydCB7IExheW91dEdyaWQsIENhbGN1bGF0b3IgYXMgQ2FsY0ljb24sIFN0aWNreU5vdGUsIFNldHRpbmdzIGFzIFNldHRpbmdzSWNvbiwgVGVybWluYWxTcXVhcmUsIFdpZmksIEJhdHRlcnlNZWRpdW0sIFZvbHVtZTIgfSBmcm9tICdsdWNpZGUtcmVhY3QnO1xuXG5jb25zdCBBUFBTOiBBcHBEZWZpbml0aW9uW10gPSBbXG4gICAgeyBpZDogJ2NhbGMnLCBuYW1lOiAnQ2FsY3VsYXRvcicsIGljb246IENhbGNJY29uLCBjb21wb25lbnQ6IENhbGN1bGF0b3IgfSxcbiAgICB7IGlkOiAnbm90ZXMnLCBuYW1lOiAnTm90ZXMnLCBpY29uOiBTdGlja3lOb3RlLCBjb21wb25lbnQ6IE5vdGVzIH0sXG4gICAgeyBpZDogJ3NldHRpbmdzJywgbmFtZTogJ1NldHRpbmdzJywgaWNvbjogU2V0dGluZ3NJY29uLCBjb21wb25lbnQ6IFNldHRpbmdzIH0sXG4gICAgeyBpZDogJ3Rlcm1pbmFsJywgbmFtZTogJ1Jvb3QgVGVybWluYWwnLCBpY29uOiBUZXJtaW5hbFNxdWFyZSwgY29tcG9uZW50OiBUZXJtaW5hbCwgaXNHb2RNb2RlT25seTogdHJ1ZSB9XG5dO1xuXG5leHBvcnQgY29uc3QgQXBwOiBSZWFjdC5GQyA9ICgpID0+IHtcbiAgICBjb25zdCBbc3RhdGUsIHNldFN0YXRlXSA9IHVzZVN0YXRlPE9zU3RhdGU+KHtcbiAgICAgICAgYWN0aXZlQXBwSWQ6IG51bGwsXG4gICAgICAgIG9wZW5BcHBJZHM6IFtdLFxuICAgICAgICBpc1N0YXJ0TWVudU9wZW46IGZhbHNlXG4gICAgfSk7XG4gICAgY29uc3QgW3RpbWUsIHNldFRpbWVdID0gdXNlU3RhdGUobmV3IERhdGUoKSk7XG4gICAgY29uc3QgW2lzR29kTW9kZSwgc2V0SXNHb2RNb2RlXSA9IHVzZVN0YXRlKGZhbHNlKTtcbiAgICBjb25zdCBbaGFzU3RhcnRlZCwgc2V0SGFzU3RhcnRlZF0gPSB1c2VTdGF0ZShmYWxzZSk7XG5cbiAgICB1c2VFZmZlY3QoKCkgPT4ge1xuICAgICAgICBzZXRJc0dvZE1vZGUoY2hlY2tHb2RNb2RlKCkpO1xuICAgICAgICBjb25zdCB0aW1lciA9IHNldEludGVydmFsKCgpID0+IHNldFRpbWUobmV3IERhdGUoKSksIDEwMDApO1xuICAgICAgICByZXR1cm4gKCkgPT4gY2xlYXJJbnRlcnZhbCh0aW1lcik7XG4gICAgfSwgW10pO1xuXG4gICAgLy8gUGxheSBzdGFydHVwIHNvdW5kIG9uY2Ugb24gZmlyc3QgaW50ZXJhY3Rpb24gdG8gcmVzcGVjdCBicm93c2VyIGF1dG9wbGF5IHBvbGljaWVzXG4gICAgdXNlRWZmZWN0KCgpID0+IHtcbiAgICAgICAgY29uc3QgaGFuZGxlRmlyc3RJbnRlcmFjdGlvbiA9ICgpID0+IHtcbiAgICAgICAgICAgIGlmICghaGFzU3RhcnRlZCkge1xuICAgICAgICAgICAgICAgIHBsYXlTdGFydHVwU291bmQoKTtcbiAgICAgICAgICAgICAgICBzZXRIYXNTdGFydGVkKHRydWUpO1xuICAgICAgICAgICAgfVxuICAgICAgICAgICAgd2luZG93LnJlbW92ZUV2ZW50TGlzdGVuZXIoJ2NsaWNrJywgaGFuZGxlRmlyc3RJbnRlcmFjdGlvbik7XG4gICAgICAgIH07XG4gICAgICAgIHdpbmRvdy5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsIGhhbmRsZUZpcnN0SW50ZXJhY3Rpb24pO1xuICAgICAgICByZXR1cm4gKCkgPT4gd2luZG93LnJlbW92ZUV2ZW50TGlzdGVuZXIoJ2NsaWNrJywgaGFuZGxlRmlyc3RJbnRlcmFjdGlvbik7XG4gICAgfSwgW2hhc1N0YXJ0ZWRdKTtcblxuICAgIGNvbnN0IHRvZ2dsZVN0YXJ0TWVudSA9ICgpID0+IHtcbiAgICAgICAgcGxheUNsaWNrU291bmQoKTtcbiAgICAgICAgc2V0U3RhdGUocyA9PiAoeyAuLi5zLCBpc1N0YXJ0TWVudU9wZW46ICFzLmlzU3RhcnRNZW51T3BlbiB9KSk7XG4gICAgfTtcblxuICAgIGNvbnN0IGNsb3NlU3RhcnRNZW51ID0gKCkgPT4ge1xuICAgICAgICBpZiAoc3RhdGUuaXNTdGFydE1lbnVPcGVuKSB7XG4gICAgICAgICAgICBzZXRTdGF0ZShzID0+ICh7IC4uLnMsIGlzU3RhcnRNZW51T3BlbjogZmFsc2UgfSkpO1xuICAgICAgICB9XG4gICAgfTtcblxuICAgIGNvbnN0IG9wZW5BcHAgPSAoYXBwSWQ6IHN0cmluZykgPT4ge1xuICAgICAgICBwbGF5Q2xpY2tTb3VuZCgpO1xuICAgICAgICBzZXRTdGF0ZShzID0+ICh7XG4gICAgICAgICAgICAuLi5zLFxuICAgICAgICAgICAgaXNTdGFydE1lbnVPcGVuOiBmYWxzZSxcbiAgICAgICAgICAgIGFjdGl2ZUFwcElkOiBhcHBJZCxcbiAgICAgICAgICAgIG9wZW5BcHBJZHM6IHMub3BlbkFwcElkcy5pbmNsdWRlcyhhcHBJZCkgPyBzLm9wZW5BcHBJZHMgOiBbLi4ucy5vcGVuQXBwSWRzLCBhcHBJZF1cbiAgICAgICAgfSkpO1xuICAgIH07XG5cbiAgICBjb25zdCBjbG9zZUFwcCA9IChhcHBJZDogc3RyaW5nKSA9PiB7XG4gICAgICAgIHBsYXlDbGlja1NvdW5kKCk7XG4gICAgICAgIHNldFN0YXRlKHMgPT4gKHtcbiAgICAgICAgICAgIC4uLnMsXG4gICAgICAgICAgICBhY3RpdmVBcHBJZDogcy5hY3RpdmVBcHBJZCA9PT0gYXBwSWQgPyBudWxsIDogcy5hY3RpdmVBcHBJZCxcbiAgICAgICAgICAgIG9wZW5BcHBJZHM6IHMub3BlbkFwcElkcy5maWx0ZXIoaWQgPT4gaWQgIT09IGFwcElkKVxuICAgICAgICB9KSk7XG4gICAgfTtcblxuICAgIGNvbnN0IGFjdGl2ZUFwcERlZiA9IEFQUFMuZmluZChhID0+IGEuaWQgPT09IHN0YXRlLmFjdGl2ZUFwcElkKTtcbiAgICBjb25zdCB2aXNpYmxlQXBwcyA9IEFQUFMuZmlsdGVyKGEgPT4gIWEuaXNHb2RNb2RlT25seSB8fCBpc0dvZE1vZGUpO1xuXG4gICAgcmV0dXJuIChcbiAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJvcy1jb250YWluZXJcIiBvbkNsaWNrPXtjbG9zZVN0YXJ0TWVudX0+XG4gICAgICAgICAgICB7LyogRGVza3RvcCBBcmVhICovfVxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJkZXNrdG9wXCI+XG4gICAgICAgICAgICAgICAge3Zpc2libGVBcHBzLm1hcChhcHAgPT4ge1xuICAgICAgICAgICAgICAgICAgICBjb25zdCBJY29uID0gYXBwLmljb247XG4gICAgICAgICAgICAgICAgICAgIHJldHVybiAoXG4gICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGtleT17YGRlc2t0b3AtJHthcHAuaWR9YH0gY2xhc3NOYW1lPVwiZGVza3RvcC1pY29uXCIgb25Eb3VibGVDbGljaz17KCkgPT4gb3BlbkFwcChhcHAuaWQpfSBvbkNsaWNrPXsoZSkgPT4geyBlLnN0b3BQcm9wYWdhdGlvbigpOyBvcGVuQXBwKGFwcC5pZCk7IH19PlxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiaWNvbi13cmFwcGVyXCI+XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxJY29uIHNpemU9ezI0fSAvPlxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzcGFuPnthcHAubmFtZX08L3NwYW4+XG4gICAgICAgICAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgICAgICAgICAgKTtcbiAgICAgICAgICAgICAgICB9KX1cbiAgICAgICAgICAgIDwvZGl2PlxuXG4gICAgICAgICAgICB7LyogV2luZG93IE1hbmFnZXIgKE9ubHkgc2hvd2luZyB0b3Btb3N0IGFjdGl2ZSBhcHAgZm9yIGNvbXBhY3QgdmlldykgKi99XG4gICAgICAgICAgICB7YWN0aXZlQXBwRGVmICYmIChcbiAgICAgICAgICAgICAgICA8V2luZG93IFxuICAgICAgICAgICAgICAgICAgICBhcHA9e2FjdGl2ZUFwcERlZn0gXG4gICAgICAgICAgICAgICAgICAgIG9uQ2xvc2U9eygpID0+IGNsb3NlQXBwKGFjdGl2ZUFwcERlZi5pZCl9IFxuICAgICAgICAgICAgICAgIC8+XG4gICAgICAgICAgICApfVxuXG4gICAgICAgICAgICB7LyogU3RhcnQgTWVudSAqL31cbiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPXtgc3RhcnQtbWVudSAke3N0YXRlLmlzU3RhcnRNZW51T3BlbiA/ICdvcGVuJyA6ICcnfWB9IG9uQ2xpY2s9e2UgPT4gZS5zdG9wUHJvcGFnYXRpb24oKX0+XG4gICAgICAgICAgICAgICAgPGlucHV0IHR5cGU9XCJ0ZXh0XCIgY2xhc3NOYW1lPVwic3RhcnQtc2VhcmNoXCIgcGxhY2Vob2xkZXI9XCJUeXBlIGhlcmUgdG8gc2VhcmNoXCIgLz5cbiAgICAgICAgICAgICAgICA8ZGl2IHN0eWxlPXt7bWFyZ2luQm90dG9tOiAnMTZweCcsIGZvbnRXZWlnaHQ6IDYwMCwgZm9udFNpemU6ICcxNHB4JywgY29sb3I6ICd2YXIoLS1zeXMtdGV4dCknfX0+UGlubmVkPC9kaXY+XG4gICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzdGFydC1hcHBzLWdyaWRcIj5cbiAgICAgICAgICAgICAgICAgICAge3Zpc2libGVBcHBzLm1hcChhcHAgPT4ge1xuICAgICAgICAgICAgICAgICAgICAgICAgY29uc3QgSWNvbiA9IGFwcC5pY29uO1xuICAgICAgICAgICAgICAgICAgICAgICAgcmV0dXJuIChcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGtleT17YHN0YXJ0LSR7YXBwLmlkfWB9IGNsYXNzTmFtZT1cInN0YXJ0LWFwcC1pdGVtXCIgb25DbGljaz17KCkgPT4gb3BlbkFwcChhcHAuaWQpfT5cbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgPEljb24gY2xhc3NOYW1lPVwiaWNvblwiIGNvbG9yPXthcHAuaXNHb2RNb2RlT25seSA/ICcjMDBmZjAwJyA6ICdjdXJyZW50Q29sb3InfSAvPlxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8c3Bhbj57YXBwLm5hbWV9PC9zcGFuPlxuICAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgICAgICAgICAgICAgKTtcbiAgICAgICAgICAgICAgICAgICAgfSl9XG4gICAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICA8L2Rpdj5cblxuICAgICAgICAgICAgey8qIFRhc2tiYXIgKi99XG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInRhc2tiYXJcIiBvbkNsaWNrPXtlID0+IGUuc3RvcFByb3BhZ2F0aW9uKCl9PlxuICAgICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwidGFza2Jhci1jZW50ZXJcIj5cbiAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzdGFydC1idXR0b25cIiBvbkNsaWNrPXt0b2dnbGVTdGFydE1lbnV9PlxuICAgICAgICAgICAgICAgICAgICAgICAgPExheW91dEdyaWQgc2l6ZT17MjB9IC8+XG4gICAgICAgICAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgICAgICAgICB7LyogT3BlbiBBcHAgSWNvbnMgaW4gVGFza2JhciAqL31cbiAgICAgICAgICAgICAgICAgICAge3N0YXRlLm9wZW5BcHBJZHMubWFwKGFwcElkID0+IHtcbiAgICAgICAgICAgICAgICAgICAgICAgIGNvbnN0IGFwcCA9IEFQUFMuZmluZChhID0+IGEuaWQgPT09IGFwcElkKTtcbiAgICAgICAgICAgICAgICAgICAgICAgIGlmICghYXBwKSByZXR1cm4gbnVsbDtcbiAgICAgICAgICAgICAgICAgICAgICAgIGNvbnN0IEljb24gPSBhcHAuaWNvbjtcbiAgICAgICAgICAgICAgICAgICAgICAgIGNvbnN0IGlzQWN0aXZlID0gc3RhdGUuYWN0aXZlQXBwSWQgPT09IGFwcElkO1xuICAgICAgICAgICAgICAgICAgICAgICAgcmV0dXJuIChcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBrZXk9e2B0Yi0ke2FwcElkfWB9IFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjbGFzc05hbWU9e2B0YXNrYmFyLWljb24gJHtpc0FjdGl2ZSA/ICdhY3RpdmUnIDogJyd9YH1cbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgb25DbGljaz17KCkgPT4gb3BlbkFwcChhcHBJZCl9XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgPlxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8SWNvbiBzaXplPXsxOH0gY29sb3I9e2FwcC5pc0dvZE1vZGVPbmx5ID8gJyMwMGZmMDAnIDogJ2N1cnJlbnRDb2xvcid9IC8+XG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgPC9kaXY+XG4gICAgICAgICAgICAgICAgICAgICAgICApO1xuICAgICAgICAgICAgICAgICAgICB9KX1cbiAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInRhc2tiYXItcmlnaHRcIj5cbiAgICAgICAgICAgICAgICAgICAge2lzR29kTW9kZSAmJiA8c3BhbiBjbGFzc05hbWU9XCJnb2QtbW9kZS1pbmRpY2F0b3JcIj5ST09URUQ8L3NwYW4+fVxuICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInN5cy10cmF5XCI+XG4gICAgICAgICAgICAgICAgICAgICAgICA8V2lmaSBzaXplPXsxNH0gLz5cbiAgICAgICAgICAgICAgICAgICAgICAgIDxWb2x1bWUyIHNpemU9ezE0fSAvPlxuICAgICAgICAgICAgICAgICAgICAgICAgPEJhdHRlcnlNZWRpdW0gc2l6ZT17MTR9IC8+XG4gICAgICAgICAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInN5cy10cmF5XCIgc3R5bGU9e3tmbGV4RGlyZWN0aW9uOiAnY29sdW1uJywgZ2FwOiAnMnB4JywgYWxpZ25JdGVtczogJ2ZsZXgtZW5kJ319PlxuICAgICAgICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPVwidGV4dC14cyBmb250LWJvbGRcIj57dGltZS50b0xvY2FsZVRpbWVTdHJpbmcoW10sIHtob3VyOiAnMi1kaWdpdCcsIG1pbnV0ZTonMi1kaWdpdCd9KX08L3NwYW4+XG4gICAgICAgICAgICAgICAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9XCJ0ZXh0LXhzXCI+e3RpbWUudG9Mb2NhbGVEYXRlU3RyaW5nKCl9PC9zcGFuPlxuICAgICAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgICAgICA8L2Rpdj5cbiAgICAgICAgICAgIDwvZGl2PlxuICAgICAgICA8L2Rpdj5cbiAgICApO1xufTsiLCJpbmRleC50c3giOiJpbXBvcnQgUmVhY3QgZnJvbSAncmVhY3QnO1xuaW1wb3J0IHsgY3JlYXRlUm9vdCB9IGZyb20gJ3JlYWN0LWRvbS9jbGllbnQnO1xuaW1wb3J0IHsgQXBwIH0gZnJvbSAnLi9BcHAnO1xuXG5jb25zdCBjb250YWluZXIgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgncm9vdCcpO1xuaWYgKGNvbnRhaW5lcikge1xuICAgIGNvbnN0IHJvb3QgPSBjcmVhdGVSb290KGNvbnRhaW5lcik7XG4gICAgcm9vdC5yZW5kZXIoPEFwcCAvPik7XG59In0sImlzTXVsdGlGaWxlIjp0cnVlfQ== -->
