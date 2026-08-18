@@ -1,0 +1,10 @@
+{
+  "id": "MiniOS_1787036989897",
+  "name": "MiniOS",
+  "createdAt": 1787036989897,
+  "lastModified": 1787038574468,
+  "version": 5,
+  "description": "A compact, modern web-based operating system simulation.",
+  "category": "Custom",
+  "initialPrompt": ""
+}
