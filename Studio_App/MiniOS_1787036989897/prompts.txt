@@ -8,3 +8,7 @@ fix runtime error
 ---
 [8/18/2026, 9:13:21 AM] v3:
 runtime error error resolving module ./app
+
+---
+[8/18/2026, 9:23:16 AM] v4:
+make windows that they can be smallerable and movable
