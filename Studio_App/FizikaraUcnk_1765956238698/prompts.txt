@@ -1,2 +1,25 @@
 [8/28/2026, 11:56:52 PM] v10:
 add godmode to the game with a god mode "cheat menu" with cheats but sometimes ucnik can see trough the fourth wall if you cheat and comments it and it is a bit scary with an effect if she recognises that you are cheeating too but irl
+
+---
+[8/29/2026, 12:08:06 AM] v11:
+1. Valós adatok becsempészése a monológba (időjárás/óra/böngésző):
+javascript
+
+const hour = new Date().getHours();
+const quotes = [
+    `Azt hiszed, nem látom, hogy hajnali ${hour} órakor próbálsz csalni?`,
+    "A JavaScript Console sem ment meg a pótvizsgától!",
+    "Látom az egérmutatód mikromozgásait. Remeg a kezed a képernyő előtt..."
+];
+
+
+
+2. Egérkurzor követése (a szem tényleg a játékost nézi):
+A fekete lyuk/szem ikon vagy az avatar követhetné az egérmutató koordinátáit (mousemove eseményre kis elfordulással / transform: rotate(...)).
+
+3. Gombok manipulálása:
+A Scary Mode alatt a cheat menü vagy a válaszgombok feliratai átváltozhatnának: mindegyik gomb felirata pl. *„Bukás”*, *„Nincs menekvés”*, *„0 Kelvin”* lenne.
+
+Szeretnéd, hogy valamelyiket beépítsük a kódba?
+mindet
