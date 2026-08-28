@@ -1,0 +1,10 @@
+{
+  "id": "Tetra",
+  "name": "Tetra",
+  "createdAt": 1787953708364,
+  "lastModified": 1787953709697,
+  "version": 1,
+  "description": "A beautifully modern block-stacking puzzle game with satisfying mechanics.",
+  "category": "Games",
+  "initialPrompt": "LOL tetris"
+}
